@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "calendar": "Calendar",
         "system": "Battery & System",
         "shelf": "Drop Shelf",
+        "code": "Code",
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -53,5 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(CalendarModule())
         registry.register(SystemModule())
         registry.register(ShelfModule())
+        registry.register(CodeModule())
     }
 }

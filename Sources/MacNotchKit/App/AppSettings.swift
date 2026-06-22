@@ -25,6 +25,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
             ModuleSetting(id: "calendar", isEnabled: true),
             ModuleSetting(id: "system", isEnabled: true),
             ModuleSetting(id: "shelf", isEnabled: true),
+            ModuleSetting(id: "code", isEnabled: true),
         ],
         launchAtLogin: false
     )
