@@ -44,3 +44,18 @@ Verification Output:
 - `swift build`
   - exit code: 0
   - result: `Build complete! (0.46s)`
+
+---
+
+Task 9 follow-up fix note:
+- Added a regression guard in `SystemSampler.cpuUsagePercent(previous:current:)` so any regressing CPU tick counter returns `0` instead of using unsigned underflowed deltas.
+- Added `cpu usage percent returns zero when any tick regresses` to `SystemSampleTests`.
+- Updated `NotchRootView` to key both collapsed and expanded module `ForEach` loops by stable `module.id` rather than array offset, without changing layout structure.
+
+Verification Output:
+- `swift build`
+  - exit code: 0
+  - result: `Build complete! (0.34s)`
+- `swift run MacNotchTests`
+  - exit code: 0
+  - result: `125 checks, 0 failure(s)`

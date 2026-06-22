@@ -67,4 +67,12 @@ func systemSampleTests() {
 
         expectEqual(usage, 0, "first cpu snapshot has a safe zero percent fallback")
     }
+
+    test("cpu usage percent returns zero when any tick regresses") {
+        let previous = CPULoadSnapshot(user: 100, system: 50, idle: 200, nice: 25)
+        let current = CPULoadSnapshot(user: 99, system: 70, idle: 230, nice: 30)
+        let usage = SystemSampler.cpuUsagePercent(previous: previous, current: current)
+
+        expectEqual(usage, 0, "regressing CPU ticks should not underflow into a bogus usage percent")
+    }
 }

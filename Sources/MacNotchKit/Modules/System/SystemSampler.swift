@@ -115,11 +115,19 @@ public enum SystemSampler {
 
     package static func cpuUsagePercent(previous: CPULoadSnapshot?, current: CPULoadSnapshot) -> Double {
         guard let previous else { return 0 }
+        guard
+            current.user >= previous.user,
+            current.system >= previous.system,
+            current.idle >= previous.idle,
+            current.nice >= previous.nice
+        else {
+            return 0
+        }
 
-        let userDelta = current.user &- previous.user
-        let systemDelta = current.system &- previous.system
-        let idleDelta = current.idle &- previous.idle
-        let niceDelta = current.nice &- previous.nice
+        let userDelta = current.user - previous.user
+        let systemDelta = current.system - previous.system
+        let idleDelta = current.idle - previous.idle
+        let niceDelta = current.nice - previous.nice
 
         let busyDelta = Double(userDelta + systemDelta + niceDelta)
         let totalDelta = busyDelta + Double(idleDelta)

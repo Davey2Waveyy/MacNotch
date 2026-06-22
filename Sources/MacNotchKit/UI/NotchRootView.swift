@@ -49,7 +49,7 @@ public struct NotchRootView: View {
 
         return ZStack(alignment: .top) {
             HStack(spacing: 6) {
-                ForEach(Array(currentModules.enumerated()), id: \.offset) { _, module in
+                ForEach(currentModules, id: \.id) { module in
                     if let collapsed = module.collapsedView() {
                         collapsed
                     }
@@ -64,7 +64,7 @@ public struct NotchRootView: View {
                     Color.clear
                         .frame(maxWidth: .infinity, minHeight: expandedHeight - 28)
                 } else {
-                    ForEach(Array(currentModules.enumerated()), id: \.offset) { _, module in
+                    ForEach(currentModules, id: \.id) { module in
                         module.expandedView()
                     }
                 }
