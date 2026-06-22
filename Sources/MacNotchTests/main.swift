@@ -11,6 +11,7 @@ screenLocatorTests()
 systemSampleTests()
 mediaControllerTests()
 calendarFormatTests()
+calendarModuleTests()
 shelfStoreTests()
 settingsLogicTests()
 

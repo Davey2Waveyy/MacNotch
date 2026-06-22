@@ -15,7 +15,7 @@ final class CalendarModule: NotchModule {
 
     private let state = StateBox()
     private let store = EKEventStore()
-    private var timer: Timer?
+    private let refreshCoordinator = CalendarRefreshCoordinator()
 
     func collapsedView() -> AnyView? {
         nil
@@ -26,13 +26,14 @@ final class CalendarModule: NotchModule {
     }
 
     func activate() {
-        startTimer()
+        refreshCoordinator.activate { [weak self] in
+            Task { @MainActor [weak self] in await self?.refresh() }
+        }
         Task { @MainActor in await refresh() }
     }
 
     func deactivate() {
-        timer?.invalidate()
-        timer = nil
+        refreshCoordinator.deactivate()
     }
 
     func refresh() async {
@@ -56,14 +57,6 @@ final class CalendarModule: NotchModule {
         state.accessDenied = false
         state.events = CalendarFormat.upcoming(mapped, now: Date(), limit: 4)
     }
-
-    private func startTimer() {
-        guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in await self?.refresh() }
-        }
-    }
-
     private func openCalendarSettings() {
         let urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
         if let url = URL(string: urlString) {
