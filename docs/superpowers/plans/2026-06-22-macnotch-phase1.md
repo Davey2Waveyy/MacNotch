@@ -470,9 +470,10 @@ git commit -m "Add NotchStateMachine with collapse/expand transitions"
 ### Task 4: `AppSettings` + `SettingsStore` (pure logic, TDD)
 
 **Files:**
-- Create: `Sources/MacNotch/App/AppSettings.swift`
-- Create: `Sources/MacNotch/App/SettingsStore.swift`
-- Test: `Tests/MacNotchTests/SettingsStoreTests.swift`
+- Create: `Sources/MacNotchKit/App/AppSettings.swift`
+- Create: `Sources/MacNotchKit/App/SettingsStore.swift`
+- Create: `Sources/MacNotchTests/SettingsStoreTests.swift`
+- Modify: `Sources/MacNotchTests/main.swift` (register the new tests)
 
 **Interfaces:**
 - Produces:
@@ -480,21 +481,21 @@ git commit -m "Add NotchStateMachine with collapse/expand transitions"
   - `struct AppSettings: Codable, Equatable { var modules: [ModuleSetting]; var launchAtLogin: Bool; static var defaults: AppSettings }`
   - `final class SettingsStore` init with a file `URL`; `var settings: AppSettings`; `func load()`; `func save()`; `func setEnabled(_ id: String, _ on: Bool)`; `func move(id: String, to index: Int)`; `func orderedEnabledIDs() -> [String]`.
 
-- [ ] **Step 1: Write failing tests**
+- [ ] **Step 1: Write failing tests (harness style)**
 
-`Tests/MacNotchTests/SettingsStoreTests.swift`:
+`Sources/MacNotchTests/SettingsStoreTests.swift`:
 
 ```swift
-import XCTest
-@testable import MacNotch
+import Foundation
+import MacNotchKit
 
-final class SettingsStoreTests: XCTestCase {
-    private func tempURL() -> URL {
+func settingsStoreTests() {
+    func tempURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString + ".json")
     }
 
-    func testRoundTripPersistsToDisk() {
+    test("round-trips settings to disk") {
         let url = tempURL()
         let a = SettingsStore(url: url)
         a.setEnabled("media", false)
@@ -502,33 +503,40 @@ final class SettingsStoreTests: XCTestCase {
 
         let b = SettingsStore(url: url)
         b.load()
-        XCTAssertFalse(b.settings.modules.first { $0.id == "media" }!.isEnabled)
+        let media = b.settings.modules.first { $0.id == "media" }
+        expect(media?.isEnabled == false, "media disabled after reload")
     }
 
-    func testReorderMovesModule() {
+    test("reorder moves module to the end") {
         let store = SettingsStore(url: tempURL())
         let first = store.settings.modules.first!.id
         store.move(id: first, to: store.settings.modules.count - 1)
-        XCTAssertEqual(store.settings.modules.last!.id, first)
+        expectEqual(store.settings.modules.last!.id, first, "moved id is last")
     }
 
-    func testOrderedEnabledIDsSkipsDisabled() {
+    test("orderedEnabledIDs skips disabled") {
         let store = SettingsStore(url: tempURL())
         store.setEnabled("system", false)
-        XCTAssertFalse(store.orderedEnabledIDs().contains("system"))
-        XCTAssertTrue(store.orderedEnabledIDs().contains("media"))
+        expect(!store.orderedEnabledIDs().contains("system"), "system excluded")
+        expect(store.orderedEnabledIDs().contains("media"), "media included")
     }
 }
 ```
 
+Then register it in `Sources/MacNotchTests/main.swift` (add below the previous registrations, keep `exit(...)` last):
+
+```swift
+settingsStoreTests()
+```
+
 - [ ] **Step 2: Run to verify failure**
 
-Run: `swift test --filter SettingsStoreTests`
-Expected: FAIL — types undefined.
+Run: `swift run MacNotchTests`
+Expected: build FAILS to compile — `cannot find 'SettingsStore' in scope` (types don't exist yet). This is RED.
 
 - [ ] **Step 3: Implement `AppSettings`**
 
-`Sources/MacNotch/App/AppSettings.swift`:
+`Sources/MacNotchKit/App/AppSettings.swift`:
 
 ```swift
 import Foundation
@@ -556,7 +564,7 @@ public struct AppSettings: Codable, Equatable {
 
 - [ ] **Step 4: Implement `SettingsStore`**
 
-`Sources/MacNotch/App/SettingsStore.swift`:
+`Sources/MacNotchKit/App/SettingsStore.swift`:
 
 ```swift
 import Foundation
@@ -613,11 +621,11 @@ public final class SettingsStore {
 
 - [ ] **Step 5: Run to verify pass + commit**
 
-Run: `swift test --filter SettingsStoreTests`
-Expected: PASS (3 tests).
+Run: `swift run MacNotchTests`
+Expected: the 3 `SettingsStore` cases print `✓`, final failure count 0.
 
 ```bash
-git add Sources/MacNotch/App/AppSettings.swift Sources/MacNotch/App/SettingsStore.swift Tests/MacNotchTests/SettingsStoreTests.swift
+git add Sources/MacNotchKit/App/AppSettings.swift Sources/MacNotchKit/App/SettingsStore.swift Sources/MacNotchTests/SettingsStoreTests.swift Sources/MacNotchTests/main.swift
 git commit -m "Add AppSettings model and SettingsStore with reorder/persist"
 ```
 
