@@ -767,16 +767,17 @@ git commit -m "Add NotchModule protocol and ModuleRegistry ordering"
 ### Task 6: Agent bootstrap + menu-bar item (AppKit, manual verify)
 
 **Files:**
+- Create: `Sources/MacNotchKit/App/MenuBarController.swift`
+- Create: `Sources/MacNotchKit/App/AppDelegate.swift`
+- Create: `Sources/MacNotchKit/App/MacNotchApp.swift`
 - Modify: `Sources/MacNotch/main.swift`
-- Create: `Sources/MacNotch/App/MenuBarController.swift`
-- Create: `Sources/MacNotch/App/AppDelegate.swift`
 
 **Interfaces:**
-- Produces: `final class AppDelegate: NSObject, NSApplicationDelegate` (owns `MenuBarController`), `final class MenuBarController` (creates an `NSStatusItem` with menu: "Open Settings…", "Toggle Notch", "Quit MacNotch"). `MenuBarController` exposes `var onOpenSettings: (() -> Void)?` and `var onToggleNotch: (() -> Void)?` callbacks (wired in later tasks).
+- Produces: `enum MacNotchApp` with `@MainActor public static func run()` — the agent entry point (sets `.accessory` policy, installs `AppDelegate`, calls `NSApplication.run()`); internal `final class AppDelegate: NSObject, NSApplicationDelegate` (owns `MenuBarController`); internal `final class MenuBarController` (an `NSStatusItem` with menu: "Open Settings…", "Toggle Notch", "Quit MacNotch") exposing `var onOpenSettings: (() -> Void)?` and `var onToggleNotch: (() -> Void)?` callbacks (wired in later tasks).
 
 - [ ] **Step 1: Implement `MenuBarController`**
 
-`Sources/MacNotch/App/MenuBarController.swift`:
+`Sources/MacNotchKit/App/MenuBarController.swift`:
 
 ```swift
 import AppKit
@@ -810,7 +811,7 @@ final class MenuBarController {
 
 - [ ] **Step 2: Implement `AppDelegate`**
 
-`Sources/MacNotch/App/AppDelegate.swift`:
+`Sources/MacNotchKit/App/AppDelegate.swift`:
 
 ```swift
 import AppKit
@@ -828,16 +829,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 - [ ] **Step 3: Rewrite `main.swift` as the agent entry point**
 
-`Sources/MacNotch/main.swift`:
+`Sources/MacNotchKit/App/MacNotchApp.swift`:
 
 ```swift
 import AppKit
 
-let app = NSApplication.shared
-app.setActivationPolicy(.accessory) // agent: no Dock icon
-let delegate = AppDelegate()
-app.delegate = delegate
-app.run()
+@MainActor
+public enum MacNotchApp {
+    public static func run() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory) // agent: no Dock icon
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.run()
+    }
+}
+```
+
+`Sources/MacNotch/main.swift`:
+
+```swift
+import MacNotchKit
+
+MacNotchApp.run()
 ```
 
 - [ ] **Step 4: Build + manual verification**
@@ -848,7 +862,7 @@ Expected: a menu-bar icon (a notch glyph) appears in the system status bar. Clic
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Sources/MacNotch/App/MenuBarController.swift Sources/MacNotch/App/AppDelegate.swift Sources/MacNotch/main.swift
+git add Sources/MacNotchKit/App/MenuBarController.swift Sources/MacNotchKit/App/AppDelegate.swift Sources/MacNotchKit/App/MacNotchApp.swift Sources/MacNotch/main.swift
 git commit -m "Add agent bootstrap and menu-bar controller"
 ```
 
