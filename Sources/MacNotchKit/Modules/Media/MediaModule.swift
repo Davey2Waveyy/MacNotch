@@ -8,6 +8,7 @@ final class MediaModule: NotchModule {
 
     final class StateBox: ObservableObject {
         @Published var np: NowPlaying?
+        var activeSource: MediaSource?
     }
 
     private let state = StateBox()
@@ -39,7 +40,9 @@ final class MediaModule: NotchModule {
     }
 
     func refresh() async {
-        state.np = controller.active()?.np
+        let active = controller.active()
+        state.activeSource = active?.source
+        state.np = active?.np
     }
 
     private func startTimer() {
@@ -65,9 +68,18 @@ private struct MediaExpandedBridge: View {
     var body: some View {
         MediaExpandedView(
             np: box.np,
-            onPrevious: { controller.active()?.source.previous(); onAction() },
-            onPlayPause: { controller.active()?.source.playPause(); onAction() },
-            onNext: { controller.active()?.source.next(); onAction() }
+            onPrevious: {
+                (box.activeSource ?? controller.active()?.source)?.previous()
+                onAction()
+            },
+            onPlayPause: {
+                (box.activeSource ?? controller.active()?.source)?.playPause()
+                onAction()
+            },
+            onNext: {
+                (box.activeSource ?? controller.active()?.source)?.next()
+                onAction()
+            }
         )
     }
 }

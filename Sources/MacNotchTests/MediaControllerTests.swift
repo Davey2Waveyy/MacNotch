@@ -5,12 +5,16 @@ func mediaControllerTests() {
         let name: String
         var isAvailable: Bool
         var stored: NowPlaying?
+        var probeCount = 0
         init(_ name: String, available: Bool, np: NowPlaying?) {
             self.name = name
             self.isAvailable = available
             self.stored = np
         }
-        func nowPlaying() -> NowPlaying? { isAvailable ? stored : nil }
+        func nowPlaying() -> NowPlaying? {
+            probeCount += 1
+            return isAvailable ? stored : nil
+        }
         func playPause() {}
         func next() {}
         func previous() {}
@@ -34,6 +38,34 @@ func mediaControllerTests() {
         expect(controller.active()?.np.title == "A", "any available track is used")
     }
 
+    test("media: active snapshots each available source once per call") {
+        let first = Fake("Music", available: true, np: track("A", playing: false))
+        let second = Fake("Spotify", available: true, np: track("B", playing: true))
+        let third = Fake("Browser", available: true, np: track("C", playing: false))
+        let controller = MediaController(sources: [first, second, third])
+
+        expect(controller.active()?.np.title == "B", "playing snapshot still wins")
+        expectEqual(first.probeCount, 1, "first source probed once")
+        expectEqual(second.probeCount, 1, "second source probed once")
+        expectEqual(third.probeCount, 1, "third source probed once")
+    }
+
+    test("media: source order breaks ties for playing snapshots") {
+        let first = Fake("Music", available: true, np: track("A", playing: true))
+        let second = Fake("Spotify", available: true, np: track("B", playing: true))
+        let controller = MediaController(sources: [first, second])
+
+        expect(controller.active()?.source.name == "Music", "first playing source wins tie")
+    }
+
+    test("media: source order breaks ties for paused track snapshots") {
+        let first = Fake("Music", available: true, np: track("A", playing: false))
+        let second = Fake("Spotify", available: true, np: track("B", playing: false))
+        let controller = MediaController(sources: [first, second])
+
+        expect(controller.active()?.source.name == "Music", "first paused track wins tie")
+    }
+
     test("media: unavailable sources are skipped") {
         let dead = Fake("MediaRemote", available: false, np: track("Z", playing: true))
         let live = Fake("Music", available: true, np: track("A", playing: false))
@@ -53,5 +85,17 @@ func mediaControllerTests() {
         let noDuration = NowPlaying(title: "t", artist: "a", app: "x",
                                     isPlaying: true, elapsed: 30, duration: nil)
         expect(noDuration.progress == nil, "no progress without duration")
+    }
+
+    test("media: progress clamps below zero") {
+        let np = NowPlaying(title: "t", artist: "a", app: "x",
+                            isPlaying: true, elapsed: -5, duration: 120)
+        expectEqual(np.progress, 0, "negative elapsed clamps to zero")
+    }
+
+    test("media: progress clamps above one") {
+        let np = NowPlaying(title: "t", artist: "a", app: "x",
+                            isPlaying: true, elapsed: 130, duration: 120)
+        expectEqual(np.progress, 1, "elapsed beyond duration clamps to one")
     }
 }

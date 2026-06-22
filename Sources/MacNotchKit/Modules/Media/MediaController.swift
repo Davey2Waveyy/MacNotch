@@ -13,18 +13,15 @@ public final class MediaController {
     }
 
     public func active() -> (source: MediaSource, np: NowPlaying)? {
-        let live = sources.filter { $0.isAvailable }
-
-        if let playing = live.first(where: { $0.nowPlaying()?.isPlaying == true }),
-           let np = playing.nowPlaying() {
-            return (playing, np)
+        let snapshots = sources.compactMap { source -> (source: MediaSource, np: NowPlaying)? in
+            guard source.isAvailable, let np = source.nowPlaying() else { return nil }
+            return (source, np)
         }
 
-        for source in live {
-            if let np = source.nowPlaying() {
-                return (source, np)
-            }
+        if let playing = snapshots.first(where: { $0.np.isPlaying }) {
+            return playing
         }
-        return nil
+
+        return snapshots.first
     }
 }
