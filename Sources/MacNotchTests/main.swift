@@ -4,5 +4,6 @@ import Foundation
 sanityTests()
 notchStateMachineTests()
 settingsStoreTests()
+moduleRegistryTests()
 
 exit(Int32(TestRunner.shared.runAll()))
