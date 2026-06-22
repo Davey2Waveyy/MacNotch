@@ -4,6 +4,7 @@ import Foundation
 sanityTests()
 macNotchAppTests()
 notchStateMachineTests()
+notchWindowTests()
 settingsStoreTests()
 moduleRegistryTests()
 screenLocatorTests()
