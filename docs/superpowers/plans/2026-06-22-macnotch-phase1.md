@@ -634,9 +634,10 @@ git commit -m "Add AppSettings model and SettingsStore with reorder/persist"
 ### Task 5: `NotchModule` protocol + `ModuleStack` ordering (TDD with fakes)
 
 **Files:**
-- Create: `Sources/MacNotch/Modules/ModuleProtocol.swift`
-- Create: `Sources/MacNotch/UI/ModuleStack.swift`
-- Test: `Tests/MacNotchTests/ModuleStackTests.swift`
+- Create: `Sources/MacNotchKit/Modules/ModuleProtocol.swift`
+- Create: `Sources/MacNotchKit/UI/ModuleStack.swift`
+- Create: `Sources/MacNotchTests/ModuleRegistryTests.swift`
+- Modify: `Sources/MacNotchTests/main.swift` (register the new tests)
 
 **Interfaces:**
 - Produces:
@@ -644,50 +645,67 @@ git commit -m "Add AppSettings model and SettingsStore with reorder/persist"
   - `@MainActor final class ModuleRegistry` with `register(_:)` and `func ordered(by ids: [String]) -> [any NotchModule]`.
 - Consumes: `SettingsStore.orderedEnabledIDs()` (Task 4).
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Write failing test (harness style)**
 
-`Tests/MacNotchTests/ModuleStackTests.swift`:
+`NotchModule` and `ModuleRegistry` are `@MainActor`-isolated. The harness helpers
+are non-isolated, but the test runner's `main.swift` executes on the main thread,
+so each test body wraps its registry work in `MainActor.assumeIsolated { ... }` to
+get a synchronous main-actor context. The `FakeModule` is declared `@MainActor`
+because it conforms to the `@MainActor` protocol.
+
+`Sources/MacNotchTests/ModuleRegistryTests.swift`:
 
 ```swift
-import XCTest
 import SwiftUI
-@testable import MacNotch
+import MacNotchKit
 
 @MainActor
-final class ModuleStackTests: XCTestCase {
-    final class FakeModule: NotchModule {
-        let id: String; var title: String; var isEnabled = true
-        init(_ id: String) { self.id = id; self.title = id }
-        func collapsedView() -> AnyView? { nil }
-        func expandedView() -> AnyView { AnyView(EmptyView()) }
-        func activate() {}; func deactivate() {}; func refresh() async {}
-    }
+final class FakeModule: NotchModule {
+    let id: String
+    var title: String
+    var isEnabled = true
+    init(_ id: String) { self.id = id; self.title = id }
+    func collapsedView() -> AnyView? { nil }
+    func expandedView() -> AnyView { AnyView(EmptyView()) }
+    func activate() {}
+    func deactivate() {}
+    func refresh() async {}
+}
 
-    func testOrderedFollowsRequestedIDs() {
-        let reg = ModuleRegistry()
-        reg.register(FakeModule("a"))
-        reg.register(FakeModule("b"))
-        reg.register(FakeModule("c"))
-        let ordered = reg.ordered(by: ["c", "a"])
-        XCTAssertEqual(ordered.map(\.id), ["c", "a"])
+func moduleRegistryTests() {
+    test("ordered follows requested ids") {
+        MainActor.assumeIsolated {
+            let reg = ModuleRegistry()
+            reg.register(FakeModule("a"))
+            reg.register(FakeModule("b"))
+            reg.register(FakeModule("c"))
+            expectEqual(reg.ordered(by: ["c", "a"]).map(\.id), ["c", "a"], "order")
+        }
     }
-
-    func testUnknownIDsAreIgnored() {
-        let reg = ModuleRegistry()
-        reg.register(FakeModule("a"))
-        XCTAssertEqual(reg.ordered(by: ["zzz", "a"]).map(\.id), ["a"])
+    test("unknown ids are ignored") {
+        MainActor.assumeIsolated {
+            let reg = ModuleRegistry()
+            reg.register(FakeModule("a"))
+            expectEqual(reg.ordered(by: ["zzz", "a"]).map(\.id), ["a"], "skip unknown")
+        }
     }
 }
 ```
 
+Then register it in `Sources/MacNotchTests/main.swift` (add below the previous registrations, keep `exit(...)` last):
+
+```swift
+moduleRegistryTests()
+```
+
 - [ ] **Step 2: Run to verify failure**
 
-Run: `swift test --filter ModuleStackTests`
-Expected: FAIL — `NotchModule`/`ModuleRegistry` undefined.
+Run: `swift run MacNotchTests`
+Expected: build FAILS to compile — `cannot find 'ModuleRegistry'`/`'NotchModule'` (types don't exist yet). This is RED.
 
 - [ ] **Step 3: Implement the protocol**
 
-`Sources/MacNotch/Modules/ModuleProtocol.swift`:
+`Sources/MacNotchKit/Modules/ModuleProtocol.swift`:
 
 ```swift
 import SwiftUI
@@ -708,7 +726,7 @@ public protocol NotchModule: AnyObject {
 
 - [ ] **Step 4: Implement `ModuleRegistry`**
 
-`Sources/MacNotch/UI/ModuleStack.swift`:
+`Sources/MacNotchKit/UI/ModuleStack.swift`:
 
 ```swift
 import SwiftUI
@@ -736,11 +754,11 @@ public final class ModuleRegistry {
 
 - [ ] **Step 5: Run to verify pass + commit**
 
-Run: `swift test --filter ModuleStackTests`
-Expected: PASS (2 tests).
+Run: `swift run MacNotchTests`
+Expected: the 2 `ModuleRegistry` cases print `✓`, final failure count 0.
 
 ```bash
-git add Sources/MacNotch/Modules/ModuleProtocol.swift Sources/MacNotch/UI/ModuleStack.swift Tests/MacNotchTests/ModuleStackTests.swift
+git add Sources/MacNotchKit/Modules/ModuleProtocol.swift Sources/MacNotchKit/UI/ModuleStack.swift Sources/MacNotchTests/ModuleRegistryTests.swift Sources/MacNotchTests/main.swift
 git commit -m "Add NotchModule protocol and ModuleRegistry ordering"
 ```
 
