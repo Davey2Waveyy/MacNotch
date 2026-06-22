@@ -9,18 +9,24 @@ struct DashboardLayoutView: View {
     let activeMode: ExpansionMode
     let onSwitchMode: (ExpansionMode) -> Void
 
-    private let toolbarHeight: CGFloat = 32
+    private let toolbarHeight: CGFloat = 30
     private let tileSpacing: CGFloat = 10
-    private let outerPadding: CGFloat = 12
+    private let outerPadding: CGFloat = 14
 
     var body: some View {
         VStack(spacing: 0) {
             tilesRow
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Rectangle()
+                .fill(NotchTheme.hairline)
+                .frame(height: 1)
+                .padding(.top, 10)
             modeToolbar
                 .frame(height: toolbarHeight)
         }
-        .padding(outerPadding)
+        .padding(.horizontal, outerPadding)
+        .padding(.top, outerPadding)
+        .padding(.bottom, 6)
         .frame(width: size.width, height: size.height, alignment: .top)
     }
 
@@ -39,15 +45,14 @@ struct DashboardLayoutView: View {
                 ForEach(tiles, id: \.id) { tile in
                     tile.view
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(.white.opacity(0.05)))
+                        .dashboardTileSurface()
                 }
             }
         }
     }
 
     private var modeToolbar: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             Spacer()
             modeButton(.dashboard, system: "square.grid.2x2", label: "Dashboard")
             modeButton(.compact, system: "rectangle", label: "Compact")

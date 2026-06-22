@@ -9,28 +9,38 @@ struct WideBarLayoutView: View {
     let onSwitchMode: (ExpansionMode) -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            ForEach(barEntries, id: \.id) { entry in
+        HStack(spacing: 12) {
+            ForEach(Array(barEntries.enumerated()), id: \.element.id) { index, entry in
+                if index > 0 {
+                    WideBarDivider()
+                }
                 entry.view
             }
 
-            Spacer(minLength: 0)
+            Spacer(minLength: 12)
 
             Button {
                 onSwitchMode(.dashboard)
             } label: {
                 Image(systemName: "rectangle.compress.vertical")
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 28, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(.white.opacity(0.08))
+                    )
             }
             .buttonStyle(.plain)
             .help("Back to dashboard")
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, 8)
         .frame(width: size.width, height: size.height, alignment: .leading)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(NotchTheme.hairline)
+                .frame(height: 1)
+        }
     }
 
     private var barEntries: [(id: String, view: AnyView)] {

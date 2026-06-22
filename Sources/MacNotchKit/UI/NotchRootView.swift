@@ -54,7 +54,9 @@ public struct NotchRootView: View {
         case .compact: return compactSize
         case .dashboard: return dashboardSize
         case .wideBar:
-            let width = NSScreen.main?.frame.width ?? 1440
+            let width = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
+                ?? NSScreen.main?.frame.width
+                ?? 1440
             return CGSize(width: width, height: wideBarHeight)
         }
     }
