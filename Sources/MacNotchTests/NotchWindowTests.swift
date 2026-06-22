@@ -21,6 +21,94 @@ final class ActivatingModule: NotchModule {
     func refresh() async {}
 }
 
+@MainActor
+private func makeTestWindow() -> NotchWindow {
+    _ = NSApplication.shared
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString)
+        .appendingPathExtension("json")
+    return NotchWindow(registry: ModuleRegistry(), settings: SettingsStore(url: url))
+}
+
+@MainActor
+private func notchWindowPanel(for window: NotchWindow) -> NSPanel {
+    for child in Mirror(reflecting: window).children {
+        if let panel = child.value as? NSPanel {
+            return panel
+        }
+    }
+
+    fatalError("NotchWindow panel not found")
+}
+
+@MainActor
+private func notchWindowModel(for window: NotchWindow) -> NotchWindowModel {
+    for child in Mirror(reflecting: window).children {
+        if let model = child.value as? NotchWindowModel {
+            return model
+        }
+    }
+
+    fatalError("NotchWindow model not found")
+}
+
+@MainActor
+private func currentNotchRect() -> CGRect {
+    let screens = ScreenLocator.current()
+    let screen = ScreenLocator.choose(from: screens)
+        ?? ScreenInfo(
+            frame: NSScreen.main?.frame ?? .zero,
+            safeAreaTop: 0,
+            notchWidth: nil,
+            isMain: true
+        )
+
+    return ScreenLocator.notchRect(for: screen, defaultWidth: 200)
+}
+
+@MainActor
+private func waitForMainQueue(_ duration: TimeInterval) {
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: duration))
+}
+
+@MainActor
+private func hoverEnter(_ window: NotchWindow) {
+    if let event = NSEvent.enterExitEvent(
+        with: .mouseEntered,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: ProcessInfo.processInfo.systemUptime,
+        windowNumber: 0,
+        context: nil,
+        eventNumber: 0,
+        trackingNumber: 0,
+        userData: nil
+    ) {
+        window.mouseEntered(with: event)
+    } else {
+        fatalError("Failed to create mouse-entered event")
+    }
+}
+
+@MainActor
+private func hoverExit(_ window: NotchWindow) {
+    if let event = NSEvent.enterExitEvent(
+        with: .mouseExited,
+        location: .zero,
+        modifierFlags: [],
+        timestamp: ProcessInfo.processInfo.systemUptime,
+        windowNumber: 0,
+        context: nil,
+        eventNumber: 0,
+        trackingNumber: 0,
+        userData: nil
+    ) {
+        window.mouseExited(with: event)
+    } else {
+        fatalError("Failed to create mouse-exited event")
+    }
+}
+
 func notchWindowTests() {
     test("NotchWindowModel starts collapsed") {
         MainActor.assumeIsolated {
@@ -126,5 +214,73 @@ func notchWindowTests() {
         coordinator.sync(for: .collapsed)
         expect(!coordinator.isVisuallyExpanded, "collapsed sync keeps collapsed visuals")
         expectEqual(coordinator.phase, .idle, "phase resets after collapsed sync")
+    }
+
+    test("NotchWindow uses the collapsed notch footprint while collapsed") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let notchRect = currentNotchRect()
+            let frame = panel.frame
+
+            expectEqual(frame.width, notchRect.width, "collapsed width matches notch width")
+            expectEqual(frame.height, notchRect.height, "collapsed height matches notch height")
+            expectEqual(frame.midX, notchRect.midX, "collapsed frame stays centered on notch")
+            expectEqual(frame.maxY, notchRect.maxY, "collapsed frame top stays aligned to notch")
+        }
+    }
+
+    test("NotchWindow hover exit keeps expanded footprint through grace then collapses visually") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let model = notchWindowModel(for: window)
+            let notchRect = currentNotchRect()
+
+            hoverEnter(window)
+            waitForMainQueue(0.4)
+
+            expect(model.isExpanded, "hover enter expands the window")
+            expectEqual(panel.frame.width, 280, "expanded width is applied")
+            expectEqual(panel.frame.height, 320, "expanded height is applied")
+
+            hoverExit(window)
+
+            expect(model.isExpanded, "grace keeps visuals expanded immediately after exit")
+            expectEqual(panel.frame.width, 280, "grace keeps expanded width")
+            expectEqual(panel.frame.height, 320, "grace keeps expanded height")
+
+            waitForMainQueue(0.25)
+
+            expect(!model.isExpanded, "visual collapse starts after grace elapses")
+            expectEqual(panel.frame.width, notchRect.width, "post-grace width collapses to notch width")
+            expectEqual(panel.frame.height, notchRect.height, "post-grace height collapses to notch height")
+        }
+    }
+
+    test("NotchWindow hover re-entry cancels stale grace and collapse completion callbacks") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let model = notchWindowModel(for: window)
+
+            hoverEnter(window)
+            waitForMainQueue(0.4)
+
+            hoverExit(window)
+            waitForMainQueue(0.22)
+            hoverEnter(window)
+            waitForMainQueue(0.3)
+
+            expect(model.isExpanded, "hover re-entry re-expands the window")
+            expectEqual(panel.frame.width, 280, "re-entry restores expanded width")
+            expectEqual(panel.frame.height, 320, "re-entry restores expanded height")
+
+            waitForMainQueue(0.3)
+
+            expect(model.isExpanded, "stale collapse completion cannot run after re-entry")
+            expectEqual(panel.frame.width, 280, "stale completion leaves expanded width intact")
+            expectEqual(panel.frame.height, 320, "stale completion leaves expanded height intact")
+        }
     }
 }

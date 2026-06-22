@@ -14,7 +14,7 @@ public final class NotchWindow: NSObject {
     private let expansionAnimationDuration: TimeInterval = 0.35
     private let collapseGraceDelay: TimeInterval = 0.18
     private let collapseAnimationDuration: TimeInterval = 0.2
-    private var transitionWorkItem: DispatchWorkItem?
+    private var scheduledTransitionToken: UInt = 0
 
     public init(registry: ModuleRegistry, settings: SettingsStore) {
         self.registry = registry
@@ -46,13 +46,12 @@ public final class NotchWindow: NSObject {
             modules: { [weak self] in self?.orderedModules() ?? [] }
         )
         panel.contentView = NSHostingView(rootView: root)
-        position()
         installHoverTracking()
         sync()
     }
 
     public func show() {
-        position()
+        sync()
         for module in orderedModules() {
             module.activate()
         }
@@ -91,13 +90,14 @@ public final class NotchWindow: NSObject {
         registry.ordered(by: settings.orderedEnabledIDs())
     }
 
-    private func position() {
+    private func updateFrame(visuallyExpanded: Bool) {
         let rect = notchRect
+        let size = visuallyExpanded ? CGSize(width: expandedWidth, height: expandedHeight) : rect.size
         let frame = CGRect(
-            x: rect.midX - (expandedWidth / 2),
-            y: rect.maxY - expandedHeight,
-            width: expandedWidth,
-            height: expandedHeight
+            x: rect.midX - (size.width / 2),
+            y: rect.maxY - size.height,
+            width: size.width,
+            height: size.height
         )
         panel.setFrame(frame, display: true)
     }
@@ -122,10 +122,10 @@ public final class NotchWindow: NSObject {
     }
 
     private func sync() {
-        transitionWorkItem?.cancel()
-        transitionWorkItem = nil
+        scheduledTransitionToken &+= 1
         transitionCoordinator.sync(for: machine.state)
         model.isExpanded = transitionCoordinator.isVisuallyExpanded
+        updateFrame(visuallyExpanded: transitionCoordinator.isVisuallyExpanded)
 
         switch machine.state {
         case .expanding:
@@ -158,10 +158,12 @@ public final class NotchWindow: NSObject {
     }
 
     private func scheduleTransition(after delay: TimeInterval, _ block: @escaping @MainActor () -> Void) {
-        let item = DispatchWorkItem { @MainActor in
-            block()
+        let token = scheduledTransitionToken
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.scheduledTransitionToken == token else { return }
+                block()
+            }
         }
-        transitionWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }
 }

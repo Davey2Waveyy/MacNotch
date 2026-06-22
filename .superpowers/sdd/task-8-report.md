@@ -73,3 +73,30 @@ Implemented `NotchWindow` and a placeholder `NotchRootView` under `MacNotchKit`,
 - `swift run MacNotchTests`
   - passed
   - `70 checks, 0 failure(s)`
+
+---
+
+## Task 8 Final Review Fixes (2026-06-22)
+
+### Fix Details
+
+- Updated `Sources/MacNotchKit/Window/NotchWindow.swift`.
+  - The panel now resizes and re-centers around the notch as visual state changes instead of permanently keeping the expanded footprint.
+  - Collapsed state uses the actual notch rect size for both visuals and hit-testing.
+  - Collapse grace keeps the expanded footprint until the grace delay elapses, then switches to the collapsed footprint when visual collapse starts.
+  - Replaced the `DispatchWorkItem` callback path with token-based main-queue scheduling so stale grace and collapse callbacks no-op cleanly after re-entry or other state changes.
+- Updated `Sources/MacNotchKit/UI/NotchRootView.swift`.
+  - The SwiftUI host view now matches the current visual footprint instead of always laying out at expanded size, so the collapsed panel renders inside the same reduced bounds the `NSPanel` uses for hit-testing.
+- Extended `Sources/MacNotchTests/NotchWindowTests.swift`.
+  - Added direct `NotchWindow` regression coverage for collapsed frame sizing.
+  - Added live scheduling coverage for grace-delayed collapse.
+  - Added cancellation coverage proving hover re-entry prevents stale grace and stale collapse-completion callbacks from mutating the window after cancellation.
+
+### Verification Output
+
+- `swift build`
+  - passed
+  - `Build complete! (0.42s)`
+- `swift run MacNotchTests`
+  - passed
+  - `89 checks, 0 failure(s)`

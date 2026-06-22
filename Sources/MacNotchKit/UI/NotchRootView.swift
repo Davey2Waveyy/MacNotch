@@ -33,7 +33,11 @@ public struct NotchRootView: View {
         ZStack(alignment: .top) {
             panelBody
         }
-        .frame(width: expandedWidth, height: expandedHeight, alignment: .top)
+        .frame(
+            width: model.isExpanded ? expandedWidth : collapsedSize.width,
+            height: model.isExpanded ? expandedHeight : collapsedSize.height,
+            alignment: .top
+        )
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: model.isExpanded)
     }
 
