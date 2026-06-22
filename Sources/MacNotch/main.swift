@@ -1,5 +1,9 @@
 import MacNotchKit
 
-MainActor.assumeIsolated {
-    MacNotchApp.run()
+@main
+struct MacNotchMain {
+    @MainActor
+    static func main() {
+        MacNotchApp.run()
+    }
 }
