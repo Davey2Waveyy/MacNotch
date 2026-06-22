@@ -14,19 +14,22 @@ public struct NotchRootView: View {
     private let expandedHeight: CGFloat
     private let collapsedSize: CGSize
     private let modules: () -> [any NotchModule]
+    private let onPanelTap: () -> Void
 
     public init(
         model: NotchWindowModel,
         expandedWidth: CGFloat,
         expandedHeight: CGFloat,
         collapsedSize: CGSize,
-        modules: @escaping () -> [any NotchModule]
+        modules: @escaping () -> [any NotchModule],
+        onPanelTap: @escaping () -> Void = {}
     ) {
         self.model = model
         self.expandedWidth = expandedWidth
         self.expandedHeight = expandedHeight
         self.collapsedSize = collapsedSize
         self.modules = modules
+        self.onPanelTap = onPanelTap
     }
 
     public var body: some View {
@@ -48,6 +51,10 @@ public struct NotchRootView: View {
         let cornerRadius = model.isExpanded ? 20.0 : 12.0
 
         return ZStack(alignment: .top) {
+            chrome(cornerRadius: cornerRadius)
+                .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .onTapGesture(perform: onPanelTap)
+
             HStack(spacing: 6) {
                 ForEach(currentModules, id: \.id) { module in
                     if let collapsed = module.collapsedView() {

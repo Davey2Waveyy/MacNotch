@@ -32,7 +32,8 @@ Granted on first use; nothing is requested up front:
 
 - **Calendar** (EventKit) — prompted the first time the Calendar module refreshes.
 - **Automation: Music / Spotify** (AppleScript) — prompted the first time you use the
-  media controls.
+  media controls. If Music or Spotify is already running, the same Automation prompt
+  can also appear on the first media refresh.
 - Battery/CPU/RAM and the Drop Shelf need no permissions.
 
 Because the app is **ad-hoc signed** for personal use, macOS may re-prompt for these

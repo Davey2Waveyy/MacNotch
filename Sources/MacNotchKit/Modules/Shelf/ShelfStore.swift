@@ -3,8 +3,26 @@ import Foundation
 /// Persisted holding tray for dropped files. Holds *references* (bookmarks), never
 /// copies — dropping a file parks a pointer to it; the original is untouched.
 public final class ShelfStore {
+    public struct Resolution: Equatable, Sendable {
+        public let url: URL
+        public let bookmarkDataIsStale: Bool
+
+        public init(url: URL, bookmarkDataIsStale: Bool) {
+            self.url = url
+            self.bookmarkDataIsStale = bookmarkDataIsStale
+        }
+    }
+
     public private(set) var items: [ShelfItem] = []
     private let url: URL
+    private static let bookmarkCreationOptions: URL.BookmarkCreationOptions = [
+        .withSecurityScope,
+        .securityScopeAllowOnlyReadAccess
+    ]
+    private static let bookmarkResolutionOptions: URL.BookmarkResolutionOptions = [
+        .withSecurityScope,
+        .withoutUI
+    ]
 
     public init(url: URL) {
         self.url = url
@@ -13,7 +31,7 @@ public final class ShelfStore {
 
     public func add(_ fileURL: URL) {
         guard let data = try? fileURL.bookmarkData(
-            options: .minimalBookmark,
+            options: Self.bookmarkCreationOptions,
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         ) else { return }
@@ -34,19 +52,50 @@ public final class ShelfStore {
 
     /// Resolves a bookmark back to its current file URL, or nil if unresolvable.
     public func resolve(_ item: ShelfItem) -> URL? {
+        resolveWithStatus(item)?.url
+    }
+
+    public func resolveWithStatus(_ item: ShelfItem) -> Resolution? {
         var isStale = false
-        return try? URL(
+        guard let resolvedURL = try? URL(
             resolvingBookmarkData: item.bookmark,
-            options: [],
+            options: Self.bookmarkResolutionOptions,
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
-        )
+        ) else { return nil }
+
+        return Resolution(url: resolvedURL, bookmarkDataIsStale: isStale)
+    }
+
+    public func withResolvedURL<T>(
+        for item: ShelfItem,
+        accessSecurityScopedResource: Bool = false,
+        _ body: (Resolution) throws -> T
+    ) rethrows -> T? {
+        guard let resolution = resolveWithStatus(item) else { return nil }
+
+        let didStartAccessing = accessSecurityScopedResource
+            ? resolution.url.startAccessingSecurityScopedResource()
+            : false
+        defer {
+            if didStartAccessing {
+                resolution.url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        return try body(resolution)
     }
 
     /// True when the bookmarked file can no longer be found (moved or deleted).
     public func isStale(_ item: ShelfItem) -> Bool {
-        guard let resolved = resolve(item) else { return true }
-        return !FileManager.default.fileExists(atPath: resolved.path)
+        let resolution = resolveWithStatus(item)
+        let fileExists = resolution.map { FileManager.default.fileExists(atPath: $0.url.path) } ?? false
+        return Self.isStale(resolution: resolution, fileExists: fileExists)
+    }
+
+    public static func isStale(resolution: Resolution?, fileExists: Bool) -> Bool {
+        guard let resolution else { return true }
+        return resolution.bookmarkDataIsStale || !fileExists
     }
 
     private func load() {

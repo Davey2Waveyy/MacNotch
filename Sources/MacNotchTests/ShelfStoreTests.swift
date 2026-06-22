@@ -52,6 +52,18 @@ func shelfStoreTests() {
         expect(store.isStale(store.items[0]), "missing file is stale")
     }
 
+    test("shelf: bookmark stale flag marks an item stale even when the file still exists") {
+        let resolution = ShelfStore.Resolution(
+            url: URL(fileURLWithPath: "/tmp/example.txt"),
+            bookmarkDataIsStale: true
+        )
+
+        expect(
+            ShelfStore.isStale(resolution: resolution, fileExists: true),
+            "bookmarkDataIsStale takes precedence over file existence"
+        )
+    }
+
     test("shelf: out-of-range remove is a safe no-op") {
         let store = ShelfStore(url: tempStoreURL())
         store.add(tempFile("only.txt"))

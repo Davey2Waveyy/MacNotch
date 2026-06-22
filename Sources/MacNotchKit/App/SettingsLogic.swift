@@ -11,4 +11,20 @@ public enum SettingsLogic {
     public static func reorder(_ settings: inout AppSettings, fromOffsets: IndexSet, toOffset: Int) {
         settings.modules.move(fromOffsets: fromOffsets, toOffset: toOffset)
     }
+
+    @discardableResult
+    public static func applyLaunchAtLoginResult(
+        _ settings: inout AppSettings,
+        requested: Bool,
+        operationSucceeded: Bool,
+        actualEnabled: Bool
+    ) -> Bool {
+        if operationSucceeded {
+            settings.launchAtLogin = requested
+            return true
+        }
+
+        settings.launchAtLogin = actualEnabled
+        return false
+    }
 }

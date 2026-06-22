@@ -53,8 +53,9 @@ struct ShelfExpandedView: View {
         }
     }
 
+    @ViewBuilder
     private func chip(_ item: ShelfItem, index: Int) -> some View {
-        HStack(spacing: 4) {
+        let chipBody = HStack(spacing: 4) {
             Image(systemName: "doc.fill")
                 .font(.system(size: 9))
                 .foregroundStyle(.white.opacity(0.7))
@@ -67,9 +68,14 @@ struct ShelfExpandedView: View {
         .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(.white.opacity(0.08)))
         .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).stroke(.white.opacity(0.10)))
-        .draggable(resolve(item) ?? URL(fileURLWithPath: "/"))
         .contextMenu {
             Button("Remove", role: .destructive) { onRemove(index) }
+        }
+
+        if let resolvedURL = resolve(item) {
+            chipBody.draggable(resolvedURL)
+        } else {
+            chipBody
         }
     }
 }

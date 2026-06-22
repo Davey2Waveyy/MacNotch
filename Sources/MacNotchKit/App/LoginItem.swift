@@ -7,15 +7,18 @@ public enum LoginItem {
         SMAppService.mainApp.status == .enabled
     }
 
-    public static func setEnabled(_ on: Bool) {
+    @discardableResult
+    public static func setEnabled(_ on: Bool) -> Bool {
         do {
             if on {
                 try SMAppService.mainApp.register()
             } else {
                 try SMAppService.mainApp.unregister()
             }
+            return true
         } catch {
             NSLog("MacNotch: login item update failed: \(error.localizedDescription)")
+            return false
         }
     }
 }

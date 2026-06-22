@@ -1,6 +1,28 @@
 import AppKit
 import SwiftUI
 
+/// Thin NSView wrapper that reliably owns its own tracking area.
+/// NSHostingView manages tracking areas internally and can clobber externally-added
+/// areas when SwiftUI re-renders, so we wrap it in this container instead.
+@MainActor
+private final class HoverContainerView: NSView {
+    weak var owner: NotchWindow?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(NSTrackingArea(
+            rect: bounds,
+            options: [.mouseEnteredAndExited, .activeAlways],
+            owner: self,
+            userInfo: nil
+        ))
+    }
+
+    override func mouseEntered(with event: NSEvent) { owner?.mouseEntered(with: event) }
+    override func mouseExited(with event: NSEvent) { owner?.mouseExited(with: event) }
+}
+
 @MainActor
 public final class NotchWindow: NSObject {
     private let panel: NSPanel
@@ -16,6 +38,8 @@ public final class NotchWindow: NSObject {
     private let collapseAnimationDuration: TimeInterval = 0.2
     private var scheduledTransitionToken: UInt = 0
     private var activeModules: [any NotchModule] = []
+    private var localClickMonitor: Any?
+    private var globalClickMonitor: Any?
 
     public init(registry: ModuleRegistry, settings: SettingsStore) {
         self.registry = registry
@@ -44,14 +68,17 @@ public final class NotchWindow: NSObject {
             expandedWidth: expandedWidth,
             expandedHeight: expandedHeight,
             collapsedSize: notchRect.size,
-            modules: { [weak self] in self?.orderedModules() ?? [] }
+            modules: { [weak self] in self?.orderedModules() ?? [] },
+            onPanelTap: { [weak self] in self?.toggle() }
         )
         panel.contentView = NSHostingView(rootView: root)
         installHoverTracking()
+        installClickMonitorsIfNeeded()
         sync()
     }
 
     public func show() {
+        installClickMonitorsIfNeeded()
         sync()
         activateModulesIfNeeded()
         panel.orderFrontRegardless()
@@ -60,6 +87,7 @@ public final class NotchWindow: NSObject {
     public func tearDown() {
         scheduledTransitionToken &+= 1
         deactivateModulesIfNeeded()
+        removeClickMonitors()
         panel.orderOut(nil)
     }
 
@@ -150,6 +178,62 @@ public final class NotchWindow: NSObject {
             userInfo: nil
         )
         view.addTrackingArea(area)
+    }
+
+    private func installClickMonitorsIfNeeded() {
+        let eventMask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+
+        if localClickMonitor == nil {
+            localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self] event in
+                Task { @MainActor [weak self] in
+                    self?.handleMonitoredClick(event)
+                }
+                return event
+            }
+        }
+
+        if globalClickMonitor == nil {
+            globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: eventMask) { [weak self] event in
+                Task { @MainActor [weak self] in
+                    self?.handleMonitoredClick(event)
+                }
+            }
+        }
+    }
+
+    private func removeClickMonitors() {
+        if let localClickMonitor {
+            NSEvent.removeMonitor(localClickMonitor)
+            self.localClickMonitor = nil
+        }
+
+        if let globalClickMonitor {
+            NSEvent.removeMonitor(globalClickMonitor)
+            self.globalClickMonitor = nil
+        }
+    }
+
+    private func handleMonitoredClick(_ event: NSEvent) {
+        guard panel.isVisible else { return }
+
+        let screenPoint = screenPoint(for: event)
+        guard NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+            at: screenPoint,
+            panelFrame: panel.frame,
+            state: machine.state,
+            phase: transitionCoordinator.phase
+        ) else { return }
+
+        guard machine.forceCollapse() else { return }
+        transitionCoordinator.requestImmediateCollapse()
+        sync()
+    }
+
+    private func screenPoint(for event: NSEvent) -> CGPoint {
+        if let window = event.window {
+            return window.convertToScreen(CGRect(origin: event.locationInWindow, size: .zero)).origin
+        }
+        return event.locationInWindow
     }
 
     private func applyHover(_ inside: Bool) {

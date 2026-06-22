@@ -16,10 +16,6 @@ final class SettingsWindowController {
 
     func show() {
         if window == nil {
-            var initial = settings.settings
-            initial.launchAtLogin = LoginItem.isEnabled() // reflect the real system state
-
-            let view = SettingsView(settings: initial, titles: titles, onChange: onChange)
             let window = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 360, height: 320),
                 styleMask: [.titled, .closable],
@@ -27,12 +23,16 @@ final class SettingsWindowController {
                 defer: false
             )
             window.title = "MacNotch Settings"
-            window.contentView = NSHostingView(rootView: view)
             window.isReleasedWhenClosed = false
             window.center()
             self.window = window
         }
 
+        var initial = settings.settings
+        initial.launchAtLogin = LoginItem.isEnabled()
+
+        let view = SettingsView(settings: initial, titles: titles, onChange: onChange)
+        window?.contentView = NSHostingView(rootView: view)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }

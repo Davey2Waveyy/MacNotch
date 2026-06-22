@@ -111,6 +111,58 @@ private func hoverExit(_ window: NotchWindow) {
 }
 
 func notchWindowTests() {
+    test("outside-click policy ignores clicks inside the panel and collapses active outside states") {
+        let frame = CGRect(x: 100, y: 100, width: 280, height: 320)
+        let inside = CGPoint(x: 140, y: 140)
+        let outside = CGPoint(x: 40, y: 40)
+
+        expect(
+            !NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+                at: inside,
+                panelFrame: frame,
+                state: .expanded,
+                phase: .idle
+            ),
+            "inside clicks do not collapse"
+        )
+        expect(
+            !NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+                at: outside,
+                panelFrame: frame,
+                state: .collapsed,
+                phase: .idle
+            ),
+            "collapsed state ignores outside clicks"
+        )
+        expect(
+            NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+                at: outside,
+                panelFrame: frame,
+                state: .expanded,
+                phase: .idle
+            ),
+            "expanded state collapses on outside click"
+        )
+        expect(
+            NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+                at: outside,
+                panelFrame: frame,
+                state: .collapsing,
+                phase: .collapseGrace
+            ),
+            "collapse grace accepts outside click"
+        )
+        expect(
+            NotchWindowInputPolicy.shouldCollapseForOutsideClick(
+                at: outside,
+                panelFrame: frame,
+                state: .collapsing,
+                phase: .collapseAnimation
+            ),
+            "collapse animation accepts outside click"
+        )
+    }
+
     test("NotchWindowModel starts collapsed") {
         MainActor.assumeIsolated {
             let model = NotchWindowModel()

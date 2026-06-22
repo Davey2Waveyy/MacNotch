@@ -3,11 +3,21 @@ import SwiftUI
 struct SettingsView: View {
     @State private var settings: AppSettings
     private let titles: [String: String]
+    private let loginItemIsEnabled: () -> Bool
+    private let setLoginItemEnabled: (Bool) -> Bool
     private let onChange: (AppSettings) -> Void
 
-    init(settings: AppSettings, titles: [String: String], onChange: @escaping (AppSettings) -> Void) {
+    init(
+        settings: AppSettings,
+        titles: [String: String],
+        loginItemIsEnabled: @escaping () -> Bool = LoginItem.isEnabled,
+        setLoginItemEnabled: @escaping (Bool) -> Bool = LoginItem.setEnabled,
+        onChange: @escaping (AppSettings) -> Void
+    ) {
         _settings = State(initialValue: settings)
         self.titles = titles
+        self.loginItemIsEnabled = loginItemIsEnabled
+        self.setLoginItemEnabled = setLoginItemEnabled
         self.onChange = onChange
     }
 
@@ -30,8 +40,14 @@ struct SettingsView: View {
                 Toggle("Launch at login", isOn: Binding(
                     get: { settings.launchAtLogin },
                     set: { isOn in
-                        settings.launchAtLogin = isOn
-                        LoginItem.setEnabled(isOn)
+                        let operationSucceeded = setLoginItemEnabled(isOn)
+                        let shouldPersist = SettingsLogic.applyLaunchAtLoginResult(
+                            &settings,
+                            requested: isOn,
+                            operationSucceeded: operationSucceeded,
+                            actualEnabled: loginItemIsEnabled()
+                        )
+                        guard shouldPersist else { return }
                         onChange(settings)
                     }
                 ))

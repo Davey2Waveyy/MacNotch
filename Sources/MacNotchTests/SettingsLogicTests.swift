@@ -23,4 +23,32 @@ func settingsLogicTests() {
         SettingsLogic.reorder(&settings, fromOffsets: IndexSet(integer: 0), toOffset: settings.modules.count)
         expect(settings.modules.last?.id == firstID, "first module is now last")
     }
+
+    test("settings: launch-at-login persists only after a successful login-item update") {
+        var settings = AppSettings.defaults
+        let shouldPersist = SettingsLogic.applyLaunchAtLoginResult(
+            &settings,
+            requested: true,
+            operationSucceeded: true,
+            actualEnabled: false
+        )
+
+        expect(shouldPersist, "successful login-item update should persist")
+        expect(settings.launchAtLogin, "launch-at-login follows the requested value on success")
+    }
+
+    test("settings: launch-at-login reverts to the real login-item state on failure") {
+        var settings = AppSettings.defaults
+        settings.launchAtLogin = false
+
+        let shouldPersist = SettingsLogic.applyLaunchAtLoginResult(
+            &settings,
+            requested: true,
+            operationSucceeded: false,
+            actualEnabled: false
+        )
+
+        expect(!shouldPersist, "failed login-item update does not persist")
+        expect(!settings.launchAtLogin, "launch-at-login reverts to the actual system state")
+    }
 }
