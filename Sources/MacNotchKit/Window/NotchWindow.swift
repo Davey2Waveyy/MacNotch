@@ -6,6 +6,7 @@ public final class NotchWindow: NSObject {
     private let panel: NSPanel
     private let model = NotchWindowModel()
     private let machine = NotchStateMachine()
+    private let transitionCoordinator = NotchWindowTransitionCoordinator()
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let expandedWidth: CGFloat = 280
@@ -60,6 +61,9 @@ public final class NotchWindow: NSObject {
 
     public func toggle() {
         guard machine.clicked() else { return }
+        if machine.state == .collapsing {
+            transitionCoordinator.requestImmediateCollapse()
+        }
         sync()
     }
 
@@ -111,13 +115,17 @@ public final class NotchWindow: NSObject {
 
     private func applyHover(_ inside: Bool) {
         guard machine.hoverChanged(inside) else { return }
+        if !inside, machine.state == .collapsing {
+            transitionCoordinator.requestGracefulCollapse()
+        }
         sync()
     }
 
     private func sync() {
         transitionWorkItem?.cancel()
         transitionWorkItem = nil
-        model.isExpanded = machine.isExpanded
+        transitionCoordinator.sync(for: machine.state)
+        model.isExpanded = transitionCoordinator.isVisuallyExpanded
 
         switch machine.state {
         case .expanding:
@@ -126,9 +134,23 @@ public final class NotchWindow: NSObject {
                 self.sync()
             }
         case .collapsing:
-            scheduleTransition(after: collapseGraceDelay + collapseAnimationDuration) { [weak self] in
-                guard let self, self.machine.completeCollapse() else { return }
-                self.sync()
+            switch transitionCoordinator.phase {
+            case .collapseGrace:
+                scheduleTransition(after: collapseGraceDelay) { [weak self] in
+                    guard let self, self.transitionCoordinator.advanceCollapseGrace(for: self.machine.state) else { return }
+                    self.sync()
+                }
+            case .collapseAnimation:
+                scheduleTransition(after: collapseAnimationDuration) { [weak self] in
+                    guard
+                        let self,
+                        self.transitionCoordinator.advanceCollapseAnimation(for: self.machine.state),
+                        self.machine.completeCollapse()
+                    else { return }
+                    self.sync()
+                }
+            case .idle:
+                break
             }
         case .collapsed, .expanded:
             break

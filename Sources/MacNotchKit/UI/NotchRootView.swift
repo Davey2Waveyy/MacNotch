@@ -37,11 +37,24 @@ public struct NotchRootView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: model.isExpanded)
     }
 
-    @ViewBuilder
     private var panelBody: some View {
         let currentModules = modules()
+        let width = model.isExpanded ? expandedWidth : collapsedSize.width
+        let height = model.isExpanded ? expandedHeight : collapsedSize.height
+        let cornerRadius = model.isExpanded ? 20.0 : 12.0
 
-        if model.isExpanded {
+        return ZStack(alignment: .top) {
+            HStack(spacing: 6) {
+                ForEach(Array(currentModules.enumerated()), id: \.offset) { _, module in
+                    if let collapsed = module.collapsedView() {
+                        collapsed
+                    }
+                }
+            }
+            .frame(width: collapsedSize.width, height: collapsedSize.height)
+            .opacity(model.isExpanded ? 0 : 1)
+            .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
+
             VStack(spacing: 10) {
                 if currentModules.isEmpty {
                     Color.clear
@@ -54,20 +67,12 @@ public struct NotchRootView: View {
             }
             .padding(14)
             .frame(width: expandedWidth, height: expandedHeight, alignment: .top)
-            .background(chrome(cornerRadius: 20))
-            .transition(.opacity)
-        } else {
-            HStack(spacing: 6) {
-                ForEach(Array(currentModules.enumerated()), id: \.offset) { _, module in
-                    if let collapsed = module.collapsedView() {
-                        collapsed
-                    }
-                }
-            }
-            .frame(width: collapsedSize.width, height: collapsedSize.height)
-            .background(chrome(cornerRadius: 12))
-            .transition(.opacity)
+            .opacity(model.isExpanded ? 1 : 0)
+            .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
         }
+        .frame(width: width, height: height, alignment: .top)
+        .background(chrome(cornerRadius: cornerRadius))
+        .clipped()
     }
 
     private func chrome(cornerRadius: CGFloat) -> some View {

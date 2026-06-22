@@ -83,4 +83,48 @@ func notchWindowTests() {
             try? FileManager.default.removeItem(at: tempURL)
         }
     }
+
+    test("collapse grace keeps visual state expanded until grace elapses") {
+        let coordinator = NotchWindowTransitionCoordinator()
+
+        coordinator.sync(for: .expanded)
+        coordinator.requestGracefulCollapse()
+        coordinator.sync(for: .collapsing)
+
+        expect(coordinator.isVisuallyExpanded, "visual state stays expanded during grace")
+        expectEqual(coordinator.phase, .collapseGrace, "grace phase is active")
+
+        expect(coordinator.advanceCollapseGrace(for: .collapsing), "grace advances into animation")
+        expect(!coordinator.isVisuallyExpanded, "visual collapse starts after grace")
+        expectEqual(coordinator.phase, .collapseAnimation, "collapse animation phase becomes active")
+    }
+
+    test("collapse grace is canceled by hover re-entry") {
+        let coordinator = NotchWindowTransitionCoordinator()
+
+        coordinator.sync(for: .expanded)
+        coordinator.requestGracefulCollapse()
+        coordinator.sync(for: .collapsing)
+        coordinator.sync(for: .expanding)
+
+        expect(coordinator.isVisuallyExpanded, "visual state remains expanded after re-entry")
+        expectEqual(coordinator.phase, .idle, "pending collapse is canceled")
+        expect(!coordinator.advanceCollapseGrace(for: .expanding), "stale grace callback has no effect")
+    }
+
+    test("immediate collapse and later sync remain sane") {
+        let coordinator = NotchWindowTransitionCoordinator()
+
+        coordinator.sync(for: .expanded)
+        coordinator.requestImmediateCollapse()
+        coordinator.sync(for: .collapsing)
+
+        expect(!coordinator.isVisuallyExpanded, "immediate collapse starts visual collapse")
+        expectEqual(coordinator.phase, .collapseAnimation, "animation phase is active")
+        expect(coordinator.advanceCollapseAnimation(for: .collapsing), "animation completion is allowed")
+
+        coordinator.sync(for: .collapsed)
+        expect(!coordinator.isVisuallyExpanded, "collapsed sync keeps collapsed visuals")
+        expectEqual(coordinator.phase, .idle, "phase resets after collapsed sync")
+    }
 }
