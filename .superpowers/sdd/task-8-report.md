@@ -127,3 +127,26 @@ Implemented `NotchWindow` and a placeholder `NotchRootView` under `MacNotchKit`,
 - `swift run MacNotchTests`
   - passed
   - `100 checks, 0 failure(s)`
+
+---
+
+## Task 8 Collapse-Animation Toggle Edge Fix (2026-06-22)
+
+### Fix Details
+
+- Updated `Sources/MacNotchKit/Window/NotchWindow.swift`.
+  - `toggle()` now reopens when the panel is already visually collapsed in `collapseAnimation`, even if `NotchStateMachine.state` is still `.collapsing`.
+  - The reopen path is gated on the visible state (`phase == .collapseAnimation` and `isVisuallyExpanded == false`), so visually expanded states, including collapse grace, still close immediately.
+  - Existing token-based scheduled transition invalidation remains in place, so stale collapse-completion callbacks no-op after reopening.
+- Extended `Sources/MacNotchTests/NotchWindowTests.swift`.
+  - Added a regression covering menu toggle during the post-grace / pre-complete collapse-animation window.
+  - The regression asserts immediate reopen and proves the stale scheduled collapse completion cannot close the window afterward.
+
+### Verification Output
+
+- `swift build`
+  - passed
+  - `Build complete! (0.33s)`
+- `swift run MacNotchTests`
+  - passed
+  - `118 checks, 0 failure(s)`
