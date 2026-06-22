@@ -9,5 +9,6 @@ settingsStoreTests()
 moduleRegistryTests()
 screenLocatorTests()
 systemSampleTests()
+mediaControllerTests()
 
 exit(Int32(TestRunner.shared.runAll()))

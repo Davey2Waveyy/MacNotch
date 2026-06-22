@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerModules() {
+        registry.register(MediaModule())
         registry.register(SystemModule())
     }
 }
