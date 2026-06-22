@@ -1,0 +1,11 @@
+import AppKit
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var menuBar: MenuBarController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        menuBar = MenuBarController()
+        // NotchWindow is wired in Task 8.
+    }
+}
