@@ -38,6 +38,11 @@ final class ShelfModule: NotchModule {
         ))
     }
 
+    func acceptDrop(_ urls: [URL]) {
+        urls.forEach { store.add($0) }
+        state.items = store.items
+    }
+
     func activate() {
         state.items = store.items
     }

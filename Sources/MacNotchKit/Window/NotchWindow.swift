@@ -7,6 +7,7 @@ import SwiftUI
 @MainActor
 private final class HoverContainerView: NSView {
     weak var owner: NotchWindow?
+    var onDropped: (([URL]) -> Void)?
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -21,6 +22,38 @@ private final class HoverContainerView: NSView {
 
     override func mouseEntered(with event: NSEvent) { owner?.mouseEntered(with: event) }
     override func mouseExited(with event: NSEvent) { owner?.mouseExited(with: event) }
+
+    // MARK: - NSDraggingDestination
+    // NSTrackingArea events are suppressed by the OS during a drag session, so we
+    // register as a drag destination to detect drags entering the collapsed notch.
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        owner?.applyDragHover(true)
+        return .copy
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        .copy
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        // When the drag moves to a child (e.g. SwiftUI drop zone), AppKit calls
+        // draggingExited on us even though the drag is still within our bounds.
+        // Only collapse if the drag has truly left the panel.
+        guard let sender else { owner?.applyDragHover(false); return }
+        let localPoint = convert(sender.draggingLocation, from: nil)
+        if !bounds.contains(localPoint) {
+            owner?.applyDragHover(false)
+        }
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let urls = sender.draggingPasteboard
+            .readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])?
+            .compactMap { $0 as? URL } ?? []
+        onDropped?(urls)
+        return !urls.isEmpty
+    }
 }
 
 @MainActor
@@ -71,8 +104,14 @@ public final class NotchWindow: NSObject {
             modules: { [weak self] in self?.orderedModules() ?? [] },
             onPanelTap: { [weak self] in self?.toggle() }
         )
-        panel.contentView = NSHostingView(rootView: root)
-        installHoverTracking()
+        let hostingView = NSHostingView(rootView: root)
+        let container = HoverContainerView()
+        container.owner = self
+        container.onDropped = { [weak self] urls in self?.handleExternalDrop(urls) }
+        container.registerForDraggedTypes([.fileURL])
+        hostingView.autoresizingMask = [.width, .height]
+        container.addSubview(hostingView)
+        panel.contentView = container
         installClickMonitorsIfNeeded()
         sync()
     }
@@ -169,17 +208,6 @@ public final class NotchWindow: NSObject {
         panel.setFrame(frame, display: true)
     }
 
-    private func installHoverTracking() {
-        guard let view = panel.contentView else { return }
-        let area = NSTrackingArea(
-            rect: view.bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-            owner: self,
-            userInfo: nil
-        )
-        view.addTrackingArea(area)
-    }
-
     private func installClickMonitorsIfNeeded() {
         let eventMask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
 
@@ -242,6 +270,14 @@ public final class NotchWindow: NSObject {
             transitionCoordinator.requestGracefulCollapse()
         }
         sync()
+    }
+
+    fileprivate func applyDragHover(_ inside: Bool) {
+        applyHover(inside)
+    }
+
+    private func handleExternalDrop(_ urls: [URL]) {
+        (activeModules.first { $0.id == "shelf" } as? ShelfModule)?.acceptDrop(urls)
     }
 
     private func sync() {
