@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func registerModules() {
         registry.register(MediaModule())
+        registry.register(CalendarModule())
         registry.register(SystemModule())
     }
 }

@@ -10,5 +10,6 @@ moduleRegistryTests()
 screenLocatorTests()
 systemSampleTests()
 mediaControllerTests()
+calendarFormatTests()
 
 exit(Int32(TestRunner.shared.runAll()))
