@@ -8,5 +8,6 @@ notchWindowTests()
 settingsStoreTests()
 moduleRegistryTests()
 screenLocatorTests()
+systemSampleTests()
 
 exit(Int32(TestRunner.shared.runAll()))

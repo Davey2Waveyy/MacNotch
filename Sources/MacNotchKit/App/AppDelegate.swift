@@ -24,6 +24,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerModules() {
-        // Tasks 9-12 register modules here.
+        registry.register(SystemModule())
     }
 }
