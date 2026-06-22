@@ -11,5 +11,6 @@ screenLocatorTests()
 systemSampleTests()
 mediaControllerTests()
 calendarFormatTests()
+shelfStoreTests()
 
 exit(Int32(TestRunner.shared.runAll()))

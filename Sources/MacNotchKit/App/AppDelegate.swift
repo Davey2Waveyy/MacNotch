@@ -31,5 +31,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(MediaModule())
         registry.register(CalendarModule())
         registry.register(SystemModule())
+        registry.register(ShelfModule())
     }
 }
