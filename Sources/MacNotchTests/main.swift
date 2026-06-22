@@ -6,5 +6,6 @@ macNotchAppTests()
 notchStateMachineTests()
 settingsStoreTests()
 moduleRegistryTests()
+screenLocatorTests()
 
 exit(Int32(TestRunner.shared.runAll()))
