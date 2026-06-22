@@ -14,5 +14,6 @@ calendarFormatTests()
 calendarModuleTests()
 shelfStoreTests()
 settingsLogicTests()
+codeModuleCoreTests()
 
 exit(Int32(TestRunner.shared.runAll()))
