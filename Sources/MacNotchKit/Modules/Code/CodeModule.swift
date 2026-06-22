@@ -31,6 +31,19 @@ final class CodeModule: NotchModule {
         ))
     }
 
+    func dashboardTile() -> AnyView? {
+        AnyView(CodeDashboardBridge(
+            box: state,
+            onAction: { [weak self] index, action in self?.perform(action, at: index) },
+            onRemove: { [weak self] index in self?.remove(at: index) },
+            onDrop: { [weak self] urls in self?.pin(urls) }
+        ))
+    }
+
+    func wideBarView() -> AnyView? {
+        AnyView(CodeWideBarBridge(box: state))
+    }
+
     func activate() {
         startTimer()
         Task { @MainActor in await refresh() }
@@ -93,5 +106,29 @@ private struct CodeBridge: View {
             onRemove: onRemove,
             onDrop: onDrop
         )
+    }
+}
+
+private struct CodeDashboardBridge: View {
+    @ObservedObject var box: CodeModule.StateBox
+    let onAction: (Int, CodeAction) -> Void
+    let onRemove: (Int) -> Void
+    let onDrop: ([URL]) -> Void
+
+    var body: some View {
+        CodeDashboardTile(
+            projects: box.projects,
+            onAction: onAction,
+            onRemove: onRemove,
+            onDrop: onDrop
+        )
+    }
+}
+
+private struct CodeWideBarBridge: View {
+    @ObservedObject var box: CodeModule.StateBox
+
+    var body: some View {
+        CodeWideBar(projects: box.projects)
     }
 }

@@ -30,4 +30,11 @@ public struct NowPlaying: Equatable, Sendable {
         guard let elapsed, let duration, duration > 0 else { return nil }
         return min(max(elapsed / duration, 0), 1)
     }
+
+    /// One-line "Title — Artist" summary for the wide-bar strip. Drops the
+    /// dash when the artist is empty so it never reads "Title — ".
+    public var marquee: String {
+        let trimmedArtist = artist.trimmingCharacters(in: .whitespaces)
+        return trimmedArtist.isEmpty ? title : "\(title) — \(trimmedArtist)"
+    }
 }

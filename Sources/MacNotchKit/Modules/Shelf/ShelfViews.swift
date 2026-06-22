@@ -79,3 +79,81 @@ struct ShelfExpandedView: View {
         }
     }
 }
+
+/// Drop-shelf widget for the dashboard layout (same drop target, tile framing).
+struct ShelfDashboardTile: View {
+    let items: [ShelfItem]
+    let onDrop: ([URL]) -> Void
+    let onRemove: (Int) -> Void
+    let resolve: (ShelfItem) -> URL?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TileHeader(title: "Drop Shelf", systemImage: "tray.full")
+            Spacer(minLength: 0)
+            if items.isEmpty {
+                VStack(spacing: 4) {
+                    Image(systemName: "arrow.down.doc")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.white.opacity(0.35))
+                    Text("Drop files here")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        ForEach(items.indices, id: \.self) { index in
+                            chip(items[index], index: index)
+                        }
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .contentShape(Rectangle())
+        .dropDestination(for: URL.self) { urls, _ in
+            onDrop(urls)
+            return true
+        }
+    }
+
+    @ViewBuilder
+    private func chip(_ item: ShelfItem, index: Int) -> some View {
+        let chipBody = HStack(spacing: 4) {
+            Image(systemName: "doc.fill")
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.7))
+            Text(item.name)
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(.white.opacity(0.08)))
+        .contextMenu {
+            Button("Remove", role: .destructive) { onRemove(index) }
+        }
+
+        if let resolvedURL = resolve(item) {
+            chipBody.draggable(resolvedURL)
+        } else {
+            chipBody
+        }
+    }
+}
+
+/// Item-count summary for the wide bar.
+struct ShelfWideBar: View {
+    let count: Int
+
+    var body: some View {
+        WideBarItem(systemImage: "tray.full",
+                    text: count == 0 ? "Shelf empty" : "\(count) file\(count == 1 ? "" : "s")")
+    }
+}

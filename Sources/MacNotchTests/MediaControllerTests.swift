@@ -98,4 +98,16 @@ func mediaControllerTests() {
                             isPlaying: true, elapsed: 130, duration: 120)
         expectEqual(np.progress, 1, "elapsed beyond duration clamps to one")
     }
+
+    test("media: marquee joins title and artist") {
+        let np = NowPlaying(title: "Song", artist: "Band", app: "Music",
+                            isPlaying: true, elapsed: nil, duration: nil)
+        expectEqual(np.marquee, "Song — Band", "title and artist joined")
+    }
+
+    test("media: marquee drops the dash when artist is blank") {
+        let np = NowPlaying(title: "Podcast", artist: "  ", app: "Music",
+                            isPlaying: true, elapsed: nil, duration: nil)
+        expectEqual(np.marquee, "Podcast", "no trailing dash for blank artist")
+    }
 }

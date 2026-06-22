@@ -27,6 +27,14 @@ final class SystemModule: NotchModule {
         AnyView(SystemModuleBridge(box: state))
     }
 
+    func dashboardTile() -> AnyView? {
+        AnyView(SystemDashboardBridge(box: state))
+    }
+
+    func wideBarView() -> AnyView? {
+        AnyView(SystemWideBarBridge(box: state))
+    }
+
     func activate() {
         refreshTimer()
         Task { @MainActor in
@@ -59,5 +67,21 @@ private struct SystemModuleBridge: View {
 
     var body: some View {
         SystemExpandedView(sample: box.sample)
+    }
+}
+
+private struct SystemDashboardBridge: View {
+    @ObservedObject var box: SystemModule.StateBox
+
+    var body: some View {
+        SystemDashboardTile(sample: box.sample)
+    }
+}
+
+private struct SystemWideBarBridge: View {
+    @ObservedObject var box: SystemModule.StateBox
+
+    var body: some View {
+        SystemWideBar(sample: box.sample)
     }
 }

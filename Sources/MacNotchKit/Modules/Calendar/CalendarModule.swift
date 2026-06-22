@@ -25,6 +25,14 @@ final class CalendarModule: NotchModule {
         AnyView(CalendarBridge(box: state, onGrantAccess: openCalendarSettings))
     }
 
+    func dashboardTile() -> AnyView? {
+        AnyView(CalendarDashboardBridge(box: state, onGrantAccess: openCalendarSettings))
+    }
+
+    func wideBarView() -> AnyView? {
+        AnyView(CalendarWideBarBridge(box: state))
+    }
+
     func activate() {
         refreshCoordinator.activate { [weak self] in
             Task { @MainActor [weak self] in await self?.refresh() }
@@ -73,5 +81,24 @@ private struct CalendarBridge: View {
         CalendarExpandedView(events: box.events,
                              accessDenied: box.accessDenied,
                              onGrantAccess: onGrantAccess)
+    }
+}
+
+private struct CalendarDashboardBridge: View {
+    @ObservedObject var box: CalendarModule.StateBox
+    let onGrantAccess: () -> Void
+
+    var body: some View {
+        CalendarDashboardTile(events: box.events,
+                              accessDenied: box.accessDenied,
+                              onGrantAccess: onGrantAccess)
+    }
+}
+
+private struct CalendarWideBarBridge: View {
+    @ObservedObject var box: CalendarModule.StateBox
+
+    var body: some View {
+        CalendarWideBar(events: box.events, accessDenied: box.accessDenied)
     }
 }

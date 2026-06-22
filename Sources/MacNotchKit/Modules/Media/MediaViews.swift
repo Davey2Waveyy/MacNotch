@@ -79,3 +79,91 @@ struct MediaExpandedView: View {
         .buttonStyle(.plain)
     }
 }
+
+/// Now-playing widget for the dashboard layout: artwork, track, transport.
+struct MediaDashboardTile: View {
+    let np: NowPlaying?
+    let onPrevious: () -> Void
+    let onPlayPause: () -> Void
+    let onNext: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            TileHeader(title: "Now Playing", systemImage: "music.note")
+            Spacer(minLength: 0)
+            if let np {
+                HStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 1, green: 0.42, blue: 0.62),
+                                         Color(red: 0.65, green: 0.42, blue: 1)],
+                                startPoint: .topLeading, endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                        .overlay(Image(systemName: "music.note").foregroundStyle(.white.opacity(0.85)))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(np.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(np.artist)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 20) {
+                    control("backward.fill", action: onPrevious)
+                    control(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
+                    control("forward.fill", action: onNext)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
+            } else {
+                Text("Nothing playing")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func control(_ systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13))
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Inline now-playing summary with a play/pause toggle for the wide bar.
+struct MediaWideBar: View {
+    let np: NowPlaying?
+    let onPlayPause: () -> Void
+
+    var body: some View {
+        if let np {
+            HStack(spacing: 8) {
+                Button(action: onPlayPause) {
+                    Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                Text(np.marquee)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+        }
+    }
+}

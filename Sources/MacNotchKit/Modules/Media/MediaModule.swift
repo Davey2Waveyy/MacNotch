@@ -29,6 +29,18 @@ final class MediaModule: NotchModule {
         })
     }
 
+    func dashboardTile() -> AnyView? {
+        AnyView(MediaDashboardBridge(box: state, controller: controller) { [weak self] in
+            Task { @MainActor [weak self] in await self?.refresh() }
+        })
+    }
+
+    func wideBarView() -> AnyView? {
+        AnyView(MediaWideBarBridge(box: state, controller: controller) { [weak self] in
+            Task { @MainActor [weak self] in await self?.refresh() }
+        })
+    }
+
     func activate() {
         startTimer()
         Task { @MainActor in await refresh() }
@@ -81,5 +93,42 @@ private struct MediaExpandedBridge: View {
                 onAction()
             }
         )
+    }
+}
+
+private struct MediaDashboardBridge: View {
+    @ObservedObject var box: MediaModule.StateBox
+    let controller: MediaController
+    let onAction: () -> Void
+
+    var body: some View {
+        MediaDashboardTile(
+            np: box.np,
+            onPrevious: {
+                (box.activeSource ?? controller.active()?.source)?.previous()
+                onAction()
+            },
+            onPlayPause: {
+                (box.activeSource ?? controller.active()?.source)?.playPause()
+                onAction()
+            },
+            onNext: {
+                (box.activeSource ?? controller.active()?.source)?.next()
+                onAction()
+            }
+        )
+    }
+}
+
+private struct MediaWideBarBridge: View {
+    @ObservedObject var box: MediaModule.StateBox
+    let controller: MediaController
+    let onAction: () -> Void
+
+    var body: some View {
+        MediaWideBar(np: box.np) {
+            (box.activeSource ?? controller.active()?.source)?.playPause()
+            onAction()
+        }
     }
 }
