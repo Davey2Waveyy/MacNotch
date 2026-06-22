@@ -351,67 +351,72 @@ git commit -m "Add .app packaging script with ad-hoc signing"
 ### Task 3: `NotchStateMachine` (pure logic, TDD)
 
 **Files:**
-- Create: `Sources/MacNotch/Window/NotchStateMachine.swift`
-- Test: `Tests/MacNotchTests/NotchStateMachineTests.swift`
+- Create: `Sources/MacNotchKit/Window/NotchStateMachine.swift`
+- Create: `Sources/MacNotchTests/NotchStateMachineTests.swift`
+- Modify: `Sources/MacNotchTests/main.swift` (register the new tests)
 
 **Interfaces:**
 - Produces:
-  - `enum NotchState { case collapsed, expanded }`
+  - `enum NotchState { case collapsed, expanded }` (no associated values → implicitly `Equatable`, so `expectEqual` works on it)
   - `final class NotchStateMachine` with `var state: NotchState` (default `.collapsed`), `var hoverToExpand: Bool` (default `true`), and mutating methods returning `Bool` (whether state changed): `hoverChanged(_ inside: Bool) -> Bool`, `clicked() -> Bool`, `mouseExitedPanel() -> Bool`, `clickedOutside() -> Bool`.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Write the failing tests (harness style)**
 
-`Tests/MacNotchTests/NotchStateMachineTests.swift`:
+`Sources/MacNotchTests/NotchStateMachineTests.swift`:
 
 ```swift
-import XCTest
-@testable import MacNotch
+import MacNotchKit
 
-final class NotchStateMachineTests: XCTestCase {
-    func testHoverEnterExpandsWhenEnabled() {
+func notchStateMachineTests() {
+    test("hover enter expands when enabled") {
         let sm = NotchStateMachine()
-        XCTAssertTrue(sm.hoverChanged(true))
-        XCTAssertEqual(sm.state, .expanded)
+        expect(sm.hoverChanged(true), "hover returns changed")
+        expectEqual(sm.state, .expanded, "state")
     }
-
-    func testHoverEnterDoesNothingWhenDisabled() {
+    test("hover enter does nothing when disabled") {
         let sm = NotchStateMachine()
         sm.hoverToExpand = false
-        XCTAssertFalse(sm.hoverChanged(true))
-        XCTAssertEqual(sm.state, .collapsed)
+        expect(!sm.hoverChanged(true), "hover returns no change")
+        expectEqual(sm.state, .collapsed, "state")
     }
-
-    func testClickTogglesBothWays() {
+    test("click toggles both ways") {
         let sm = NotchStateMachine()
-        XCTAssertTrue(sm.clicked()); XCTAssertEqual(sm.state, .expanded)
-        XCTAssertTrue(sm.clicked()); XCTAssertEqual(sm.state, .collapsed)
+        expect(sm.clicked(), "first click changed"); expectEqual(sm.state, .expanded, "expanded")
+        expect(sm.clicked(), "second click changed"); expectEqual(sm.state, .collapsed, "collapsed")
     }
-
-    func testMouseExitCollapses() {
+    test("mouse exit collapses") {
         let sm = NotchStateMachine()
-        _ = sm.clicked() // expanded
-        XCTAssertTrue(sm.mouseExitedPanel())
-        XCTAssertEqual(sm.state, .collapsed)
-    }
-
-    func testClickedOutsideCollapsesOnlyWhenExpanded() {
-        let sm = NotchStateMachine()
-        XCTAssertFalse(sm.clickedOutside()) // already collapsed → no change
         _ = sm.clicked()
-        XCTAssertTrue(sm.clickedOutside())
-        XCTAssertEqual(sm.state, .collapsed)
+        expect(sm.mouseExitedPanel(), "exit changed")
+        expectEqual(sm.state, .collapsed, "state")
+    }
+    test("clicked outside collapses only when expanded") {
+        let sm = NotchStateMachine()
+        expect(!sm.clickedOutside(), "no change when collapsed")
+        _ = sm.clicked()
+        expect(sm.clickedOutside(), "collapses when expanded")
+        expectEqual(sm.state, .collapsed, "state")
     }
 }
 ```
 
+Then register it in `Sources/MacNotchTests/main.swift` — add the call below `sanityTests()` (keep the `exit(...)` line last):
+
+```swift
+sanityTests()
+notchStateMachineTests()
+
+exit(Int32(TestRunner.shared.runAll()))
+```
+
 - [ ] **Step 2: Run to verify failure**
 
-Run: `swift test --filter NotchStateMachineTests`
-Expected: FAIL — `NotchStateMachine` undefined.
+Run: `swift run MacNotchTests`
+Expected: build FAILS to compile — `cannot find 'NotchStateMachine' in scope` (the type doesn't exist yet). This is the RED state.
 
 - [ ] **Step 3: Implement**
 
-`Sources/MacNotch/Window/NotchStateMachine.swift`:
+`Sources/MacNotchKit/Window/NotchStateMachine.swift`:
 
 ```swift
 import Foundation
@@ -450,13 +455,13 @@ public final class NotchStateMachine {
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `swift test --filter NotchStateMachineTests`
-Expected: PASS (5 tests).
+Run: `swift run MacNotchTests`
+Expected: the 5 `NotchStateMachine` cases print `✓`, and the final line's failure count is 0.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Sources/MacNotch/Window/NotchStateMachine.swift Tests/MacNotchTests/NotchStateMachineTests.swift
+git add Sources/MacNotchKit/Window/NotchStateMachine.swift Sources/MacNotchTests/NotchStateMachineTests.swift Sources/MacNotchTests/main.swift
 git commit -m "Add NotchStateMachine with collapse/expand transitions"
 ```
 
