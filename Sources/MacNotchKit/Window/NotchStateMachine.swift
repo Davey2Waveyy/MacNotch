@@ -48,6 +48,19 @@ public final class NotchStateMachine {
         }
     }
 
+    /// Requests collapse without reopening if collapse is already pending.
+    public func forceCollapse() -> Bool {
+        switch state {
+        case .collapsed:
+            return false
+        case .expanding, .expanded:
+            state = .collapsing
+            return true
+        case .collapsing:
+            return true
+        }
+    }
+
     public func mouseExitedPanel() -> Bool {
         switch state {
         case .expanded, .expanding:

@@ -100,3 +100,30 @@ Implemented `NotchWindow` and a placeholder `NotchRootView` under `MacNotchKit`,
 - `swift run MacNotchTests`
   - passed
   - `89 checks, 0 failure(s)`
+
+---
+
+## Task 8 Toggle Fix (2026-06-22)
+
+### Fix Details
+
+- Updated `Sources/MacNotchKit/Window/NotchStateMachine.swift`.
+  - Added `forceCollapse()` as an explicit close-path API for callers that need collapse to continue or start without reopening from `.collapsing`.
+  - Preserved existing hover re-entry behavior through `hoverChanged(true)`, so the bug fix stays scoped to explicit close/toggle intent.
+- Updated `Sources/MacNotchKit/Window/NotchWindow.swift`.
+  - `toggle()` now expands only from `.collapsed`.
+  - For `.expanding`, `.expanded`, and `.collapsing`, `toggle()` now uses `forceCollapse()` and requests immediate visual collapse, which prevents menu toggles during collapse grace from bouncing back to `.expanding`.
+- Extended `Sources/MacNotchTests/NotchStateMachineTests.swift`.
+  - Added pure regression coverage proving forced collapse keeps a pending collapse on the close path until completion.
+- Extended `Sources/MacNotchTests/NotchWindowTests.swift`.
+  - Added a smoke-level regression test covering `toggle()` during collapse grace and asserting deterministic immediate close plus stable end state after scheduled callbacks.
+  - The new smoke test uses slightly broader waits than the earlier hover-timing checks to keep the assertion focused on deterministic end states rather than tight wall-clock boundaries.
+
+### Verification Output
+
+- `swift build`
+  - passed
+  - `Build complete! (1.03s)`
+- `swift run MacNotchTests`
+  - passed
+  - `100 checks, 0 failure(s)`

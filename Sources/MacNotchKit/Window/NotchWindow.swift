@@ -59,8 +59,10 @@ public final class NotchWindow: NSObject {
     }
 
     public func toggle() {
-        guard machine.clicked() else { return }
-        if machine.state == .collapsing {
+        if machine.state == .collapsed {
+            guard machine.clicked() else { return }
+        } else {
+            guard machine.forceCollapse() else { return }
             transitionCoordinator.requestImmediateCollapse()
         }
         sync()

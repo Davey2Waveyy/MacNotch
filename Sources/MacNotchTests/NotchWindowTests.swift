@@ -283,4 +283,30 @@ func notchWindowTests() {
             expectEqual(panel.frame.height, 320, "stale completion leaves expanded height intact")
         }
     }
+
+    test("NotchWindow toggle during collapse grace closes immediately") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let model = notchWindowModel(for: window)
+            let notchRect = currentNotchRect()
+
+            hoverEnter(window)
+            waitForMainQueue(0.45)
+            hoverExit(window)
+
+            expect(model.isExpanded, "grace keeps the window visually expanded before toggle")
+            window.toggle()
+
+            expect(!model.isExpanded, "toggle forces immediate visual collapse during grace")
+            expectEqual(panel.frame.width, notchRect.width, "toggle restores collapsed width immediately")
+            expectEqual(panel.frame.height, notchRect.height, "toggle restores collapsed height immediately")
+
+            waitForMainQueue(0.35)
+
+            expect(!model.isExpanded, "forced collapse remains closed after scheduled callbacks")
+            expectEqual(panel.frame.width, notchRect.width, "scheduled callbacks leave collapsed width intact")
+            expectEqual(panel.frame.height, notchRect.height, "scheduled callbacks leave collapsed height intact")
+        }
+    }
 }

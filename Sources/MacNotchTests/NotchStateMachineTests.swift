@@ -59,4 +59,16 @@ func notchStateMachineTests() {
         expect(sm.hoverChanged(true), "hover changes collapsing state")
         expectEqual(sm.state, .expanding, "hover re-enters expanding")
     }
+
+    test("force collapse keeps a pending collapse on the close path") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+        _ = sm.mouseExitedPanel()
+
+        expect(sm.forceCollapse(), "force collapse is accepted while already collapsing")
+        expectEqual(sm.state, .collapsing, "state stays collapsing until completion")
+        expect(sm.completeCollapse(), "forced collapse can complete")
+        expectEqual(sm.state, .collapsed, "forced collapse finishes closed")
+    }
 }
