@@ -7,7 +7,7 @@ public enum NotchState {
 
 /// Which expanded form the notch is showing.
 /// Compact = hover preview; dashboard = full tile panel; wideBar = horizontal strip.
-public enum ExpansionMode: String, CaseIterable, Sendable {
+public enum ExpansionMode: String, CaseIterable, Codable, Sendable {
     case compact
     case dashboard
     case wideBar
@@ -17,6 +17,9 @@ public final class NotchStateMachine {
     public private(set) var state: NotchState = .collapsed
     public private(set) var mode: ExpansionMode = .compact
     public var hoverToExpand = true
+
+    /// Which mode a fresh click opens into. Hover always uses `.compact`.
+    public var defaultExpandMode: ExpansionMode = .dashboard
 
     public init() {}
 
@@ -50,8 +53,8 @@ public final class NotchStateMachine {
     public func clicked() -> Bool {
         switch state {
         case .collapsed:
-            // Fresh click opens the full dashboard.
-            mode = .dashboard
+            // Fresh click opens into the user's preferred mode (default dashboard).
+            mode = defaultExpandMode
             state = .expanding
             return true
         case .collapsing:

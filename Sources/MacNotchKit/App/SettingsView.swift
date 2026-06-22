@@ -36,6 +36,22 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Expansion") {
+                Picker("Click opens", selection: Binding(
+                    get: { settings.defaultExpansionMode },
+                    set: { mode in
+                        settings.defaultExpansionMode = mode
+                        onChange(settings)
+                    }
+                )) {
+                    Text("Dashboard").tag(ExpansionMode.dashboard)
+                    Text("Wide Bar").tag(ExpansionMode.wideBar)
+                }
+                Text("Hovering always shows the compact preview.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section {
                 Toggle("Launch at login", isOn: Binding(
                     get: { settings.launchAtLogin },

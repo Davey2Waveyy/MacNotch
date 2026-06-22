@@ -88,6 +88,7 @@ public final class NotchWindow: NSObject {
 
         super.init()
 
+        machine.defaultExpandMode = settings.settings.defaultExpansionMode
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.backgroundColor = .clear
@@ -133,6 +134,7 @@ public final class NotchWindow: NSObject {
     /// Re-applies the enabled/ordered module set after a settings change and forces
     /// the SwiftUI tree to re-read the module list.
     public func reload() {
+        machine.defaultExpandMode = settings.settings.defaultExpansionMode
         deactivateModulesIfNeeded()
         activateModulesIfNeeded()
         model.objectWillChange.send()

@@ -84,6 +84,13 @@ func notchStateMachineTests() {
         expectEqual(sm.mode, .dashboard, "click opens dashboard")
     }
 
+    test("click honours the configured default expand mode") {
+        let sm = NotchStateMachine()
+        sm.defaultExpandMode = .wideBar
+        _ = sm.clicked()
+        expectEqual(sm.mode, .wideBar, "click opens the preferred mode")
+    }
+
     test("hover exit does not collapse the dashboard") {
         let sm = NotchStateMachine()
         _ = sm.clicked()

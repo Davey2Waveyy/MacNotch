@@ -61,4 +61,34 @@ func settingsStoreTests() {
         )
         expectEqual(store.settings.launchAtLogin, true, "other persisted settings survive merge")
     }
+
+    test("legacy settings without an expansion mode still load") {
+        let url = tempURL()
+        // A settings file written before defaultExpansionMode existed.
+        let legacyJSON = """
+        {"modules":[{"id":"media","isEnabled":false}],"launchAtLogin":true}
+        """
+        try! legacyJSON.data(using: .utf8)!.write(to: url, options: .atomic)
+
+        let store = SettingsStore(url: url)
+        store.load()
+
+        expectEqual(store.settings.defaultExpansionMode, .dashboard, "missing mode falls back to dashboard")
+        expect(store.settings.modules.first { $0.id == "media" }?.isEnabled == false,
+               "legacy module preferences survive the decode")
+        expectEqual(store.settings.launchAtLogin, true, "legacy launchAtLogin survives the decode")
+    }
+
+    test("expansion mode round-trips to disk") {
+        let url = tempURL()
+        let store = SettingsStore(url: url)
+        var updated = store.settings
+        updated.defaultExpansionMode = .wideBar
+        store.replace(updated)
+        store.save()
+
+        let reloaded = SettingsStore(url: url)
+        reloaded.load()
+        expectEqual(reloaded.settings.defaultExpansionMode, .wideBar, "mode persists across reload")
+    }
 }
