@@ -2,7 +2,46 @@ import Foundation
 import IOKit.ps
 import Darwin
 
+package struct CPULoadSnapshot: Sendable, Equatable {
+    package let user: UInt64
+    package let system: UInt64
+    package let idle: UInt64
+    package let nice: UInt64
+
+    package init(user: UInt64, system: UInt64, idle: UInt64, nice: UInt64) {
+        self.user = user
+        self.system = system
+        self.idle = idle
+        self.nice = nice
+    }
+
+    fileprivate init(_ load: host_cpu_load_info) {
+        self.init(
+            user: UInt64(load.cpu_ticks.0),
+            system: UInt64(load.cpu_ticks.1),
+            idle: UInt64(load.cpu_ticks.2),
+            nice: UInt64(load.cpu_ticks.3)
+        )
+    }
+}
+
+private final class CPUSnapshotStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var previous: CPULoadSnapshot?
+
+    func percent(for current: CPULoadSnapshot) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let percent = SystemSampler.cpuUsagePercent(previous: previous, current: current)
+        previous = current
+        return percent
+    }
+}
+
 public enum SystemSampler {
+    private static let cpuSnapshotStore = CPUSnapshotStore()
+
     public static func sample() -> SystemSample {
         let (batteryPercent, isCharging) = batteryStatus()
         return SystemSample(
@@ -24,10 +63,18 @@ public enum SystemSampler {
         }
 
         let current = description[kIOPSCurrentCapacityKey] as? Int
-        let max = description[kIOPSMaxCapacityKey] as? Int ?? 100
+        let max = description[kIOPSMaxCapacityKey] as? Int
         let state = description[kIOPSPowerSourceStateKey] as? String
-        let percent = current.map { Int((Double($0) / Double(max) * 100).rounded()) }
+        let percent = batteryPercent(current: current, max: max)
         return (percent, state == kIOPSACPowerValue)
+    }
+
+    package static func batteryPercent(current: Int?, max: Int?) -> Int? {
+        guard let current, let max, max > 0 else { return nil }
+
+        let percent = (Double(current) / Double(max)) * 100
+        guard percent.isFinite else { return nil }
+        return Int(percent.rounded())
     }
 
     private static func ramUsedBytes() -> UInt64 {
@@ -63,13 +110,20 @@ public enum SystemSampler {
         }
 
         guard result == KERN_SUCCESS else { return 0 }
+        return cpuSnapshotStore.percent(for: CPULoadSnapshot(load))
+    }
 
-        let user = Double(load.cpu_ticks.0)
-        let system = Double(load.cpu_ticks.1)
-        let idle = Double(load.cpu_ticks.2)
-        let nice = Double(load.cpu_ticks.3)
-        let busy = user + system + nice
-        let total = busy + idle
-        return total > 0 ? busy / total * 100 : 0
+    package static func cpuUsagePercent(previous: CPULoadSnapshot?, current: CPULoadSnapshot) -> Double {
+        guard let previous else { return 0 }
+
+        let userDelta = current.user &- previous.user
+        let systemDelta = current.system &- previous.system
+        let idleDelta = current.idle &- previous.idle
+        let niceDelta = current.nice &- previous.nice
+
+        let busyDelta = Double(userDelta + systemDelta + niceDelta)
+        let totalDelta = busyDelta + Double(idleDelta)
+        guard totalDelta > 0, busyDelta.isFinite, totalDelta.isFinite else { return 0 }
+        return (busyDelta / totalDelta) * 100
     }
 }

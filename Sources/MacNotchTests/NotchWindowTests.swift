@@ -8,6 +8,7 @@ final class ActivatingModule: NotchModule {
     var title: String
     var isEnabled = true
     private(set) var activationCount = 0
+    private(set) var deactivationCount = 0
 
     init(_ id: String) {
         self.id = id
@@ -17,7 +18,7 @@ final class ActivatingModule: NotchModule {
     func collapsedView() -> AnyView? { nil }
     func expandedView() -> AnyView { AnyView(EmptyView()) }
     func activate() { activationCount += 1 }
-    func deactivate() {}
+    func deactivate() { deactivationCount += 1 }
     func refresh() async {}
 }
 
@@ -172,6 +173,46 @@ func notchWindowTests() {
         }
     }
 
+    test("NotchWindow teardown deactivates modules it activated exactly once") {
+        MainActor.assumeIsolated {
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("json")
+            let persisted = AppSettings(
+                modules: [
+                    ModuleSetting(id: "calendar", isEnabled: false),
+                    ModuleSetting(id: "system", isEnabled: true),
+                    ModuleSetting(id: "media", isEnabled: true),
+                ],
+                launchAtLogin: false
+            )
+            let data = try? JSONEncoder().encode(persisted)
+            expect(data != nil, "settings test data encoded")
+            try? data?.write(to: tempURL, options: .atomic)
+
+            let settings = SettingsStore(url: tempURL)
+            settings.load()
+
+            let registry = ModuleRegistry()
+            let media = ActivatingModule("media")
+            let calendar = ActivatingModule("calendar")
+            let system = ActivatingModule("system")
+            registry.register(media)
+            registry.register(calendar)
+            registry.register(system)
+
+            let window = NotchWindow(registry: registry, settings: settings)
+            window.show()
+            window.tearDown()
+            window.tearDown()
+
+            expectEqual(system.deactivationCount, 1, "first enabled module deactivates once")
+            expectEqual(media.deactivationCount, 1, "second enabled module deactivates once")
+            expectEqual(calendar.deactivationCount, 0, "disabled module never deactivates")
+            try? FileManager.default.removeItem(at: tempURL)
+        }
+    }
+
     test("collapse grace keeps visual state expanded until grace elapses") {
         let coordinator = NotchWindowTransitionCoordinator()
 
@@ -307,6 +348,32 @@ func notchWindowTests() {
             expect(!model.isExpanded, "forced collapse remains closed after scheduled callbacks")
             expectEqual(panel.frame.width, notchRect.width, "scheduled callbacks leave collapsed width intact")
             expectEqual(panel.frame.height, notchRect.height, "scheduled callbacks leave collapsed height intact")
+        }
+    }
+
+    test("NotchWindow toggle during collapse animation reopens immediately") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let model = notchWindowModel(for: window)
+
+            hoverEnter(window)
+            waitForMainQueue(0.45)
+            hoverExit(window)
+            waitForMainQueue(0.25)
+
+            expect(!model.isExpanded, "post-grace collapse animation is visually collapsed before toggle")
+            window.toggle()
+
+            expect(model.isExpanded, "toggle reopens immediately once the panel is visually collapsed")
+            expectEqual(panel.frame.width, 280, "toggle restores expanded width immediately")
+            expectEqual(panel.frame.height, 320, "toggle restores expanded height immediately")
+
+            waitForMainQueue(0.3)
+
+            expect(model.isExpanded, "stale collapse completion cannot re-close after reopening")
+            expectEqual(panel.frame.width, 280, "stale collapse completion leaves expanded width intact")
+            expectEqual(panel.frame.height, 320, "stale collapse completion leaves expanded height intact")
         }
     }
 }

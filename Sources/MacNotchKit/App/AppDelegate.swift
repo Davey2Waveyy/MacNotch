@@ -23,6 +23,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.menuBar = menuBar
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        notchWindow?.tearDown()
+    }
+
     private func registerModules() {
         registry.register(SystemModule())
     }

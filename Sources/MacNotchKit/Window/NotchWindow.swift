@@ -15,6 +15,7 @@ public final class NotchWindow: NSObject {
     private let collapseGraceDelay: TimeInterval = 0.18
     private let collapseAnimationDuration: TimeInterval = 0.2
     private var scheduledTransitionToken: UInt = 0
+    private var activeModules: [any NotchModule] = []
 
     public init(registry: ModuleRegistry, settings: SettingsStore) {
         self.registry = registry
@@ -52,14 +53,23 @@ public final class NotchWindow: NSObject {
 
     public func show() {
         sync()
-        for module in orderedModules() {
-            module.activate()
-        }
+        activateModulesIfNeeded()
         panel.orderFrontRegardless()
     }
 
+    public func tearDown() {
+        scheduledTransitionToken &+= 1
+        deactivateModulesIfNeeded()
+        panel.orderOut(nil)
+    }
+
     public func toggle() {
-        if machine.state == .collapsed {
+        let canReopenFromCollapseAnimation =
+            machine.state == .collapsing
+            && transitionCoordinator.phase == .collapseAnimation
+            && !transitionCoordinator.isVisuallyExpanded
+
+        if machine.state == .collapsed || canReopenFromCollapseAnimation {
             guard machine.clicked() else { return }
         } else {
             guard machine.forceCollapse() else { return }
@@ -90,6 +100,25 @@ public final class NotchWindow: NSObject {
 
     private func orderedModules() -> [any NotchModule] {
         registry.ordered(by: settings.orderedEnabledIDs())
+    }
+
+    private func activateModulesIfNeeded() {
+        guard activeModules.isEmpty else { return }
+
+        let modules = orderedModules()
+        activeModules = modules
+        for module in modules {
+            module.activate()
+        }
+    }
+
+    private func deactivateModulesIfNeeded() {
+        guard !activeModules.isEmpty else { return }
+
+        for module in activeModules {
+            module.deactivate()
+        }
+        activeModules.removeAll(keepingCapacity: false)
     }
 
     private func updateFrame(visuallyExpanded: Bool) {
