@@ -64,8 +64,9 @@ public final class NotchWindow: NSObject {
     private let transitionCoordinator = NotchWindowTransitionCoordinator()
     private let registry: ModuleRegistry
     private let settings: SettingsStore
-    private let expandedWidth: CGFloat = 280
-    private let expandedHeight: CGFloat = 320
+    private let compactSize = CGSize(width: 280, height: 320)
+    private let dashboardSize = CGSize(width: 720, height: 180)
+    private let wideBarHeight: CGFloat = 56
     private let expansionAnimationDuration: TimeInterval = 0.35
     private let collapseGraceDelay: TimeInterval = 0.18
     private let collapseAnimationDuration: TimeInterval = 0.2
@@ -98,11 +99,10 @@ public final class NotchWindow: NSObject {
 
         let root = NotchRootView(
             model: model,
-            expandedWidth: expandedWidth,
-            expandedHeight: expandedHeight,
             collapsedSize: notchRect.size,
             modules: { [weak self] in self?.orderedModules() ?? [] },
-            onPanelTap: { [weak self] in self?.toggle() }
+            onPanelTap: { [weak self] in self?.toggle() },
+            onSwitchMode: { [weak self] mode in self?.setMode(mode) }
         )
         let hostingView = NSHostingView(rootView: root)
         let container = HoverContainerView()
@@ -196,16 +196,46 @@ public final class NotchWindow: NSObject {
         activeModules.removeAll(keepingCapacity: false)
     }
 
+    private func expandedSize(for mode: ExpansionMode) -> CGSize {
+        switch mode {
+        case .compact:
+            return compactSize
+        case .dashboard:
+            return dashboardSize
+        case .wideBar:
+            let screenWidth = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
+                ?? NSScreen.main?.frame.width
+                ?? 1440
+            return CGSize(width: screenWidth, height: wideBarHeight)
+        }
+    }
+
     private func updateFrame(visuallyExpanded: Bool) {
         let rect = notchRect
-        let size = visuallyExpanded ? CGSize(width: expandedWidth, height: expandedHeight) : rect.size
+        let size: CGSize
+        let originX: CGFloat
+        if visuallyExpanded {
+            let target = expandedSize(for: machine.mode)
+            size = target
+            originX = machine.mode == .wideBar
+                ? (NSScreen.main?.frame.minX ?? 0)
+                : rect.midX - (target.width / 2)
+        } else {
+            size = rect.size
+            originX = rect.midX - (size.width / 2)
+        }
         let frame = CGRect(
-            x: rect.midX - (size.width / 2),
+            x: originX,
             y: rect.maxY - size.height,
             width: size.width,
             height: size.height
         )
         panel.setFrame(frame, display: true)
+    }
+
+    public func setMode(_ mode: ExpansionMode) {
+        guard machine.switchMode(to: mode) else { return }
+        sync()
     }
 
     private func installClickMonitorsIfNeeded() {
@@ -284,6 +314,7 @@ public final class NotchWindow: NSObject {
         scheduledTransitionToken &+= 1
         transitionCoordinator.sync(for: machine.state)
         model.isExpanded = transitionCoordinator.isVisuallyExpanded
+        model.mode = machine.mode
         updateFrame(visuallyExpanded: transitionCoordinator.isVisuallyExpanded)
 
         switch machine.state {

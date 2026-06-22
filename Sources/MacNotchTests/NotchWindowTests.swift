@@ -175,8 +175,6 @@ func notchWindowTests() {
             let model = NotchWindowModel()
             let view = NotchRootView(
                 model: model,
-                expandedWidth: 280,
-                expandedHeight: 320,
                 collapsedSize: CGSize(width: 200, height: 32),
                 modules: { [] }
             )

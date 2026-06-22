@@ -1,54 +1,76 @@
+import AppKit
 import Combine
 import SwiftUI
 
 @MainActor
 public final class NotchWindowModel: ObservableObject {
     @Published public var isExpanded = false
+    @Published public var mode: ExpansionMode = .compact
 
     public init() {}
 }
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchWindowModel
-    private let expandedWidth: CGFloat
-    private let expandedHeight: CGFloat
     private let collapsedSize: CGSize
     private let modules: () -> [any NotchModule]
     private let onPanelTap: () -> Void
+    private let onSwitchMode: (ExpansionMode) -> Void
+
+    private let compactSize = CGSize(width: 280, height: 320)
+    private let dashboardSize = CGSize(width: 720, height: 180)
+    private let wideBarHeight: CGFloat = 56
 
     public init(
         model: NotchWindowModel,
-        expandedWidth: CGFloat,
-        expandedHeight: CGFloat,
         collapsedSize: CGSize,
         modules: @escaping () -> [any NotchModule],
-        onPanelTap: @escaping () -> Void = {}
+        onPanelTap: @escaping () -> Void = {},
+        onSwitchMode: @escaping (ExpansionMode) -> Void = { _ in }
     ) {
         self.model = model
-        self.expandedWidth = expandedWidth
-        self.expandedHeight = expandedHeight
         self.collapsedSize = collapsedSize
         self.modules = modules
         self.onPanelTap = onPanelTap
+        self.onSwitchMode = onSwitchMode
     }
 
     public var body: some View {
+        let size = expandedSize
         ZStack(alignment: .top) {
             panelBody
         }
         .frame(
-            width: model.isExpanded ? expandedWidth : collapsedSize.width,
-            height: model.isExpanded ? expandedHeight : collapsedSize.height,
+            width: model.isExpanded ? size.width : collapsedSize.width,
+            height: model.isExpanded ? size.height : collapsedSize.height,
             alignment: .top
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: model.isExpanded)
+        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.mode)
+    }
+
+    private var expandedSize: CGSize {
+        switch model.mode {
+        case .compact: return compactSize
+        case .dashboard: return dashboardSize
+        case .wideBar:
+            let width = NSScreen.main?.frame.width ?? 1440
+            return CGSize(width: width, height: wideBarHeight)
+        }
     }
 
     private var panelBody: some View {
         let currentModules = modules()
-        let width = model.isExpanded ? expandedWidth : collapsedSize.width
-        let height = model.isExpanded ? expandedHeight : collapsedSize.height
-        let cornerRadius = model.isExpanded ? 20.0 : 12.0
+        let size = expandedSize
+        let width = model.isExpanded ? size.width : collapsedSize.width
+        let height = model.isExpanded ? size.height : collapsedSize.height
+        let cornerRadius: CGFloat = {
+            switch model.mode {
+            case .compact: return model.isExpanded ? 20 : 12
+            case .dashboard: return model.isExpanded ? 22 : 12
+            case .wideBar: return 0
+            }
+        }()
 
         return ZStack(alignment: .top) {
             chrome(cornerRadius: cornerRadius)
@@ -66,24 +88,49 @@ public struct NotchRootView: View {
             .opacity(model.isExpanded ? 0 : 1)
             .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
 
-            VStack(spacing: 10) {
-                if currentModules.isEmpty {
-                    Color.clear
-                        .frame(maxWidth: .infinity, minHeight: expandedHeight - 28)
-                } else {
-                    ForEach(currentModules, id: \.id) { module in
-                        module.expandedView()
-                    }
-                }
-            }
-            .padding(14)
-            .frame(width: expandedWidth, height: expandedHeight, alignment: .top)
-            .opacity(model.isExpanded ? 1 : 0)
-            .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
+            expandedContent(modules: currentModules, size: size)
+                .opacity(model.isExpanded ? 1 : 0)
+                .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
         }
         .frame(width: width, height: height, alignment: .top)
         .background(chrome(cornerRadius: cornerRadius))
         .clipped()
+    }
+
+    @ViewBuilder
+    private func expandedContent(modules currentModules: [any NotchModule], size: CGSize) -> some View {
+        switch model.mode {
+        case .compact:
+            compactExpanded(modules: currentModules, size: size)
+        case .dashboard:
+            DashboardLayoutView(
+                modules: currentModules,
+                size: size,
+                activeMode: model.mode,
+                onSwitchMode: onSwitchMode
+            )
+        case .wideBar:
+            WideBarLayoutView(
+                modules: currentModules,
+                size: size,
+                onSwitchMode: onSwitchMode
+            )
+        }
+    }
+
+    private func compactExpanded(modules currentModules: [any NotchModule], size: CGSize) -> some View {
+        VStack(spacing: 10) {
+            if currentModules.isEmpty {
+                Color.clear
+                    .frame(maxWidth: .infinity, minHeight: size.height - 28)
+            } else {
+                ForEach(currentModules, id: \.id) { module in
+                    module.expandedView()
+                }
+            }
+        }
+        .padding(14)
+        .frame(width: size.width, height: size.height, alignment: .top)
     }
 
     private func chrome(cornerRadius: CGFloat) -> some View {

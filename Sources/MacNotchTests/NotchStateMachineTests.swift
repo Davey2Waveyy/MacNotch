@@ -31,7 +31,7 @@ func notchStateMachineTests() {
 
     test("mouse exit requests collapse and waits for completion") {
         let sm = NotchStateMachine()
-        _ = sm.clicked()
+        _ = sm.hoverChanged(true)
         _ = sm.completeExpand()
 
         expect(sm.mouseExitedPanel(), "exit changed")
@@ -52,7 +52,7 @@ func notchStateMachineTests() {
 
     test("hover can reverse a pending collapse") {
         let sm = NotchStateMachine()
-        _ = sm.clicked()
+        _ = sm.hoverChanged(true)
         _ = sm.completeExpand()
         _ = sm.mouseExitedPanel()
 
@@ -62,7 +62,7 @@ func notchStateMachineTests() {
 
     test("force collapse keeps a pending collapse on the close path") {
         let sm = NotchStateMachine()
-        _ = sm.clicked()
+        _ = sm.hoverChanged(true)
         _ = sm.completeExpand()
         _ = sm.mouseExitedPanel()
 
@@ -70,5 +70,73 @@ func notchStateMachineTests() {
         expectEqual(sm.state, .collapsing, "state stays collapsing until completion")
         expect(sm.completeCollapse(), "forced collapse can complete")
         expectEqual(sm.state, .collapsed, "forced collapse finishes closed")
+    }
+
+    test("hover opens in compact mode") {
+        let sm = NotchStateMachine()
+        _ = sm.hoverChanged(true)
+        expectEqual(sm.mode, .compact, "hover opens compact")
+    }
+
+    test("click opens in dashboard mode") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        expectEqual(sm.mode, .dashboard, "click opens dashboard")
+    }
+
+    test("hover exit does not collapse the dashboard") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+
+        expect(!sm.mouseExitedPanel(), "hover exit is ignored in dashboard mode")
+        expectEqual(sm.state, .expanded, "state stays expanded")
+    }
+
+    test("hover exit does not collapse the wide bar") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+        _ = sm.switchMode(to: .wideBar)
+
+        expect(!sm.mouseExitedPanel(), "hover exit is ignored in wide-bar mode")
+        expectEqual(sm.state, .expanded, "state stays expanded")
+    }
+
+    test("outside click collapses any expanded mode") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+        _ = sm.switchMode(to: .wideBar)
+
+        expect(sm.clickedOutside(), "outside click collapses regardless of mode")
+        expectEqual(sm.state, .collapsing, "state enters collapsing")
+    }
+
+    test("switchMode changes the active mode while expanded") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+
+        expect(sm.switchMode(to: .wideBar), "switch reports change")
+        expectEqual(sm.mode, .wideBar, "mode becomes wide bar")
+        expect(!sm.switchMode(to: .wideBar), "no-op switch returns false")
+    }
+
+    test("switchMode is rejected when collapsed") {
+        let sm = NotchStateMachine()
+        expect(!sm.switchMode(to: .dashboard), "switch is rejected when collapsed")
+        expectEqual(sm.mode, .compact, "mode is unchanged")
+    }
+
+    test("reopen during collapsing preserves the prior mode") {
+        let sm = NotchStateMachine()
+        _ = sm.hoverChanged(true)
+        _ = sm.completeExpand()
+        _ = sm.mouseExitedPanel()
+        expectEqual(sm.state, .collapsing, "state is collapsing")
+
+        expect(sm.clicked(), "click during collapse reopens")
+        expectEqual(sm.mode, .compact, "prior compact mode is preserved on reopen")
     }
 }
