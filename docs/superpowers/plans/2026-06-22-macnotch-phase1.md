@@ -11,23 +11,40 @@
 ## Global Constraints
 
 - Platform floor: `.macOS(.v14)`; built and run on macOS 26.5, Apple Silicon (arm64).
-- **No Xcode / no `xcodebuild`.** Build only with `swift build` / `swift test`. The `.app` bundle is assembled by `Scripts/package-app.sh`.
+- **No Xcode / no `xcodebuild`.** Build only with `swift build`. The `.app` bundle is assembled by `Scripts/package-app.sh`.
+- **No XCTest/Testing in this environment** (they ship only with Xcode). Tests run via a self-contained runner executable: `swift run MacNotchTests`, which exits non-zero on any failure. See the Testing Convention below.
 - Distribution is **personal/local only**: ad-hoc codesign (`codesign --sign -`), no notarization, no sandbox.
 - Bundle id: `io.local.macnotch`. App is an agent: `Info.plist` sets `LSUIElement = true` (no Dock icon).
 - Required `Info.plist` usage strings: `NSCalendarsUsageDescription`, `NSAppleEventsUsageDescription`.
 - All external reads (AppleScript, EventKit, IOKit) must be failable and degrade to a quiet placeholder — a failing module must never crash the shell.
-- TDD: write the failing test first, watch it fail, implement minimally, watch it pass, commit. Pure-logic tasks are fully tested with `swift test`; AppKit/SwiftUI tasks (windowing, views, drag-and-drop) end with a documented **manual verification** step because they cannot run headlessly.
+- TDD: write the failing test first, watch it fail, implement minimally, watch it pass, commit. Pure-logic tasks are fully tested with `swift run MacNotchTests`; AppKit/SwiftUI tasks (windowing, views, drag-and-drop) end with a documented **manual verification** step because they cannot run headlessly.
 - Every commit message ends with the trailer:
   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
 - Commit after every task. Keep commits small.
 
+**Testing Convention (replaces XCTest):** All logic under test lives in the
+`MacNotchKit` library and is declared `public`, so tests use a plain
+`import MacNotchKit` (no `@testable`). A test file defines a single free
+function `func <area>Tests()` that registers cases with the harness helpers
+`test(_:_:)`, `expect(_:_:)`, and `expectEqual(_:_:_:)` (defined in Task 1's
+`Harness.swift`). The runner's `Sources/MacNotchTests/main.swift` calls each
+`<area>Tests()` function and then `exit(Int32(TestRunner.shared.runAll()))`.
+**Every task that adds a test file must append its `<area>Tests()` call to that
+`main.swift`.** Translation from the XCTest snippets shown in later tasks is
+mechanical: `XCTAssertEqual(a, b)` → `expectEqual(a, b, "label")`;
+`XCTAssertTrue(x)`/`XCTAssertFalse(x)` → `expect(x, "label")`/`expect(!x, "label")`;
+`XCTAssertNil(x)` → `expect(x == nil, "label")`; each `func testFoo()` becomes a
+`test("foo") { ... }` block inside the area function.
+
 **Module map (locked in during design):**
 
 ```
-Sources/MacNotch/
-├── App/        AppCore, MenuBarController, SettingsStore, AppSettings, LoginItem, SettingsView
+Sources/MacNotchKit/         (library target — all logic + AppKit/SwiftUI, public API)
+├── AppCore.swift            version, bundle id
+├── App/        MacNotchApp (entry point), AppDelegate, MenuBarController,
+│               SettingsStore, AppSettings, LoginItem, SettingsView, SettingsWindowController
 ├── Window/     NotchWindow, NotchStateMachine, ScreenLocator, ScreenInfo
-├── UI/         NotchRootView, ModuleStack, NotchPanelChrome (shared SwiftUI)
+├── UI/         NotchRootView, ModuleStack (ModuleRegistry)
 └── Modules/
     ├── ModuleProtocol.swift          NotchModule
     ├── Media/    MediaModule, MediaController, MediaSource, NowPlaying,
@@ -35,22 +52,43 @@ Sources/MacNotch/
     ├── Calendar/ CalendarModule, CalendarViews
     ├── System/   SystemModule, SystemSampler, SystemSample, SystemViews
     └── Shelf/    ShelfModule, ShelfStore, ShelfItem, ShelfViews
-Tests/MacNotchTests/   one file per pure-logic unit
+Sources/MacNotch/main.swift        (thin executable: import MacNotchKit; MacNotchApp.run())
+Sources/MacNotchTests/             (executable test runner)
+├── Harness.swift                  TestRunner + test/expect/expectEqual
+├── main.swift                     calls each <area>Tests(), exits non-zero on failure
+└── <Area>Tests.swift              one file per pure-logic unit
 ```
+
+> **Path note:** the plan's later tasks were written before this restructure and
+> say `Sources/MacNotch/App/...`, `Sources/MacNotch/Window/...`, etc., and
+> `Tests/MacNotchTests/...`. Those now live under **`Sources/MacNotchKit/...`**
+> (production code) and **`Sources/MacNotchTests/...`** (tests) respectively.
+> Keep the same subfolders and filenames; only the top-level target dir changes.
 
 ---
 
-### Task 1: Project scaffold + test harness
+### Task 1: Project scaffold + self-contained test harness
+
+This project's toolchain (Command Line Tools, no Xcode) has **no XCTest and no
+Testing module**, so we use three targets: a `MacNotchKit` library holding all
+code, a thin `MacNotch` executable, and a `MacNotchTests` executable that runs a
+hand-rolled assertion harness. Tests run with `swift run MacNotchTests`.
 
 **Files:**
 - Create: `Package.swift`
+- Create: `Sources/MacNotchKit/AppCore.swift`
 - Create: `Sources/MacNotch/main.swift`
-- Create: `Sources/MacNotch/App/AppCore.swift`
-- Create: `Tests/MacNotchTests/SanityTests.swift`
+- Create: `Sources/MacNotchTests/Harness.swift`
+- Create: `Sources/MacNotchTests/SanityTests.swift`
+- Create: `Sources/MacNotchTests/main.swift`
 - Create: `Makefile`
 
 **Interfaces:**
-- Produces: executable target `MacNotch`; test target `MacNotchTests`; `AppCore.version: String`.
+- Produces: library target `MacNotchKit` (public API, `-enable-testing` not needed
+  because everything tested is `public`); executable `MacNotch`; executable
+  `MacNotchTests`; `AppCore.version: String`, `AppCore.bundleID: String`; harness
+  helpers `test(_:_:)`, `expect(_:_:)`, `expectEqual(_:_:_:)`, and
+  `TestRunner.shared.runAll() -> Int`.
 
 - [ ] **Step 1: Write `Package.swift`**
 
@@ -62,22 +100,27 @@ let package = Package(
     name: "MacNotch",
     platforms: [.macOS(.v14)],
     targets: [
+        .target(
+            name: "MacNotchKit",
+            path: "Sources/MacNotchKit"
+        ),
         .executableTarget(
             name: "MacNotch",
+            dependencies: ["MacNotchKit"],
             path: "Sources/MacNotch"
         ),
-        .testTarget(
+        .executableTarget(
             name: "MacNotchTests",
-            dependencies: ["MacNotch"],
-            path: "Tests/MacNotchTests"
+            dependencies: ["MacNotchKit"],
+            path: "Sources/MacNotchTests"
         ),
     ]
 )
 ```
 
-- [ ] **Step 2: Write a minimal `AppCore` and `main.swift`**
+- [ ] **Step 2: Write `AppCore` (in the library) and the thin executable**
 
-`Sources/MacNotch/App/AppCore.swift`:
+`Sources/MacNotchKit/AppCore.swift`:
 
 ```swift
 import Foundation
@@ -91,41 +134,108 @@ public enum AppCore {
 `Sources/MacNotch/main.swift`:
 
 ```swift
-import Foundation
+import MacNotchKit
 
-// Real agent bootstrap is added in Task 6. For now, prove the binary builds/runs.
+// Real agent bootstrap is added in Task 6 (MacNotchApp.run()). For now, prove the
+// executable links against the library and runs.
 print("MacNotch \(AppCore.version)")
 ```
 
-- [ ] **Step 3: Write the failing sanity test**
+- [ ] **Step 3: Write the test harness**
 
-`Tests/MacNotchTests/SanityTests.swift`:
+`Sources/MacNotchTests/Harness.swift`:
 
 ```swift
-import XCTest
-@testable import MacNotch
+import Foundation
 
-final class SanityTests: XCTestCase {
-    func testVersionIsSet() {
-        XCTAssertEqual(AppCore.version, "0.1.0")
-        XCTAssertEqual(AppCore.bundleID, "io.local.macnotch")
+public final class TestRunner {
+    public static let shared = TestRunner()
+    private var cases: [(String, () -> Void)] = []
+    private(set) var checks = 0
+    private(set) var failures = 0
+
+    public func add(_ name: String, _ body: @escaping () -> Void) {
+        cases.append((name, body))
+    }
+
+    public func record(_ pass: Bool, _ msg: String, _ file: String, _ line: Int) {
+        checks += 1
+        if pass {
+            print("  ✓ \(msg)")
+        } else {
+            failures += 1
+            print("  ✗ FAIL: \(msg)  [\(file):\(line)]")
+        }
+    }
+
+    /// Runs every registered case; returns a process exit code (0 = all passed).
+    public func runAll() -> Int {
+        for (name, body) in cases {
+            print("• \(name)")
+            body()
+        }
+        print("\n\(checks) checks, \(failures) failure(s)")
+        return failures == 0 ? 0 : 1
+    }
+}
+
+public func test(_ name: String, _ body: @escaping () -> Void) {
+    TestRunner.shared.add(name, body)
+}
+
+public func expect(_ condition: @autoclosure () -> Bool, _ message: String,
+                   file: String = #fileID, line: Int = #line) {
+    TestRunner.shared.record(condition(), message, file, line)
+}
+
+public func expectEqual<T: Equatable>(_ a: @autoclosure () -> T,
+                                      _ b: @autoclosure () -> T,
+                                      _ message: String,
+                                      file: String = #fileID, line: Int = #line) {
+    let av = a(), bv = b()
+    TestRunner.shared.record(av == bv, "\(message) (\(av) == \(bv))", file, line)
+}
+```
+
+- [ ] **Step 4: Write the failing sanity test**
+
+`Sources/MacNotchTests/SanityTests.swift`:
+
+```swift
+import MacNotchKit
+
+func sanityTests() {
+    test("AppCore version and bundle id") {
+        expectEqual(AppCore.version, "0.1.0", "version")
+        expectEqual(AppCore.bundleID, "io.local.macnotch", "bundleID")
     }
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+`Sources/MacNotchTests/main.swift`:
 
-Run: `swift test`
-Expected: builds and PASSES (1 test).
+```swift
+import Foundation
 
-- [ ] **Step 5: Write the `Makefile`**
+// Register each area's tests, then run. Later tasks append their <area>Tests() call here.
+sanityTests()
+
+exit(Int32(TestRunner.shared.runAll()))
+```
+
+- [ ] **Step 5: Run the tests**
+
+Run: `swift run MacNotchTests`
+Expected: builds and prints `✓ version`, `✓ bundleID`, then `2 checks, 0 failure(s)`; process exits 0. (To see RED first, temporarily change the expected version string, run, observe a `✗ FAIL`, then revert.)
+
+- [ ] **Step 6: Write the `Makefile`**
 
 ```makefile
 .PHONY: build test run package clean
 build:
 	swift build
 test:
-	swift test
+	swift run MacNotchTests
 package:
 	bash Scripts/package-app.sh
 run: package
@@ -135,14 +245,14 @@ clean:
 	rm -rf build
 ```
 
-- [ ] **Step 6: Verify build + commit**
+- [ ] **Step 7: Verify build + commit**
 
-Run: `swift build && swift test`
-Expected: build succeeds, tests pass.
+Run: `swift build && swift run MacNotchTests`
+Expected: build succeeds, `2 checks, 0 failure(s)`.
 
 ```bash
-git add Package.swift Sources Tests Makefile
-git commit -m "Scaffold SwiftPM project with test harness"
+git add Package.swift Sources Makefile
+git commit -m "Scaffold SwiftPM project with self-contained test harness"
 ```
 
 ---
