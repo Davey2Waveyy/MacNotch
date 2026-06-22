@@ -13,7 +13,7 @@ public final class SettingsStore {
         guard let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode(AppSettings.self, from: data)
         else { return }
-        settings = decoded
+        settings = AppSettings.mergingPersisted(decoded)
     }
 
     public func save() {

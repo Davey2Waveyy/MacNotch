@@ -14,7 +14,18 @@ public final class ModuleRegistry {
 
     /// Returns modules in the requested id order, skipping unknown ids.
     public func ordered(by ids: [String]) -> [any NotchModule] {
-        ids.compactMap { modules[$0] }
+        let enabledIDs = Set(ids)
+        for module in modules.values {
+            module.isEnabled = enabledIDs.contains(module.id)
+        }
+
+        var seen = Set<String>()
+        return ids.compactMap { id in
+            guard seen.insert(id).inserted else { return nil }
+            guard let module = modules[id] else { return nil }
+            module.isEnabled = true
+            return module
+        }
     }
 
     public var all: [any NotchModule] { registrationOrder.compactMap { modules[$0] } }

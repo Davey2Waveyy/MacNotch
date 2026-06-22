@@ -32,4 +32,33 @@ func settingsStoreTests() {
         expect(!store.orderedEnabledIDs().contains("system"), "system excluded")
         expect(store.orderedEnabledIDs().contains("media"), "media included")
     }
+
+    test("load merges persisted known modules with defaults and drops unknown ids") {
+        let url = tempURL()
+        let persisted = AppSettings(
+            modules: [
+                ModuleSetting(id: "system", isEnabled: false),
+                ModuleSetting(id: "legacy", isEnabled: true),
+                ModuleSetting(id: "media", isEnabled: true),
+            ],
+            launchAtLogin: true
+        )
+        let data = try! JSONEncoder().encode(persisted)
+        try! data.write(to: url, options: .atomic)
+
+        let store = SettingsStore(url: url)
+        store.load()
+
+        expectEqual(
+            store.settings.modules.map(\.id),
+            ["system", "media", "calendar", "shelf"],
+            "known persisted order preserved and missing defaults appended"
+        )
+        expectEqual(
+            store.settings.modules.map(\.isEnabled),
+            [false, true, true, true],
+            "persisted enablement preserved and appended defaults keep default enablement"
+        )
+        expectEqual(store.settings.launchAtLogin, true, "other persisted settings survive merge")
+    }
 }

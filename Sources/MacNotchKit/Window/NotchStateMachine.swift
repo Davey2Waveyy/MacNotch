@@ -1,6 +1,9 @@
-import Foundation
-
-public enum NotchState { case collapsed, expanded }
+public enum NotchState {
+    case collapsed
+    case expanding
+    case expanded
+    case collapsing
+}
 
 public final class NotchStateMachine {
     public private(set) var state: NotchState = .collapsed
@@ -8,25 +11,64 @@ public final class NotchStateMachine {
 
     public init() {}
 
+    public var isExpanded: Bool {
+        switch state {
+        case .collapsed, .collapsing:
+            return false
+        case .expanding, .expanded:
+            return true
+        }
+    }
+
     /// Returns true if `state` changed.
     public func hoverChanged(_ inside: Bool) -> Bool {
         if inside {
-            guard hoverToExpand, state == .collapsed else { return false }
-            state = .expanded; return true
+            guard hoverToExpand else { return false }
+
+            switch state {
+            case .collapsed, .collapsing:
+                state = .expanding
+                return true
+            case .expanding, .expanded:
+                return false
+            }
         } else {
             return mouseExitedPanel()
         }
     }
 
     public func clicked() -> Bool {
-        state = (state == .collapsed) ? .expanded : .collapsed
-        return true
+        switch state {
+        case .collapsed, .collapsing:
+            state = .expanding
+            return true
+        case .expanding, .expanded:
+            state = .collapsing
+            return true
+        }
     }
 
     public func mouseExitedPanel() -> Bool {
-        guard state == .expanded else { return false }
-        state = .collapsed; return true
+        switch state {
+        case .expanded, .expanding:
+            state = .collapsing
+            return true
+        case .collapsed, .collapsing:
+            return false
+        }
     }
 
     public func clickedOutside() -> Bool { mouseExitedPanel() }
+
+    public func completeExpand() -> Bool {
+        guard state == .expanding else { return false }
+        state = .expanded
+        return true
+    }
+
+    public func completeCollapse() -> Bool {
+        guard state == .collapsing else { return false }
+        state = .collapsed
+        return true
+    }
 }

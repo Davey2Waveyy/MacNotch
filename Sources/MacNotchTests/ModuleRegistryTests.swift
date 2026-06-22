@@ -31,4 +31,23 @@ func moduleRegistryTests() {
             expectEqual(reg.ordered(by: ["zzz", "a"]).map(\.id), ["a"], "skip unknown")
         }
     }
+
+    test("ordered syncs module enablement with requested ids") {
+        MainActor.assumeIsolated {
+            let reg = ModuleRegistry()
+            let a = FakeModule("a")
+            let b = FakeModule("b")
+            let c = FakeModule("c")
+            reg.register(a)
+            reg.register(b)
+            reg.register(c)
+
+            let ordered = reg.ordered(by: ["c", "missing", "a"])
+
+            expectEqual(ordered.map(\.id), ["c", "a"], "requested known ids returned in order")
+            expect(c.isEnabled, "requested module enabled")
+            expect(a.isEnabled, "requested module enabled")
+            expect(!b.isEnabled, "unrequested module disabled")
+        }
+    }
 }

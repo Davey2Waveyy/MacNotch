@@ -1,33 +1,62 @@
 import MacNotchKit
 
 func notchStateMachineTests() {
-    test("hover enter expands when enabled") {
+    test("hover enter starts expansion when enabled") {
         let sm = NotchStateMachine()
         expect(sm.hoverChanged(true), "hover returns changed")
-        expectEqual(sm.state, .expanded, "state")
+        expectEqual(sm.state, .expanding, "state enters expanding")
+        expect(sm.completeExpand(), "completion advances state")
+        expectEqual(sm.state, .expanded, "state becomes expanded")
     }
+
     test("hover enter does nothing when disabled") {
         let sm = NotchStateMachine()
         sm.hoverToExpand = false
         expect(!sm.hoverChanged(true), "hover returns no change")
         expectEqual(sm.state, .collapsed, "state")
     }
-    test("click toggles both ways") {
+
+    test("click toggles toward expanding and collapsing") {
         let sm = NotchStateMachine()
-        expect(sm.clicked(), "first click changed"); expectEqual(sm.state, .expanded, "expanded")
-        expect(sm.clicked(), "second click changed"); expectEqual(sm.state, .collapsed, "collapsed")
+        expect(sm.clicked(), "first click changed")
+        expectEqual(sm.state, .expanding, "first click starts expansion")
+        expect(sm.completeExpand(), "expand completes")
+        expectEqual(sm.state, .expanded, "expanded after completion")
+
+        expect(sm.clicked(), "second click changed")
+        expectEqual(sm.state, .collapsing, "second click starts collapse")
+        expect(sm.completeCollapse(), "collapse completes")
+        expectEqual(sm.state, .collapsed, "collapsed after completion")
     }
-    test("mouse exit collapses") {
+
+    test("mouse exit requests collapse and waits for completion") {
         let sm = NotchStateMachine()
         _ = sm.clicked()
+        _ = sm.completeExpand()
+
         expect(sm.mouseExitedPanel(), "exit changed")
-        expectEqual(sm.state, .collapsed, "state")
+        expectEqual(sm.state, .collapsing, "state enters collapsing")
+        expect(sm.completeCollapse(), "collapse completion advances state")
+        expectEqual(sm.state, .collapsed, "state becomes collapsed")
     }
-    test("clicked outside collapses only when expanded") {
+
+    test("clicked outside collapses only from expanded states") {
         let sm = NotchStateMachine()
         expect(!sm.clickedOutside(), "no change when collapsed")
         _ = sm.clicked()
-        expect(sm.clickedOutside(), "collapses when expanded")
-        expectEqual(sm.state, .collapsed, "state")
+        _ = sm.completeExpand()
+
+        expect(sm.clickedOutside(), "collapse requested when expanded")
+        expectEqual(sm.state, .collapsing, "state waits in collapsing")
+    }
+
+    test("hover can reverse a pending collapse") {
+        let sm = NotchStateMachine()
+        _ = sm.clicked()
+        _ = sm.completeExpand()
+        _ = sm.mouseExitedPanel()
+
+        expect(sm.hoverChanged(true), "hover changes collapsing state")
+        expectEqual(sm.state, .expanding, "hover re-enters expanding")
     }
 }
