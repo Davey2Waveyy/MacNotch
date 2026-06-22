@@ -1,6 +1,23 @@
 import AppKit
 
 public enum ScreenLocator {
+    package static func inferredNotchWidth(
+        screenWidth: CGFloat,
+        auxiliaryTopLeftAreaWidth: CGFloat?,
+        safeAreaTop: CGFloat
+    ) -> CGFloat? {
+        guard safeAreaTop > 0, let auxiliaryTopLeftAreaWidth else {
+            return nil
+        }
+
+        let width = (screenWidth - (2 * auxiliaryTopLeftAreaWidth)).rounded()
+        guard width > 0, width < screenWidth else {
+            return nil
+        }
+
+        return width
+    }
+
     public static func choose(from screens: [ScreenInfo]) -> ScreenInfo? {
         if let notched = screens.first(where: { $0.hasNotch }) {
             return notched
@@ -24,15 +41,14 @@ public enum ScreenLocator {
 
     public static func current() -> [ScreenInfo] {
         NSScreen.screens.map { screen in
-            let auxiliaryTopLeftArea = screen.auxiliaryTopLeftArea
-            let notchWidth: CGFloat? = screen.safeAreaInsets.top > 0
-                ? (screen.frame.width - (2 * (auxiliaryTopLeftArea?.width ?? 0))).rounded()
-                : nil
-
             return ScreenInfo(
                 frame: screen.frame,
                 safeAreaTop: screen.safeAreaInsets.top,
-                notchWidth: notchWidth.map { $0 > 0 ? $0 : nil } ?? nil,
+                notchWidth: inferredNotchWidth(
+                    screenWidth: screen.frame.width,
+                    auxiliaryTopLeftAreaWidth: screen.auxiliaryTopLeftArea?.width,
+                    safeAreaTop: screen.safeAreaInsets.top
+                ),
                 isMain: screen == NSScreen.main
             )
         }
