@@ -41,6 +41,11 @@ public final class SettingsStore {
         settings.modules.filter { $0.isEnabled }.map { $0.id }
     }
 
+    /// Replaces the whole settings value (used when the Settings window commits edits).
+    public func replace(_ newSettings: AppSettings) {
+        settings = newSettings
+    }
+
     /// Default store location in Application Support.
     public static func defaultURL() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory,

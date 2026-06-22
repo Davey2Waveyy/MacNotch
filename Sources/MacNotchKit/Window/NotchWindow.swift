@@ -63,6 +63,14 @@ public final class NotchWindow: NSObject {
         panel.orderOut(nil)
     }
 
+    /// Re-applies the enabled/ordered module set after a settings change and forces
+    /// the SwiftUI tree to re-read the module list.
+    public func reload() {
+        deactivateModulesIfNeeded()
+        activateModulesIfNeeded()
+        model.objectWillChange.send()
+    }
+
     public func toggle() {
         let canReopenFromCollapseAnimation =
             machine.state == .collapsing

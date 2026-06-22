@@ -4,8 +4,16 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController?
     private var notchWindow: NotchWindow?
+    private var settingsWindowController: SettingsWindowController?
     private let registry = ModuleRegistry()
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
+
+    private let moduleTitles = [
+        "media": "Now Playing",
+        "calendar": "Calendar",
+        "system": "Battery & System",
+        "shelf": "Drop Shelf",
+    ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         settings.load()
@@ -15,11 +23,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notchWindow.show()
         self.notchWindow = notchWindow
 
+        let settingsWindowController = SettingsWindowController(
+            settings: settings,
+            titles: moduleTitles
+        ) { [weak self] updated in
+            guard let self else { return }
+            self.settings.replace(updated)
+            self.settings.save()
+            self.notchWindow?.reload()
+        }
+        self.settingsWindowController = settingsWindowController
+
         let menuBar = MenuBarController()
         menuBar.onToggleNotch = { [weak notchWindow] in
             notchWindow?.toggle()
         }
-        menuBar.onOpenSettings = {}
+        menuBar.onOpenSettings = { [weak settingsWindowController] in
+            settingsWindowController?.show()
+        }
         self.menuBar = menuBar
     }
 

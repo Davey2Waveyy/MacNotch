@@ -12,5 +12,6 @@ systemSampleTests()
 mediaControllerTests()
 calendarFormatTests()
 shelfStoreTests()
+settingsLogicTests()
 
 exit(Int32(TestRunner.shared.runAll()))
