@@ -12,11 +12,8 @@ final class MediaModule: NotchModule {
     }
 
     private let state = StateBox()
-    private let controller = MediaController(sources: [
-        MediaRemoteSource(),
-        AppleScriptSource(appName: "Music"),
-        AppleScriptSource(appName: "Spotify"),
-    ])
+    private let spotify = SpotifySource()
+    private lazy var controller = MediaController(sources: [spotify])
     private var timer: Timer?
 
     func collapsedView() -> AnyView? {
@@ -42,13 +39,9 @@ final class MediaModule: NotchModule {
     }
 
     func activate() {
+        spotify.probeInitialState()
         startTimer()
-        Task { @MainActor in
-            await refresh()
-            // Warm up the Automation TCC prompt so it appears the first time
-            // the user opens the notch rather than mid-playback.
-            _ = controller.active()
-        }
+        Task { @MainActor in await refresh() }
     }
 
     func deactivate() {

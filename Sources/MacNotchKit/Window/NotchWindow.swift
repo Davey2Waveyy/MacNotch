@@ -97,7 +97,10 @@ public final class NotchWindow: NSObject {
 
         machine.defaultExpandMode = settings.settings.defaultExpansionMode
         panel.isFloatingPanel = true
-        panel.level = .statusBar
+        // .statusBar (25) can render behind the macOS 26 menu bar on some
+        // configurations. Use popUpMenu (101) which is the standard level for
+        // system-overlay panels that need to appear above the menu bar.
+        panel.level = .popUpMenu
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = false

@@ -132,57 +132,49 @@ struct MediaDashboardTile: View {
     }
 
     private var nothingPlayingView: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Nothing playing")
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.45))
-
-            HStack(spacing: 8) {
-                appLaunchButton("Spotify", bundleID: "com.spotify.client",
-                                appPath: "/Applications/Spotify.app",
-                                color: Color(red: 0.11, green: 0.73, blue: 0.33))
-                appLaunchButton("Music", bundleID: "com.apple.Music",
-                                appPath: "/System/Applications/Music.app",
-                                color: Color(red: 1, green: 0.42, blue: 0.62))
-            }
+            spotifyButton
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func appLaunchButton(_ name: String, bundleID: String, appPath: String, color: Color) -> some View {
+    private var spotifyButton: some View {
         let isRunning = NSWorkspace.shared.runningApplications
-            .contains { $0.bundleIdentifier == bundleID }
+            .contains { $0.bundleIdentifier == "com.spotify.client" }
         return Button {
             if isRunning {
                 NSWorkspace.shared.runningApplications
-                    .first { $0.bundleIdentifier == bundleID }?
+                    .first { $0.bundleIdentifier == "com.spotify.client" }?
                     .activate(options: .activateIgnoringOtherApps)
             } else {
-                let url = URL(fileURLWithPath: appPath)
-                NSWorkspace.shared.openApplication(at: url,
+                NSWorkspace.shared.openApplication(
+                    at: URL(fileURLWithPath: "/Applications/Spotify.app"),
                     configuration: NSWorkspace.OpenConfiguration())
             }
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Circle()
-                    .fill(color.opacity(0.25))
-                    .frame(width: 20, height: 20)
+                    .fill(Color(red: 0.11, green: 0.73, blue: 0.33).opacity(0.22))
+                    .frame(width: 22, height: 22)
                     .overlay(
                         Image(systemName: "music.note")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(color)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color(red: 0.11, green: 0.73, blue: 0.33))
                     )
-                Text(name)
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.75))
+                Text(isRunning ? "Open Spotify" : "Launch Spotify")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.8))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Color.white.opacity(0.07))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.75)
                     )
             )
