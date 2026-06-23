@@ -67,7 +67,7 @@ final class TimersModule: NotchModule {
 
     private func dismiss(_ id: UUID) {
         state.firing.removeAll { $0.id == id }
-        if state.firing.isEmpty { stopAlarm() }
+        stopAlarm()
     }
 
     private func pump() {
