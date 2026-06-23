@@ -72,7 +72,7 @@ struct DashboardLayoutView: View {
     /// module ID appears here render in the dashboard, in this order — the
     /// rest of the dashboardTile() implementations are kept available for
     /// alternate dashboard pages we may add later.
-    private static let dashboardOrder = ["quickToggles", "screenTime", "timers", "actions"]
+    private static let dashboardOrder = ["quickToggles", "screenTime", "timers", "shelf", "actions"]
 
     private var tilesRow: some View {
         HStack(spacing: tileSpacing) {

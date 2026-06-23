@@ -31,7 +31,7 @@ public struct NotchRootView: View {
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 520
-    private let dashboardSize = CGSize(width: 900, height: 296)
+    private let dashboardSize = CGSize(width: 1080, height: 296)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -125,6 +125,21 @@ public struct NotchRootView: View {
                     .allowsHitTesting(model.mode != .compact)
             }
             .clipShape(NotchPanelShape(bottomRadius: cornerRadius))
+
+            // Solid black strip behind the physical notch so the hardware notch
+            // disappears into the panel and the whole thing reads as one piece
+            // hanging from the notch (rather than a separate card the notch
+            // overlaps). Only while expanded; the collapsed state already *is*
+            // the notch.
+            if model.isExpanded, model.mode != .wideBar {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(.black)
+                        .frame(height: notchInset)
+                    Spacer(minLength: 0)
+                }
+                .allowsHitTesting(false)
+            }
         }
         .frame(width: width, height: height, alignment: .top)
     }

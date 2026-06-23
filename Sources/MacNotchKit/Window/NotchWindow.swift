@@ -66,7 +66,7 @@ public final class NotchWindow: NSObject {
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
-    private let dashboardSize = CGSize(width: 900, height: 296)
+    private let dashboardSize = CGSize(width: 1080, height: 296)
     private let wideBarHeight: CGFloat = 56
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 520
@@ -80,6 +80,7 @@ public final class NotchWindow: NSObject {
     private var activeModules: [any NotchModule] = []
     private var localClickMonitor: Any?
     private var globalClickMonitor: Any?
+    private var timerFiredObserver: Any?
 
     public init(registry: ModuleRegistry, settings: SettingsStore) {
         self.registry = registry
@@ -123,6 +124,22 @@ public final class NotchWindow: NSObject {
             MainActor.assumeIsolated { self?.applyCompactHeight(height) }
         }
         installClickMonitorsIfNeeded()
+        timerFiredObserver = NotificationCenter.default.addObserver(
+            forName: .macNotchTimerFired, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.popOpenForAlarm() }
+        }
+        sync()
+    }
+
+    /// Pops the notch open to the dashboard so a fired timer's alarm is visible.
+    private func popOpenForAlarm() {
+        guard machine.state == .collapsed || machine.mode != .dashboard else { return }
+        if machine.state == .collapsed {
+            _ = machine.tapped()
+        } else {
+            _ = machine.switchMode(to: .dashboard)
+        }
         sync()
     }
 
@@ -152,6 +169,10 @@ public final class NotchWindow: NSObject {
         scheduledTransitionToken &+= 1
         deactivateModulesIfNeeded()
         removeClickMonitors()
+        if let timerFiredObserver {
+            NotificationCenter.default.removeObserver(timerFiredObserver)
+            self.timerFiredObserver = nil
+        }
         panel.orderOut(nil)
     }
 
