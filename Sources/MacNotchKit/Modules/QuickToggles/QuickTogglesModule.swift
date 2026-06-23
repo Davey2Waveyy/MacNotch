@@ -24,9 +24,8 @@ final class QuickTogglesModule: NotchModule {
 
     func collapsedView() -> AnyView? { nil }
 
-    func expandedView() -> AnyView {
-        AnyView(QuickTogglesView(state: state, controller: self))
-    }
+    // Dashboard-only — compact view skips this module.
+    func expandedView() -> AnyView? { nil }
 
     func dashboardTile() -> AnyView? {
         AnyView(QuickTogglesDashboardTile(state: state, controller: self))

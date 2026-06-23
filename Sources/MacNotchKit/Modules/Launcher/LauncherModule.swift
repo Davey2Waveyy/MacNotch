@@ -19,14 +19,7 @@ final class LauncherModule: NotchModule {
     }
 
     func collapsedView() -> AnyView? { nil }
-    func expandedView() -> AnyView {
-        AnyView(LauncherDashboardTile(
-            state: state,
-            onLaunch: { [weak self] app in self?.launch(app) },
-            onDrop: { [weak self] urls in self?.pinDropped(urls) },
-            onRemove: { [weak self] app in self?.remove(app) }
-        ))
-    }
+    func expandedView() -> AnyView? { nil }
 
     func dashboardTile() -> AnyView? {
         AnyView(LauncherDashboardTile(

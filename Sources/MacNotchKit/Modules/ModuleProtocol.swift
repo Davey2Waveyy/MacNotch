@@ -7,7 +7,9 @@ public protocol NotchModule: AnyObject {
     var isEnabled: Bool { get set }
 
     func collapsedView() -> AnyView?
-    func expandedView() -> AnyView
+    /// Card rendered in the compact (hover) view. Return nil to opt out of
+    /// compact entirely — useful for dashboard-only modules.
+    func expandedView() -> AnyView?
     func activate()
     func deactivate()
     func refresh() async

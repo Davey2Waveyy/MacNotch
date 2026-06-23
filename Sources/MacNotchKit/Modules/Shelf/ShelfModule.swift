@@ -21,7 +21,7 @@ final class ShelfModule: NotchModule {
         AnyView(ShelfCollapsedBridge(box: state))
     }
 
-    func expandedView() -> AnyView {
+    func expandedView() -> AnyView? {
         AnyView(ShelfExpandedBridge(
             box: state,
             onDrop: { [weak self] urls in

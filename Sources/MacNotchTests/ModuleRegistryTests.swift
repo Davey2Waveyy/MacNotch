@@ -8,7 +8,7 @@ final class FakeModule: NotchModule {
     var isEnabled = true
     init(_ id: String) { self.id = id; self.title = id }
     func collapsedView() -> AnyView? { nil }
-    func expandedView() -> AnyView { AnyView(EmptyView()) }
+    func expandedView() -> AnyView? { AnyView(EmptyView()) }
     func activate() {}
     func deactivate() {}
     func refresh() async {}

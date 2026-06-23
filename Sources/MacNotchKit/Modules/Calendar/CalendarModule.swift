@@ -21,7 +21,7 @@ final class CalendarModule: NotchModule {
         nil
     }
 
-    func expandedView() -> AnyView {
+    func expandedView() -> AnyView? {
         AnyView(CalendarBridge(box: state, onGrantAccess: openCalendarSettings))
     }
 

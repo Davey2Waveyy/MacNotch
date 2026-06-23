@@ -23,7 +23,7 @@ final class MediaModule: NotchModule {
         AnyView(MediaCollapsedBridge(box: state))
     }
 
-    func expandedView() -> AnyView {
+    func expandedView() -> AnyView? {
         AnyView(MediaExpandedBridge(box: state, controller: controller) { [weak self] in
             Task { @MainActor [weak self] in await self?.refresh() }
         })

@@ -22,7 +22,7 @@ final class CodeModule: NotchModule {
         nil
     }
 
-    func expandedView() -> AnyView {
+    func expandedView() -> AnyView? {
         AnyView(CodeBridge(
             box: state,
             onAction: { [weak self] index, action in self?.perform(action, at: index) },

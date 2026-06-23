@@ -9,9 +9,7 @@ final class ActionsModule: NotchModule {
 
     func collapsedView() -> AnyView? { nil }
 
-    func expandedView() -> AnyView {
-        AnyView(ActionsDashboardTile(onAction: { [weak self] action in self?.perform(action) }))
-    }
+    func expandedView() -> AnyView? { nil }
 
     func dashboardTile() -> AnyView? {
         AnyView(ActionsDashboardTile(onAction: { [weak self] action in self?.perform(action) }))

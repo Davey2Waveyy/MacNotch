@@ -16,7 +16,7 @@ final class ActivatingModule: NotchModule {
     }
 
     func collapsedView() -> AnyView? { nil }
-    func expandedView() -> AnyView { AnyView(EmptyView()) }
+    func expandedView() -> AnyView? { AnyView(EmptyView()) }
     func activate() { activationCount += 1 }
     func deactivate() { deactivationCount += 1 }
     func refresh() async {}

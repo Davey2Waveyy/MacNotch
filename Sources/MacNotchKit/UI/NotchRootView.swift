@@ -31,7 +31,7 @@ public struct NotchRootView: View {
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 460
-    private let dashboardSize = CGSize(width: 840, height: 220)
+    private let dashboardSize = CGSize(width: 860, height: 260)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -144,13 +144,17 @@ public struct NotchRootView: View {
     }
 
     private func compactExpanded(modules currentModules: [any NotchModule], size: CGSize) -> some View {
-        VStack(spacing: 8) {
-            if currentModules.isEmpty {
+        let visible = currentModules.compactMap { module -> (id: String, view: AnyView)? in
+            guard let view = module.expandedView() else { return nil }
+            return (module.id, view)
+        }
+        return VStack(spacing: 8) {
+            if visible.isEmpty {
                 Color.clear
                     .frame(maxWidth: .infinity, minHeight: 96)
             } else {
-                ForEach(currentModules, id: \.id) { module in
-                    module.expandedView()
+                ForEach(visible, id: \.id) { entry in
+                    entry.view
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)

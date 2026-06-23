@@ -23,7 +23,7 @@ final class SystemModule: NotchModule {
         nil
     }
 
-    func expandedView() -> AnyView {
+    func expandedView() -> AnyView? {
         AnyView(SystemModuleBridge(box: state))
     }
 

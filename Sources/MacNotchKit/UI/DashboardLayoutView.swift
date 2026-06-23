@@ -64,11 +64,23 @@ struct DashboardLayoutView: View {
         }
     }
 
+    /// Curated order for the default "Quick" dashboard view. Only tiles whose
+    /// module ID appears here render in the dashboard, in this order — the
+    /// rest of the dashboardTile() implementations are kept available for
+    /// alternate dashboard pages we may add later.
+    private static let dashboardOrder = ["quickToggles", "calendar", "launcher", "actions"]
+
     private var tilesRow: some View {
         HStack(spacing: tileSpacing) {
-            let tiles = modules.compactMap { module -> (id: String, view: AnyView)? in
-                guard let tile = module.dashboardTile() else { return nil }
-                return (module.id, tile)
+            let available = Dictionary(uniqueKeysWithValues:
+                modules.compactMap { module -> (String, AnyView)? in
+                    guard let tile = module.dashboardTile() else { return nil }
+                    return (module.id, tile)
+                }
+            )
+            let tiles = Self.dashboardOrder.compactMap { id -> (id: String, view: AnyView)? in
+                guard let view = available[id] else { return nil }
+                return (id, view)
             }
             if tiles.isEmpty {
                 Text("No dashboard tiles yet")
