@@ -2,10 +2,21 @@ import AppKit
 import Combine
 import SwiftUI
 
+/// Reports the intrinsic height of the compact-mode content so the panel can
+/// hug its content instead of using a fixed height (which leaves dead space).
+struct CompactContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 @MainActor
 public final class NotchWindowModel: ObservableObject {
     @Published public var isExpanded = false
     @Published public var mode: ExpansionMode = .compact
+    /// Intrinsic height of the compact-mode content, measured by the view tree.
+    @Published public var compactContentHeight: CGFloat = 320
 
     public init() {}
 }
@@ -17,7 +28,9 @@ public struct NotchRootView: View {
     private let onPanelTap: () -> Void
     private let onSwitchMode: (ExpansionMode) -> Void
 
-    private let compactSize = CGSize(width: 280, height: 320)
+    private let compactWidth: CGFloat = 280
+    private static let minCompactHeight: CGFloat = 132
+    private static let maxCompactHeight: CGFloat = 460
     private let dashboardSize = CGSize(width: 720, height: 180)
     private let wideBarHeight: CGFloat = 56
 
@@ -47,11 +60,21 @@ public struct NotchRootView: View {
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: model.isExpanded)
         .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.mode)
+        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.compactContentHeight)
+        .onPreferenceChange(CompactContentHeightKey.self) { height in
+            guard height > 1 else { return }
+            let clamped = min(max(height, Self.minCompactHeight), Self.maxCompactHeight)
+            Task { @MainActor [model] in
+                if abs(clamped - model.compactContentHeight) > 0.5 {
+                    model.compactContentHeight = clamped
+                }
+            }
+        }
     }
 
     private var expandedSize: CGSize {
         switch model.mode {
-        case .compact: return compactSize
+        case .compact: return CGSize(width: compactWidth, height: model.compactContentHeight)
         case .dashboard: return dashboardSize
         case .wideBar:
             let width = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
@@ -121,18 +144,28 @@ public struct NotchRootView: View {
     }
 
     private func compactExpanded(modules currentModules: [any NotchModule], size: CGSize) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             if currentModules.isEmpty {
                 Color.clear
-                    .frame(maxWidth: .infinity, minHeight: size.height - 28)
+                    .frame(maxWidth: .infinity, minHeight: 96)
             } else {
                 ForEach(currentModules, id: \.id) { module in
                     module.expandedView()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .dashboardTileSurface()
                 }
             }
         }
-        .padding(14)
-        .frame(width: size.width, height: size.height, alignment: .top)
+        .padding(12)
+        .frame(width: size.width, alignment: .top)
+        .fixedSize(horizontal: false, vertical: true)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: CompactContentHeightKey.self, value: proxy.size.height)
+            }
+        )
     }
 
     private func chrome(cornerRadius: CGFloat) -> some View {

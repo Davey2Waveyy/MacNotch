@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// Thin NSView wrapper that reliably owns its own tracking area.
@@ -67,6 +68,11 @@ public final class NotchWindow: NSObject {
     private let compactSize = CGSize(width: 280, height: 320)
     private let dashboardSize = CGSize(width: 720, height: 180)
     private let wideBarHeight: CGFloat = 56
+    private let minCompactHeight: CGFloat = 132
+    private let maxCompactHeight: CGFloat = 460
+    private var measuredCompactHeight: CGFloat = 320
+    private var isShown = false
+    private var compactHeightObserver: AnyCancellable?
     private let expansionAnimationDuration: TimeInterval = 0.35
     private let collapseGraceDelay: TimeInterval = 0.18
     private let collapseAnimationDuration: TimeInterval = 0.2
@@ -113,15 +119,33 @@ public final class NotchWindow: NSObject {
         hostingView.autoresizingMask = [.width, .height]
         container.addSubview(hostingView)
         panel.contentView = container
+        compactHeightObserver = model.$compactContentHeight.sink { [weak self] height in
+            MainActor.assumeIsolated { self?.applyCompactHeight(height) }
+        }
         installClickMonitorsIfNeeded()
         sync()
     }
 
     public func show() {
         installClickMonitorsIfNeeded()
+        isShown = true
+        applyCompactHeight(model.compactContentHeight)
         sync()
         activateModulesIfNeeded()
         panel.orderFrontRegardless()
+    }
+
+    /// Resizes the compact panel to hug the SwiftUI-measured content height so
+    /// the preview never shows dead space below short content. Gated on `show()`
+    /// so headless tests keep the fixed footprint they assert against.
+    private func applyCompactHeight(_ height: CGFloat) {
+        guard isShown else { return }
+        let clamped = min(max(height, minCompactHeight), maxCompactHeight)
+        guard abs(clamped - measuredCompactHeight) > 0.5 else { return }
+        measuredCompactHeight = clamped
+        if machine.mode == .compact, transitionCoordinator.isVisuallyExpanded {
+            updateFrame(visuallyExpanded: true)
+        }
     }
 
     public func tearDown() {
@@ -201,7 +225,7 @@ public final class NotchWindow: NSObject {
     private func expandedSize(for mode: ExpansionMode) -> CGSize {
         switch mode {
         case .compact:
-            return compactSize
+            return CGSize(width: compactSize.width, height: measuredCompactHeight)
         case .dashboard:
             return dashboardSize
         case .wideBar:
