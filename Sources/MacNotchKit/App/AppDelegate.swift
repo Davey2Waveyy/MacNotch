@@ -9,6 +9,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
 
     private let moduleTitles = [
+        "quickToggles": "Quick Toggles",
+        "actions": "Actions",
+        "launcher": "Launcher",
         "media": "Now Playing",
         "calendar": "Calendar",
         "system": "Battery & System",
@@ -50,6 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerModules() {
+        registry.register(QuickTogglesModule())
+        registry.register(ActionsModule())
+        registry.register(LauncherModule())
         registry.register(MediaModule())
         registry.register(CalendarModule())
         registry.register(SystemModule())

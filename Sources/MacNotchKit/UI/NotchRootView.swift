@@ -31,7 +31,7 @@ public struct NotchRootView: View {
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 460
-    private let dashboardSize = CGSize(width: 720, height: 180)
+    private let dashboardSize = CGSize(width: 840, height: 220)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -169,7 +169,46 @@ public struct NotchRootView: View {
     }
 
     private func chrome(cornerRadius: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(.black)
+        NotchChrome(cornerRadius: cornerRadius, isExpanded: model.isExpanded, mode: model.mode)
+    }
+}
+
+/// Layered "glass over black" panel surface: a near-black gradient with a
+/// hairline top highlight, an inner stroke, and a soft drop shadow when
+/// expanded. Replaces the flat `.black` fill so the panel reads with depth.
+struct NotchChrome: View {
+    let cornerRadius: CGFloat
+    let isExpanded: Bool
+    let mode: ExpansionMode
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        ZStack {
+            shape
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.07, green: 0.07, blue: 0.08),
+                            Color(red: 0.02, green: 0.02, blue: 0.025)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            shape
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(isExpanded ? 0.14 : 0.06),
+                            .white.opacity(0.015)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.6
+                )
+        }
+        .shadow(color: .black.opacity(isExpanded ? 0.55 : 0), radius: isExpanded ? 18 : 0, x: 0, y: isExpanded ? 8 : 0)
+        .animation(.easeOut(duration: 0.25), value: isExpanded)
     }
 }

@@ -66,7 +66,7 @@ public final class NotchWindow: NSObject {
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
-    private let dashboardSize = CGSize(width: 720, height: 180)
+    private let dashboardSize = CGSize(width: 840, height: 220)
     private let wideBarHeight: CGFloat = 56
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 460

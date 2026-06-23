@@ -2,32 +2,66 @@ import SwiftUI
 
 /// Horizontal-tile expanded layout shown when the notch is clicked.
 /// Modules opt in by implementing `dashboardTile()`; others are skipped.
-/// Bottom toolbar lets the user switch between expansion modes.
+/// Top header carries the title; bottom toolbar switches expansion modes.
 struct DashboardLayoutView: View {
     let modules: [any NotchModule]
     let size: CGSize
     let activeMode: ExpansionMode
     let onSwitchMode: (ExpansionMode) -> Void
 
+    private let headerHeight: CGFloat = 18
     private let toolbarHeight: CGFloat = 30
     private let tileSpacing: CGFloat = 10
     private let outerPadding: CGFloat = 14
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 6) {
+            header
+                .frame(height: headerHeight)
             tilesRow
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Rectangle()
                 .fill(NotchTheme.hairline)
                 .frame(height: 1)
-                .padding(.top, 10)
+                .padding(.top, 6)
             modeToolbar
                 .frame(height: toolbarHeight)
         }
         .padding(.horizontal, outerPadding)
-        .padding(.top, outerPadding)
-        .padding(.bottom, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
         .frame(width: size.width, height: size.height, alignment: .top)
+    }
+
+    private var header: some View {
+        HStack(spacing: 4) {
+            Text("Dashboard")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.92))
+            Text("·")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.30))
+            Text(activeMode == .dashboard ? "Quick" : modeLabel)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(NotchTheme.accent)
+            Spacer()
+            ForEach([("square.and.arrow.up.on.square", "Open settings"),
+                     ("eye.slash", "Hide")], id: \.0) { icon, help in
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.40))
+                    .frame(width: 18, height: 16)
+                    .help(help)
+            }
+        }
+    }
+
+    private var modeLabel: String {
+        switch activeMode {
+        case .compact: return "Compact"
+        case .dashboard: return "Quick"
+        case .wideBar: return "Wide Bar"
+        }
     }
 
     private var tilesRow: some View {
