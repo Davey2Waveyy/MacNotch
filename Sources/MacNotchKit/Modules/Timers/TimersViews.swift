@@ -136,7 +136,7 @@ struct TimersDashboardTile: View {
     }
 
     private func runningRow(_ timer: CountdownTimer) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Text(TimerFormat.clock(timer.remaining(at: now)))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
                 .foregroundStyle(NotchTheme.accent)
@@ -146,10 +146,12 @@ struct TimersDashboardTile: View {
             Spacer(minLength: 2)
             Button { onCancel(timer.id) } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
         }
     }
 }
