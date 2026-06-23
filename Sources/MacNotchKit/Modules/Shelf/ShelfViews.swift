@@ -4,25 +4,34 @@ import SwiftUI
 /// NSView subclass that initiates a proper Finder-compatible file drag.
 /// SwiftUI's .draggable(URL) writes the wrong pasteboard type for cross-app
 /// drags — Finder needs NSPasteboard.PasteboardType.fileURL via NSURL.
+///
+/// Pattern: store the mouseDown event, then start the drag on mouseDragged
+/// (macOS requirement — beginDraggingSession must be called from mouseDragged).
 final class FileDragSourceView: NSView, NSDraggingSource {
     var fileURL: URL?
+    private var pendingMouseDown: NSEvent?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     func draggingSession(_ session: NSDraggingSession,
-                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
-        context == .outsideApplication ? .copy : .copy
-    }
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation { .copy }
 
     override func mouseDown(with event: NSEvent) {
-        guard let url = fileURL else { return }
+        pendingMouseDown = event
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        pendingMouseDown = nil
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let url = fileURL, let downEvent = pendingMouseDown else { return }
+        pendingMouseDown = nil
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
-        // Icon: use the file's actual icon, fall back to generic doc
         let icon = NSWorkspace.shared.icon(forFile: url.path)
-        let iconSize = CGSize(width: 32, height: 32)
-        item.setDraggingFrame(
-            CGRect(origin: .zero, size: iconSize),
-            contents: icon
-        )
-        beginDraggingSession(with: [item], event: event, source: self)
+        item.setDraggingFrame(CGRect(origin: .zero, size: CGSize(width: 32, height: 32)),
+                              contents: icon)
+        beginDraggingSession(with: [item], event: downEvent, source: self)
     }
 }
 
@@ -99,7 +108,7 @@ struct ShelfExpandedView: View {
         }
 
         if let resolvedURL = resolve(item) {
-            chipBody.overlay(FileDragSourceRepresentable(url: resolvedURL))
+            chipBody.background(FileDragSourceRepresentable(url: resolvedURL))
         } else {
             chipBody
         }
@@ -190,9 +199,9 @@ struct ShelfDashboardTile: View {
     }
 }
 
-/// Transparent overlay that handles mouseDown → beginDraggingSession so the
-/// chip's visual stays SwiftUI while the drag source is AppKit (which writes
-/// the correct .fileURL pasteboard type Finder expects).
+/// Transparent full-size NSView placed as the chip's background so it sits
+/// BELOW the SwiftUI label content in Z-order but fills the same frame,
+/// receiving mouse events before SwiftUI's gesture recognisers can claim them.
 struct FileDragSourceRepresentable: NSViewRepresentable {
     let url: URL
     func makeNSView(context: Context) -> FileDragSourceView {
