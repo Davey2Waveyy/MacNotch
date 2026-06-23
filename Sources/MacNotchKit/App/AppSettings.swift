@@ -51,6 +51,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
             ModuleSetting(id: "system", isEnabled: true),
             ModuleSetting(id: "shelf", isEnabled: true),
             ModuleSetting(id: "code", isEnabled: true),
+            ModuleSetting(id: "clipboard", isEnabled: true),
+            ModuleSetting(id: "reminders", isEnabled: true),
         ],
         launchAtLogin: false,
         defaultExpansionMode: .dashboard

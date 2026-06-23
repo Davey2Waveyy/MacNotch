@@ -19,6 +19,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "system": "Battery & System",
         "shelf": "Drop Shelf",
         "code": "Code",
+        "clipboard": "Clipboard",
+        "reminders": "Reminders",
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -65,5 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(SystemModule())
         registry.register(ShelfModule())
         registry.register(CodeModule())
+        registry.register(ClipboardModule())
+        registry.register(RemindersModule())
     }
 }

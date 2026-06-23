@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 @MainActor
 final class SystemModule: NotchModule {
@@ -18,6 +19,10 @@ final class SystemModule: NotchModule {
 
     private let state = StateBox()
     private var timer: Timer?
+
+    // Battery alert state — track last seen values to fire notifications only on crossing.
+    private var lastAlertedLow = false
+    private var lastAlertedHigh = false
 
     func collapsedView() -> AnyView? {
         nil
@@ -48,7 +53,9 @@ final class SystemModule: NotchModule {
     }
 
     func refresh() async {
-        state.sample = SystemSampler.sample()
+        let sample = SystemSampler.sample()
+        state.sample = sample
+        checkBatteryAlerts(sample)
     }
 
     private func refreshTimer() {
@@ -58,6 +65,44 @@ final class SystemModule: NotchModule {
             Task { @MainActor [weak self] in
                 await self?.refresh()
             }
+        }
+    }
+
+    // MARK: - Battery alerts
+
+    private func checkBatteryAlerts(_ sample: SystemSample) {
+        guard let pct = sample.batteryPercent else { return }
+
+        let isLow = pct <= 20 && !sample.isCharging
+        if isLow && !lastAlertedLow {
+            lastAlertedLow = true
+            sendNotification(title: "Battery Low (\(pct)%)",
+                             body: "Plug in to avoid losing work.",
+                             id: "battery-low")
+        } else if !isLow {
+            lastAlertedLow = false
+        }
+
+        let isHigh = pct >= 80 && sample.isCharging
+        if isHigh && !lastAlertedHigh {
+            lastAlertedHigh = true
+            sendNotification(title: "Battery at \(pct)%",
+                             body: "You can safely unplug now.",
+                             id: "battery-high")
+        } else if !isHigh {
+            lastAlertedHigh = false
+        }
+    }
+
+    private func sendNotification(title: String, body: String, id: String) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            content.sound = .default
+            let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(request)
         }
     }
 }
