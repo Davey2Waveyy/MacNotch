@@ -49,26 +49,19 @@ public struct NotchRootView: View {
     }
 
     public var body: some View {
-        // Fill the hosting window and pin the panel to the TOP. Without this the
-        // panel (which is smaller than the window during the open animation) gets
-        // centered by AppKit, so it appears to grow from the middle/bottom instead
-        // of dropping down from the notch.
-        ZStack(alignment: .top) {
-            panelBody
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.isExpanded)
-        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: model.mode)
-        .animation(.spring(response: 0.30, dampingFraction: 0.86), value: model.compactContentHeight)
-        .onPreferenceChange(CompactContentHeightKey.self) { height in
-            guard height > 1 else { return }
-            let clamped = min(max(height, Self.minCompactHeight), Self.maxCompactHeight)
-            Task { @MainActor [model] in
-                if abs(clamped - model.compactContentHeight) > 0.5 {
-                    model.compactContentHeight = clamped
+        panelBody
+            .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.isExpanded)
+            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: model.mode)
+            .animation(.spring(response: 0.30, dampingFraction: 0.86), value: model.compactContentHeight)
+            .onPreferenceChange(CompactContentHeightKey.self) { height in
+                guard height > 1 else { return }
+                let clamped = min(max(height, Self.minCompactHeight), Self.maxCompactHeight)
+                Task { @MainActor [model] in
+                    if abs(clamped - model.compactContentHeight) > 0.5 {
+                        model.compactContentHeight = clamped
+                    }
                 }
             }
-        }
     }
 
     private var expandedSize: CGSize {
@@ -96,61 +89,44 @@ public struct NotchRootView: View {
             }
         }()
 
-        // Wrap in a VStack that pins the panel to the top. As the panel grows
-        // during expansion, it grows downward from the top, not outward from
-        // the center.
-        return VStack(spacing: 0) {
-            ZStack(alignment: .top) {
-                // Single glass chrome (keeps its own silhouette + shadow, so the
-                // shadow is not clipped by the content clip below).
-                chrome(cornerRadius: cornerRadius)
-                    .contentShape(NotchPanelShape(bottomRadius: cornerRadius))
-                    .onTapGesture(perform: onPanelTap)
+        // The window frame is sized exactly to the panel via NSLayoutConstraint
+        // in NotchWindow, so the panel just fills the window — no tricks needed.
+        return ZStack(alignment: .top) {
+            chrome(cornerRadius: cornerRadius)
+                .contentShape(NotchPanelShape(bottomRadius: cornerRadius))
+                .onTapGesture(perform: onPanelTap)
 
-                ZStack(alignment: .top) {
-                    HStack(spacing: 6) {
-                        ForEach(currentModules, id: \.id) { module in
-                            if let collapsed = module.collapsedView() {
-                                collapsed
-                            }
+            ZStack(alignment: .top) {
+                HStack(spacing: 6) {
+                    ForEach(currentModules, id: \.id) { module in
+                        if let collapsed = module.collapsedView() {
+                            collapsed
                         }
                     }
-                    .frame(width: collapsedSize.width, height: collapsedSize.height)
-                    .opacity(model.isExpanded ? 0 : 1)
-                    .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
-                    .allowsHitTesting(false)
-
-                    expandedContent(modules: currentModules, size: size)
-                        .opacity(model.isExpanded ? 1 : 0)
-                        .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
-                        // The compact preview is a glance: the whole thing taps through
-                        // to open the dashboard (where the real controls live). Interactive
-                        // modes keep hit-testing so their buttons work.
-                        .allowsHitTesting(model.mode != .compact)
                 }
-                .clipShape(NotchPanelShape(bottomRadius: cornerRadius))
+                .frame(width: collapsedSize.width, height: collapsedSize.height)
+                .opacity(model.isExpanded ? 0 : 1)
+                .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
+                .allowsHitTesting(false)
 
-                // Solid black strip behind the physical notch so the hardware notch
-                // disappears into the panel and the whole thing reads as one piece
-                // hanging from the notch (rather than a separate card the notch
-                // overlaps). Only while expanded; the collapsed state already *is*
-                // the notch.
-                if model.isExpanded, model.mode != .wideBar {
-                    VStack(spacing: 0) {
-                        Rectangle()
-                            .fill(.black)
-                            .frame(height: notchInset)
-                        Spacer(minLength: 0)
-                    }
-                    .allowsHitTesting(false)
-                }
+                expandedContent(modules: currentModules, size: size)
+                    .opacity(model.isExpanded ? 1 : 0)
+                    .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
+                    .allowsHitTesting(model.mode != .compact)
             }
-            .frame(width: width, height: height, alignment: .top)
+            .clipShape(NotchPanelShape(bottomRadius: cornerRadius))
 
-            // Spacer ensures the panel stays at the top as the VStack grows
-            Spacer(minLength: 0)
+            if model.isExpanded, model.mode != .wideBar {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(.black)
+                        .frame(height: notchInset)
+                    Spacer(minLength: 0)
+                }
+                .allowsHitTesting(false)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(width: width, height: height, alignment: .top)
     }
 
     @ViewBuilder
@@ -209,7 +185,9 @@ public struct NotchRootView: View {
 
     /// Height of the physical notch, used to inset expanded content so nothing
     /// renders behind the hardware notch.
-    private var notchInset: CGFloat { collapsedSize.height }
+    /// Physical notch bar height — used to push content below the hardware notch.
+    /// Uses safeAreaInsets.top (≈37pt on notched Macs, 0 on non-notched).
+    private var notchInset: CGFloat { NSScreen.main?.safeAreaInsets.top ?? 37 }
 
     private func chrome(cornerRadius: CGFloat) -> some View {
         NotchChrome(cornerRadius: cornerRadius, isExpanded: model.isExpanded, mode: model.mode)

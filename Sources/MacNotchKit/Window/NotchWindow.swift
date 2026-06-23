@@ -80,6 +80,7 @@ public final class NotchWindow: NSObject {
     private var activeModules: [any NotchModule] = []
     private var localClickMonitor: Any?
     private var globalClickMonitor: Any?
+    private var globalMouseMoveMonitor: Any?
     private var timerFiredObserver: Any?
 
     public init(registry: ModuleRegistry, settings: SettingsStore) {
@@ -116,12 +117,21 @@ public final class NotchWindow: NSObject {
             onSwitchMode: { [weak self] mode in self?.setMode(mode) }
         )
         let hostingView = NSHostingView(rootView: root)
+        // NSHostingView centers its content by default. Disable autoresizing and
+        // manually pin to the TOP of the container so the panel drops from the
+        // notch rather than floating centered in a taller window frame.
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
         let container = HoverContainerView()
         container.owner = self
         container.onDropped = { [weak self] urls in self?.handleExternalDrop(urls) }
         container.registerForDraggedTypes([.fileURL])
-        hostingView.autoresizingMask = [.width, .height]
         container.addSubview(hostingView)
+        NSLayoutConstraint.activate([
+            hostingView.topAnchor.constraint(equalTo: container.topAnchor),
+            hostingView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hostingView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
         panel.contentView = container
         compactHeightObserver = model.$compactContentHeight.sink { [weak self] height in
             MainActor.assumeIsolated { self?.applyCompactHeight(height) }
@@ -172,6 +182,7 @@ public final class NotchWindow: NSObject {
         scheduledTransitionToken &+= 1
         deactivateModulesIfNeeded()
         removeClickMonitors()
+        removeMouseMoveMonitor()
         if let timerFiredObserver {
             NotificationCenter.default.removeObserver(timerFiredObserver)
             self.timerFiredObserver = nil
@@ -223,7 +234,35 @@ public final class NotchWindow: NSObject {
     }
 
     @objc public func mouseExited(with event: NSEvent) {
-        applyHover(false)
+        // Tracking area mouseExited is unreliable when the window grows (the
+        // cursor may already be inside the new bounds). The global mouse-move
+        // monitor installed by applyHover handles the real exit check.
+    }
+
+    /// Install a global mouse-move monitor that collapses the compact hover
+    /// panel when the cursor leaves the panel frame. Removed when not needed.
+    private func installMouseMoveMonitorIfNeeded() {
+        guard globalMouseMoveMonitor == nil else { return }
+        globalMouseMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            Task { @MainActor [weak self] in self?.checkMousePosition() }
+        }
+    }
+
+    private func removeMouseMoveMonitor() {
+        if let m = globalMouseMoveMonitor { NSEvent.removeMonitor(m); globalMouseMoveMonitor = nil }
+    }
+
+    private func checkMousePosition() {
+        guard machine.mode == .compact, machine.state == .expanded || machine.state == .expanding else {
+            removeMouseMoveMonitor()
+            return
+        }
+        let mouse = NSEvent.mouseLocation
+        let panelFrame = panel.frame
+        if !panelFrame.contains(mouse) {
+            removeMouseMoveMonitor()
+            applyHover(false)
+        }
     }
 
     private var notchRect: CGRect {
@@ -361,8 +400,13 @@ public final class NotchWindow: NSObject {
 
     private func applyHover(_ inside: Bool) {
         guard machine.hoverChanged(inside) else { return }
-        if !inside, machine.state == .collapsing {
-            transitionCoordinator.requestGracefulCollapse()
+        if inside {
+            // Install a global move monitor to detect when the cursor leaves the
+            // expanded panel (tracking area mouseExited is unreliable after the
+            // window grows to accommodate the compact preview).
+            installMouseMoveMonitorIfNeeded()
+        } else {
+            removeMouseMoveMonitor()
         }
         sync()
     }
