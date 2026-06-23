@@ -377,6 +377,12 @@ public final class NotchWindow: NSObject {
         transitionCoordinator.sync(for: machine.state)
         model.isExpanded = transitionCoordinator.isVisuallyExpanded
         model.mode = machine.mode
+
+        // Drop to .floating when expanded so SwiftUI .draggable() sessions can
+        // start — macOS blocks drag sources in .statusBar level windows.
+        // Return to .statusBar when collapsed so the notch stays above all apps.
+        panel.level = transitionCoordinator.isVisuallyExpanded ? .floating : .statusBar
+
         updateFrame(visuallyExpanded: transitionCoordinator.isVisuallyExpanded)
 
         switch machine.state {
