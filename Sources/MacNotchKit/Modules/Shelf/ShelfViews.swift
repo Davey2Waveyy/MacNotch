@@ -1,4 +1,30 @@
+import AppKit
 import SwiftUI
+
+/// NSView subclass that initiates a proper Finder-compatible file drag.
+/// SwiftUI's .draggable(URL) writes the wrong pasteboard type for cross-app
+/// drags — Finder needs NSPasteboard.PasteboardType.fileURL via NSURL.
+final class FileDragSourceView: NSView, NSDraggingSource {
+    var fileURL: URL?
+
+    func draggingSession(_ session: NSDraggingSession,
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .outsideApplication ? .copy : .copy
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let url = fileURL else { return }
+        let item = NSDraggingItem(pasteboardWriter: url as NSURL)
+        // Icon: use the file's actual icon, fall back to generic doc
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        let iconSize = CGSize(width: 32, height: 32)
+        item.setDraggingFrame(
+            CGRect(origin: .zero, size: iconSize),
+            contents: icon
+        )
+        beginDraggingSession(with: [item], event: event, source: self)
+    }
+}
 
 /// Count badge shown in the collapsed notch bar when the shelf is non-empty.
 struct ShelfCollapsedView: View {
@@ -73,7 +99,7 @@ struct ShelfExpandedView: View {
         }
 
         if let resolvedURL = resolve(item) {
-            chipBody.draggable(resolvedURL)
+            chipBody.overlay(FileDragSourceRepresentable(url: resolvedURL))
         } else {
             chipBody
         }
@@ -155,10 +181,27 @@ struct ShelfDashboardTile: View {
         }
 
         if let resolvedURL = resolve(item) {
-            chipBody.draggable(resolvedURL)
+            chipBody.overlay(
+                FileDragSourceRepresentable(url: resolvedURL)
+            )
         } else {
             chipBody
         }
+    }
+}
+
+/// Transparent overlay that handles mouseDown → beginDraggingSession so the
+/// chip's visual stays SwiftUI while the drag source is AppKit (which writes
+/// the correct .fileURL pasteboard type Finder expects).
+struct FileDragSourceRepresentable: NSViewRepresentable {
+    let url: URL
+    func makeNSView(context: Context) -> FileDragSourceView {
+        let v = FileDragSourceView()
+        v.fileURL = url
+        return v
+    }
+    func updateNSView(_ nsView: FileDragSourceView, context: Context) {
+        nsView.fileURL = url
     }
 }
 
