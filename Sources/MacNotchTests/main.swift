@@ -16,5 +16,6 @@ shelfStoreTests()
 settingsLogicTests()
 codeModuleCoreTests()
 screenTimeTrackerTests()
+timerSchedulerTests()
 
 exit(Int32(TestRunner.shared.runAll()))

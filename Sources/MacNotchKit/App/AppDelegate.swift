@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let moduleTitles = [
         "screenTime": "Screen Time",
         "quickToggles": "Quick Toggles",
+        "timers": "Timers",
         "actions": "Actions",
         "launcher": "Launcher",
         "media": "Now Playing",
@@ -56,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func registerModules() {
         registry.register(ScreenTimeModule())
         registry.register(QuickTogglesModule())
+        registry.register(TimersModule())
         registry.register(ActionsModule())
         registry.register(LauncherModule())
         registry.register(MediaModule())

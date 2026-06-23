@@ -43,6 +43,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         modules: [
             ModuleSetting(id: "screenTime", isEnabled: true),
             ModuleSetting(id: "quickToggles", isEnabled: true),
+            ModuleSetting(id: "timers", isEnabled: true),
             ModuleSetting(id: "actions", isEnabled: true),
             ModuleSetting(id: "launcher", isEnabled: true),
             ModuleSetting(id: "media", isEnabled: true),

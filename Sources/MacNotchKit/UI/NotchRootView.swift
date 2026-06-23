@@ -98,33 +98,36 @@ public struct NotchRootView: View {
         }()
 
         return ZStack(alignment: .top) {
+            // Single glass chrome (keeps its own silhouette + shadow, so the
+            // shadow is not clipped by the content clip below).
             chrome(cornerRadius: cornerRadius)
-                .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                .contentShape(NotchPanelShape(bottomRadius: cornerRadius))
                 .onTapGesture(perform: onPanelTap)
 
-            HStack(spacing: 6) {
-                ForEach(currentModules, id: \.id) { module in
-                    if let collapsed = module.collapsedView() {
-                        collapsed
+            ZStack(alignment: .top) {
+                HStack(spacing: 6) {
+                    ForEach(currentModules, id: \.id) { module in
+                        if let collapsed = module.collapsedView() {
+                            collapsed
+                        }
                     }
                 }
-            }
-            .frame(width: collapsedSize.width, height: collapsedSize.height)
-            .opacity(model.isExpanded ? 0 : 1)
-            .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
-            .allowsHitTesting(false)
+                .frame(width: collapsedSize.width, height: collapsedSize.height)
+                .opacity(model.isExpanded ? 0 : 1)
+                .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
+                .allowsHitTesting(false)
 
-            expandedContent(modules: currentModules, size: size)
-                .opacity(model.isExpanded ? 1 : 0)
-                .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
-                // The compact preview is a glance: the whole thing taps through
-                // to open the dashboard (where the real controls live). Interactive
-                // modes keep hit-testing so their buttons work.
-                .allowsHitTesting(model.mode != .compact)
+                expandedContent(modules: currentModules, size: size)
+                    .opacity(model.isExpanded ? 1 : 0)
+                    .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
+                    // The compact preview is a glance: the whole thing taps through
+                    // to open the dashboard (where the real controls live). Interactive
+                    // modes keep hit-testing so their buttons work.
+                    .allowsHitTesting(model.mode != .compact)
+            }
+            .clipShape(NotchPanelShape(bottomRadius: cornerRadius))
         }
         .frame(width: width, height: height, alignment: .top)
-        .background(chrome(cornerRadius: cornerRadius))
-        .clipped()
     }
 
     @ViewBuilder
@@ -182,42 +185,48 @@ public struct NotchRootView: View {
     }
 }
 
-/// Layered "glass over black" panel surface: a near-black gradient with a
-/// hairline top highlight, an inner stroke, and a soft drop shadow when
-/// expanded. Replaces the flat `.black` fill so the panel reads with depth.
+/// Glass panel surface shaped like a notch dropdown: real `NSVisualEffectView`
+/// blur, a dark tint for legibility over bright desktops, a hairline edge, and a
+/// soft drop shadow when expanded. Square top + rounded bottom so it reads as
+/// dropping out of the notch rather than floating as a centered card.
 struct NotchChrome: View {
     let cornerRadius: CGFloat
     let isExpanded: Bool
     let mode: ExpansionMode
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let shape = NotchPanelShape(bottomRadius: cornerRadius)
         ZStack {
+            // Real glass blur of whatever is behind the panel.
+            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
+
+            // Dark tint so the glass stays legible and on-brand, kept light
+            // enough that the blur behind still reads as glass.
+            LinearGradient(
+                colors: [
+                    Color.black.opacity(isExpanded ? 0.34 : 0.55),
+                    Color.black.opacity(isExpanded ? 0.50 : 0.66)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            // Hairline edge: brighter along the top where light catches the bezel.
             shape
-                .fill(
+                .stroke(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.07, green: 0.07, blue: 0.08),
-                            Color(red: 0.02, green: 0.02, blue: 0.025)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            shape
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(isExpanded ? 0.14 : 0.06),
-                            .white.opacity(0.015)
+                            .white.opacity(isExpanded ? 0.18 : 0.10),
+                            .white.opacity(0.02)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     ),
-                    lineWidth: 0.6
+                    lineWidth: 0.75
                 )
         }
-        .shadow(color: .black.opacity(isExpanded ? 0.55 : 0), radius: isExpanded ? 18 : 0, x: 0, y: isExpanded ? 8 : 0)
+        .clipShape(shape)
+        .shadow(color: .black.opacity(isExpanded ? 0.5 : 0), radius: isExpanded ? 20 : 0, x: 0, y: isExpanded ? 10 : 0)
         .animation(.easeOut(duration: 0.25), value: isExpanded)
     }
 }
