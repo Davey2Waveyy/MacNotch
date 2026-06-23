@@ -31,7 +31,7 @@ public struct NotchRootView: View {
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 460
-    private let dashboardSize = CGSize(width: 860, height: 260)
+    private let dashboardSize = CGSize(width: 900, height: 250)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -112,10 +112,15 @@ public struct NotchRootView: View {
             .frame(width: collapsedSize.width, height: collapsedSize.height)
             .opacity(model.isExpanded ? 0 : 1)
             .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
+            .allowsHitTesting(false)
 
             expandedContent(modules: currentModules, size: size)
                 .opacity(model.isExpanded ? 1 : 0)
                 .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
+                // The compact preview is a glance: the whole thing taps through
+                // to open the dashboard (where the real controls live). Interactive
+                // modes keep hit-testing so their buttons work.
+                .allowsHitTesting(model.mode != .compact)
         }
         .frame(width: width, height: height, alignment: .top)
         .background(chrome(cornerRadius: cornerRadius))

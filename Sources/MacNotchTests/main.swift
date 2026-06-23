@@ -15,5 +15,6 @@ calendarModuleTests()
 shelfStoreTests()
 settingsLogicTests()
 codeModuleCoreTests()
+screenTimeTrackerTests()
 
 exit(Int32(TestRunner.shared.runAll()))

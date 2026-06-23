@@ -105,6 +105,38 @@ public final class NotchStateMachine {
         }
     }
 
+    /// Result of a direct click on the notch panel.
+    public enum TapOutcome {
+        case opening      // was collapsed/collapsing → now expanding into the clicked mode
+        case promoting    // was a hover preview → now showing the clicked mode, still expanded
+        case collapsing   // a clicked mode was showing → now dismissing
+        case noChange
+    }
+
+    /// A click directly on the notch/panel. Distinct from hover: a click always
+    /// wants the full clicked mode (default dashboard). Hovering only ever shows
+    /// `.compact`, so a click on a compact preview *promotes* it to the dashboard
+    /// rather than toggling it shut.
+    public func tapped() -> TapOutcome {
+        switch state {
+        case .collapsed:
+            mode = defaultExpandMode
+            state = .expanding
+            return .opening
+        case .collapsing:
+            mode = defaultExpandMode
+            state = .expanding
+            return .opening
+        case .expanding, .expanded:
+            if mode == .compact {
+                mode = defaultExpandMode
+                return .promoting
+            }
+            state = .collapsing
+            return .collapsing
+        }
+    }
+
     /// Switch the active expansion mode without collapsing. Only valid while expanded.
     /// Returns true if the mode actually changed.
     public func switchMode(to newMode: ExpansionMode) -> Bool {

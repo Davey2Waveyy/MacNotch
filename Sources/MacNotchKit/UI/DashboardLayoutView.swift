@@ -34,41 +34,43 @@ struct DashboardLayoutView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Text("Dashboard")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.92))
-            Text("·")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.30))
-            Text(activeMode == .dashboard ? "Quick" : modeLabel)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.95))
+            Text(modeLabel)
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.4)
                 .foregroundStyle(NotchTheme.accent)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 1.5)
+                .background(Capsule().fill(NotchTheme.accent.opacity(0.16)))
             Spacer()
-            ForEach([("square.and.arrow.up.on.square", "Open settings"),
-                     ("eye.slash", "Hide")], id: \.0) { icon, help in
-                Image(systemName: icon)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.40))
-                    .frame(width: 18, height: 16)
-                    .help(help)
-            }
+            Text(Self.dateLabel())
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.45))
         }
     }
 
     private var modeLabel: String {
         switch activeMode {
-        case .compact: return "Compact"
-        case .dashboard: return "Quick"
-        case .wideBar: return "Wide Bar"
+        case .compact: return "QUICK"
+        case .dashboard: return "QUICK"
+        case .wideBar: return "WIDE"
         }
+    }
+
+    private static func dateLabel() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE, MMM d"
+        return f.string(from: Date())
     }
 
     /// Curated order for the default "Quick" dashboard view. Only tiles whose
     /// module ID appears here render in the dashboard, in this order — the
     /// rest of the dashboardTile() implementations are kept available for
     /// alternate dashboard pages we may add later.
-    private static let dashboardOrder = ["quickToggles", "calendar", "launcher", "actions"]
+    private static let dashboardOrder = ["quickToggles", "screenTime", "launcher", "actions"]
 
     private var tilesRow: some View {
         HStack(spacing: tileSpacing) {

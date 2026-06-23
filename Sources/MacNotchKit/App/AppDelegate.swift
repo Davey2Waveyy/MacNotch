@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
 
     private let moduleTitles = [
+        "screenTime": "Screen Time",
         "quickToggles": "Quick Toggles",
         "actions": "Actions",
         "launcher": "Launcher",
@@ -53,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func registerModules() {
+        registry.register(ScreenTimeModule())
         registry.register(QuickTogglesModule())
         registry.register(ActionsModule())
         registry.register(LauncherModule())

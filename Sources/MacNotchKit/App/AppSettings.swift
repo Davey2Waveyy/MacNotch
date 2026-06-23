@@ -41,6 +41,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     public static let defaults = AppSettings(
         modules: [
+            ModuleSetting(id: "screenTime", isEnabled: true),
             ModuleSetting(id: "quickToggles", isEnabled: true),
             ModuleSetting(id: "actions", isEnabled: true),
             ModuleSetting(id: "launcher", isEnabled: true),

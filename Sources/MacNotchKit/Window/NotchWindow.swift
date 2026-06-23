@@ -66,7 +66,7 @@ public final class NotchWindow: NSObject {
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
-    private let dashboardSize = CGSize(width: 860, height: 260)
+    private let dashboardSize = CGSize(width: 900, height: 250)
     private let wideBarHeight: CGFloat = 56
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 460
@@ -108,7 +108,7 @@ public final class NotchWindow: NSObject {
             model: model,
             collapsedSize: notchRect.size,
             modules: { [weak self] in self?.orderedModules() ?? [] },
-            onPanelTap: { [weak self] in self?.toggle() },
+            onPanelTap: { [weak self] in self?.handlePanelTap() },
             onSwitchMode: { [weak self] mode in self?.setMode(mode) }
         )
         let hostingView = NSHostingView(rootView: root)
@@ -177,6 +177,21 @@ public final class NotchWindow: NSObject {
             transitionCoordinator.requestImmediateCollapse()
         }
         sync()
+    }
+
+    /// Handles a click directly on the notch panel. Unlike `toggle()`, a click on
+    /// the hover (compact) preview promotes it to the full dashboard instead of
+    /// collapsing — so a single click always lands you on the dashboard.
+    public func handlePanelTap() {
+        switch machine.tapped() {
+        case .opening, .promoting:
+            sync()
+        case .collapsing:
+            transitionCoordinator.requestImmediateCollapse()
+            sync()
+        case .noChange:
+            break
+        }
     }
 
     @objc public func mouseEntered(with event: NSEvent) {
