@@ -30,8 +30,8 @@ public struct NotchRootView: View {
 
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
-    private static let maxCompactHeight: CGFloat = 460
-    private let dashboardSize = CGSize(width: 900, height: 250)
+    private static let maxCompactHeight: CGFloat = 520
+    private let dashboardSize = CGSize(width: 900, height: 296)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -49,18 +49,17 @@ public struct NotchRootView: View {
     }
 
     public var body: some View {
-        let size = expandedSize
+        // Fill the hosting window and pin the panel to the TOP. Without this the
+        // panel (which is smaller than the window during the open animation) gets
+        // centered by AppKit, so it appears to grow from the middle/bottom instead
+        // of dropping down from the notch.
         ZStack(alignment: .top) {
             panelBody
         }
-        .frame(
-            width: model.isExpanded ? size.width : collapsedSize.width,
-            height: model.isExpanded ? size.height : collapsedSize.height,
-            alignment: .top
-        )
-        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: model.isExpanded)
-        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.mode)
-        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: model.compactContentHeight)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.isExpanded)
+        .animation(.spring(response: 0.32, dampingFraction: 0.84), value: model.mode)
+        .animation(.spring(response: 0.30, dampingFraction: 0.86), value: model.compactContentHeight)
         .onPreferenceChange(CompactContentHeightKey.self) { height in
             guard height > 1 else { return }
             let clamped = min(max(height, Self.minCompactHeight), Self.maxCompactHeight)
@@ -140,6 +139,7 @@ public struct NotchRootView: View {
                 modules: currentModules,
                 size: size,
                 activeMode: model.mode,
+                topInset: notchInset,
                 onSwitchMode: onSwitchMode
             )
         case .wideBar:
@@ -170,7 +170,10 @@ public struct NotchRootView: View {
                 }
             }
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
+        // Clear the physical notch so the first card doesn't hide behind it.
+        .padding(.top, notchInset + 6)
         .frame(width: size.width, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
         .background(
@@ -179,6 +182,10 @@ public struct NotchRootView: View {
             }
         )
     }
+
+    /// Height of the physical notch, used to inset expanded content so nothing
+    /// renders behind the hardware notch.
+    private var notchInset: CGFloat { collapsedSize.height }
 
     private func chrome(cornerRadius: CGFloat) -> some View {
         NotchChrome(cornerRadius: cornerRadius, isExpanded: model.isExpanded, mode: model.mode)
@@ -200,33 +207,55 @@ struct NotchChrome: View {
             // Real glass blur of whatever is behind the panel.
             VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
 
-            // Dark tint so the glass stays legible and on-brand, kept light
-            // enough that the blur behind still reads as glass.
+            // Light dark tint: enough for legibility, sheer enough that the blur
+            // still reads as glass rather than a flat dark card.
             LinearGradient(
                 colors: [
-                    Color.black.opacity(isExpanded ? 0.34 : 0.55),
-                    Color.black.opacity(isExpanded ? 0.50 : 0.66)
+                    Color.black.opacity(isExpanded ? 0.24 : 0.46),
+                    Color.black.opacity(isExpanded ? 0.42 : 0.58)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Hairline edge: brighter along the top where light catches the bezel.
+            // Specular sheen — a soft bright band raked across the top, the way
+            // light catches the curved top of a glass object. This is what sells
+            // "glass" rather than "frosted panel".
+            LinearGradient(
+                stops: [
+                    .init(color: .white.opacity(isExpanded ? 0.16 : 0.10), location: 0.0),
+                    .init(color: .white.opacity(0.03), location: 0.18),
+                    .init(color: .clear, location: 0.42)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .blendMode(.plusLighter)
+
+            // Inner bottom shadow for depth, so the panel feels like a solid
+            // volume of glass rather than a flat sheet.
+            LinearGradient(
+                colors: [.clear, .black.opacity(isExpanded ? 0.22 : 0.0)],
+                startPoint: .center,
+                endPoint: .bottom
+            )
+
+            // Crisp rim: bright at the top edge, fading down the sides.
             shape
                 .stroke(
                     LinearGradient(
                         colors: [
-                            .white.opacity(isExpanded ? 0.18 : 0.10),
-                            .white.opacity(0.02)
+                            .white.opacity(isExpanded ? 0.30 : 0.16),
+                            .white.opacity(0.04)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     ),
-                    lineWidth: 0.75
+                    lineWidth: 0.8
                 )
         }
         .clipShape(shape)
-        .shadow(color: .black.opacity(isExpanded ? 0.5 : 0), radius: isExpanded ? 20 : 0, x: 0, y: isExpanded ? 10 : 0)
+        .shadow(color: .black.opacity(isExpanded ? 0.5 : 0), radius: isExpanded ? 22 : 0, x: 0, y: isExpanded ? 12 : 0)
         .animation(.easeOut(duration: 0.25), value: isExpanded)
     }
 }

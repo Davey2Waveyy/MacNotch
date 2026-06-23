@@ -7,6 +7,7 @@ struct DashboardLayoutView: View {
     let modules: [any NotchModule]
     let size: CGSize
     let activeMode: ExpansionMode
+    var topInset: CGFloat = 0
     let onSwitchMode: (ExpansionMode) -> Void
 
     private let headerHeight: CGFloat = 18
@@ -28,7 +29,8 @@ struct DashboardLayoutView: View {
                 .frame(height: toolbarHeight)
         }
         .padding(.horizontal, outerPadding)
-        .padding(.top, 8)
+        // Clear the physical notch above the header.
+        .padding(.top, topInset + 4)
         .padding(.bottom, 4)
         .frame(width: size.width, height: size.height, alignment: .top)
     }
