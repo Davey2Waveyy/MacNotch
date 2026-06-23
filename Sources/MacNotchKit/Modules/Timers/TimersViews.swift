@@ -142,16 +142,17 @@ struct TimersDashboardTile: View {
                 .foregroundStyle(NotchTheme.accent)
             Text(timer.label)
                 .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.5))
-            Spacer(minLength: 2)
-            Button { onCancel(timer.id) } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .frame(width: 22, height: 22)
+                .foregroundStyle(.white.opacity(0.65))
+            Spacer(minLength: 0)
+            Button(action: { onCancel(timer.id) }) {
+                Text("Stop")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.white.opacity(0.15)))
             }
             .buttonStyle(.plain)
-            .contentShape(Rectangle())
         }
     }
 }
