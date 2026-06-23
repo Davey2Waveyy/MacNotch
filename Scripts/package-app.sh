@@ -19,13 +19,13 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <dict>
   <key>CFBundleName</key><string>MacNotch</string>
   <key>CFBundleDisplayName</key><string>MacNotch</string>
-  <key>CFBundleIdentifier</key><string>io.local.macnotch</string>
+  <key>CFBundleIdentifier</key><string>com.macnotch.app</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>CFBundleExecutable</key><string>MacNotch</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSUIElement</key><true/>
+  
   <key>NSCalendarsUsageDescription</key>
   <string>MacNotch shows your upcoming events in the notch.</string>
   <key>NSAppleEventsUsageDescription</key>

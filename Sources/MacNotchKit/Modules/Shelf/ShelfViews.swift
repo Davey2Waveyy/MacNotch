@@ -137,6 +137,20 @@ struct ShelfDashboardTile: View {
         .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(.white.opacity(0.08)))
         .contextMenu {
+            if let resolvedURL = resolve(item) {
+                Button(action: {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.writeObjects([resolvedURL as NSURL])
+                }) {
+                    Label("Copy Path", systemImage: "doc.on.doc")
+                }
+                Button(action: {
+                    NSWorkspace.shared.selectFile(resolvedURL.path, inFileViewerRootedAtPath: "")
+                }) {
+                    Label("Show in Finder", systemImage: "folder")
+                }
+            }
             Button("Remove", role: .destructive) { onRemove(index) }
         }
 
