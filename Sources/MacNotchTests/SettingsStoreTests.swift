@@ -49,9 +49,12 @@ func settingsStoreTests() {
         let store = SettingsStore(url: url)
         store.load()
 
+        // Persisted had ["system"(disabled), "legacy"(dropped), "media"]; new defaults prepend shelf +
+        // others before system/media. Merge: persisted known ids first, then unvisited defaults appended.
         expectEqual(
             store.settings.modules.map(\.id),
-            ["system", "media", "screenTime", "quickToggles", "timers", "actions", "launcher", "calendar", "shelf", "code", "clipboard", "reminders"],
+            ["system", "media", "shelf", "quickToggles", "reminders",
+             "timers", "clipboard", "screenTime", "calendar", "actions", "launcher", "code"],
             "known persisted order preserved and missing defaults appended"
         )
         expectEqual(

@@ -231,12 +231,12 @@ struct NotchChrome: View {
             // Real glass blur of whatever is behind the panel.
             VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
 
-            // Light dark tint: enough for legibility, sheer enough that the blur
-            // still reads as glass rather than a flat dark card.
+            // Deep near-black tint — panel reads as a dark glass slab rather
+            // than a bright frosted sheet.
             LinearGradient(
                 colors: [
-                    Color.black.opacity(isExpanded ? 0.24 : 0.46),
-                    Color.black.opacity(isExpanded ? 0.42 : 0.58)
+                    Color.black.opacity(isExpanded ? 0.68 : 0.52),
+                    Color.black.opacity(isExpanded ? 0.80 : 0.64)
                 ],
                 startPoint: .top,
                 endPoint: .bottom

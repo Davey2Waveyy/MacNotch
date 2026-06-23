@@ -43,7 +43,12 @@ final class MediaModule: NotchModule {
 
     func activate() {
         startTimer()
-        Task { @MainActor in await refresh() }
+        Task { @MainActor in
+            await refresh()
+            // Warm up the Automation TCC prompt so it appears the first time
+            // the user opens the notch rather than mid-playback.
+            _ = controller.active()
+        }
     }
 
     func deactivate() {

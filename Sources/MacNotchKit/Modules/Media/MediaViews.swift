@@ -123,15 +123,71 @@ struct MediaDashboardTile: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
             } else {
-                Text("Nothing playing")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.5))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                nothingPlayingView
             }
             Spacer(minLength: 0)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var nothingPlayingView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Nothing playing")
+                .font(.system(size: 11))
+                .foregroundStyle(.white.opacity(0.45))
+
+            HStack(spacing: 8) {
+                appLaunchButton("Spotify", bundleID: "com.spotify.client",
+                                appPath: "/Applications/Spotify.app",
+                                color: Color(red: 0.11, green: 0.73, blue: 0.33))
+                appLaunchButton("Music", bundleID: "com.apple.Music",
+                                appPath: "/System/Applications/Music.app",
+                                color: Color(red: 1, green: 0.42, blue: 0.62))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func appLaunchButton(_ name: String, bundleID: String, appPath: String, color: Color) -> some View {
+        let isRunning = NSWorkspace.shared.runningApplications
+            .contains { $0.bundleIdentifier == bundleID }
+        return Button {
+            if isRunning {
+                NSWorkspace.shared.runningApplications
+                    .first { $0.bundleIdentifier == bundleID }?
+                    .activate(options: .activateIgnoringOtherApps)
+            } else {
+                let url = URL(fileURLWithPath: appPath)
+                NSWorkspace.shared.openApplication(at: url,
+                    configuration: NSWorkspace.OpenConfiguration())
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(color.opacity(0.25))
+                    .frame(width: 20, height: 20)
+                    .overlay(
+                        Image(systemName: "music.note")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(color)
+                    )
+                Text(name)
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.white.opacity(0.07))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.75)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func control(_ systemName: String, action: @escaping () -> Void) -> some View {

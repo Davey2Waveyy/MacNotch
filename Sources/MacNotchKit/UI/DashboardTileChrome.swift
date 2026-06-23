@@ -3,9 +3,9 @@ import SwiftUI
 /// Shared visual constants so the dashboard and wide-bar layouts stay in sync.
 enum NotchTheme {
     static let tileCornerRadius: CGFloat = 12
-    static let tileFill = Color.white.opacity(0.055)
-    static let tileStroke = Color.white.opacity(0.09)
-    static let hairline = Color.white.opacity(0.08)
+    static let tileFill = Color.white.opacity(0.09)
+    static let tileStroke = Color.white.opacity(0.14)
+    static let hairline = Color.white.opacity(0.10)
     static let accent = Color(red: 0.36, green: 0.78, blue: 1)
 }
 
