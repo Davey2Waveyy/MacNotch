@@ -8,6 +8,7 @@ public struct NowPlaying: Equatable, Sendable {
     public var isPlaying: Bool
     public var elapsed: Double?
     public var duration: Double?
+    public var artworkURL: URL?
 
     public init(
         title: String,
@@ -15,7 +16,8 @@ public struct NowPlaying: Equatable, Sendable {
         app: String,
         isPlaying: Bool,
         elapsed: Double?,
-        duration: Double?
+        duration: Double?,
+        artworkURL: URL? = nil
     ) {
         self.title = title
         self.artist = artist
@@ -23,6 +25,7 @@ public struct NowPlaying: Equatable, Sendable {
         self.isPlaying = isPlaying
         self.elapsed = elapsed
         self.duration = duration
+        self.artworkURL = artworkURL
     }
 
     /// Playback fraction in 0...1 when both elapsed and duration are known.

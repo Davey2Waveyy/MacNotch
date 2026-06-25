@@ -17,6 +17,8 @@ public final class NotchWindowModel: ObservableObject {
     @Published public var mode: ExpansionMode = .compact
     /// Intrinsic height of the compact-mode content, measured by the view tree.
     @Published public var compactContentHeight: CGFloat = 320
+    /// When true the compact preview stays pinned open even after the cursor leaves.
+    @Published public var isPinned = false
 
     public init() {}
 }
@@ -27,11 +29,14 @@ public struct NotchRootView: View {
     private let modules: () -> [any NotchModule]
     private let onPanelTap: () -> Void
     private let onSwitchMode: (ExpansionMode) -> Void
+    private let onTogglePin: () -> Void
+    private let onOpenDashboard: () -> Void
+    private let onExternalDrop: ([URL]) -> Void
 
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 520
-    private let dashboardSize = CGSize(width: 1080, height: 296)
+    private let dashboardSize = CGSize(width: 1340, height: 296)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -39,13 +44,19 @@ public struct NotchRootView: View {
         collapsedSize: CGSize,
         modules: @escaping () -> [any NotchModule],
         onPanelTap: @escaping () -> Void = {},
-        onSwitchMode: @escaping (ExpansionMode) -> Void = { _ in }
+        onSwitchMode: @escaping (ExpansionMode) -> Void = { _ in },
+        onTogglePin: @escaping () -> Void = {},
+        onOpenDashboard: @escaping () -> Void = {},
+        onExternalDrop: @escaping ([URL]) -> Void = { _ in }
     ) {
         self.model = model
         self.collapsedSize = collapsedSize
         self.modules = modules
         self.onPanelTap = onPanelTap
         self.onSwitchMode = onSwitchMode
+        self.onTogglePin = onTogglePin
+        self.onOpenDashboard = onOpenDashboard
+        self.onExternalDrop = onExternalDrop
     }
 
     public var body: some View {
@@ -88,12 +99,26 @@ public struct NotchRootView: View {
             case .wideBar: return 0
             }
         }()
+        // Top corners round out to match the bottom when the panel is open.
+        let topRadius: CGFloat = model.isExpanded ? cornerRadius : 0
 
         // The window frame is sized exactly to the panel via NSLayoutConstraint
         // in NotchWindow, so the panel just fills the window — no tricks needed.
         return ZStack(alignment: .top) {
-            chrome(cornerRadius: cornerRadius)
-                .contentShape(NotchPanelShape(bottomRadius: cornerRadius))
+            // Explicit shadow caster — using the exact panel shape guarantees the
+            // shadow is never rectangular even when NSViews are composited above.
+            NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius)
+                .fill(Color.black.opacity(0.001))
+                .shadow(
+                    color: .black.opacity(model.isExpanded ? 0.55 : 0),
+                    radius: model.isExpanded ? 28 : 0,
+                    x: 0, y: model.isExpanded ? 14 : 0
+                )
+                .animation(.spring(response: 0.38, dampingFraction: 0.82), value: model.isExpanded)
+                .allowsHitTesting(false)
+
+            chrome(cornerRadius: cornerRadius, topRadius: topRadius)
+                .contentShape(NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius))
                 .onTapGesture(perform: onPanelTap)
 
             ZStack(alignment: .top) {
@@ -112,15 +137,17 @@ public struct NotchRootView: View {
                 expandedContent(modules: currentModules, size: size)
                     .opacity(model.isExpanded ? 1 : 0)
                     .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
-                    .allowsHitTesting(model.mode != .compact)
+                    .allowsHitTesting(model.isExpanded)
             }
-            .clipShape(NotchPanelShape(bottomRadius: cornerRadius))
+            .clipShape(NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius))
 
-            if model.isExpanded, model.mode != .wideBar {
+            if model.isExpanded, model.mode != .wideBar, notchInset > 0 {
                 VStack(spacing: 0) {
+                    // Cover only the physical notch camera island, not the full panel
+                    // width, so the rounded top corners of the expanded panel are visible.
                     Rectangle()
                         .fill(.black)
-                        .frame(height: notchInset)
+                        .frame(width: collapsedSize.width, height: notchInset)
                     Spacer(minLength: 0)
                 }
                 .allowsHitTesting(false)
@@ -140,7 +167,10 @@ public struct NotchRootView: View {
                 size: size,
                 activeMode: model.mode,
                 topInset: notchInset,
-                onSwitchMode: onSwitchMode
+                onSwitchMode: onSwitchMode,
+                isPinned: model.isPinned,
+                onTogglePin: onTogglePin,
+                onExternalDrop: onExternalDrop
             )
         case .wideBar:
             WideBarLayoutView(
@@ -169,6 +199,52 @@ public struct NotchRootView: View {
                         .dashboardTileSurface()
                 }
             }
+
+            // Footer: lock (pin open) on the left, drag handle when pinned, dashboard on the right.
+            HStack {
+                Button(action: onTogglePin) {
+                    Image(systemName: model.isPinned ? "lock.fill" : "lock.open")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(model.isPinned ? Color.white.opacity(0.9) : Color.white.opacity(0.35))
+                        .frame(width: 28, height: 28)
+                        .background(
+                            RoundedRectangle(cornerRadius: 7)
+                                .fill(model.isPinned ? Color.white.opacity(0.14) : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                if model.isPinned {
+                    WindowDragHandleView()
+                        .frame(width: 28, height: 28)
+                        .overlay(
+                            Image(systemName: "grip.horizontal")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.35))
+                                .allowsHitTesting(false)
+                        )
+                }
+
+                Spacer()
+
+                Button(action: onOpenDashboard) {
+                    HStack(spacing: 4) {
+                        Text("Dashboard")
+                            .font(.system(size: 11, weight: .medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.white.opacity(0.35))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color.white.opacity(0.06))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
@@ -176,6 +252,11 @@ public struct NotchRootView: View {
         .padding(.top, notchInset + 6)
         .frame(width: size.width, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
+        // Full-coverage drop zone so files dropped anywhere on the compact panel land in the shelf.
+        .dropDestination(for: URL.self) { urls, _ in
+            onExternalDrop(urls)
+            return true
+        }
         .background(
             GeometryReader { proxy in
                 Color.clear.preference(key: CompactContentHeightKey.self, value: proxy.size.height)
@@ -189,8 +270,8 @@ public struct NotchRootView: View {
     /// Uses safeAreaInsets.top (≈37pt on notched Macs, 0 on non-notched).
     private var notchInset: CGFloat { NSScreen.main?.safeAreaInsets.top ?? 37 }
 
-    private func chrome(cornerRadius: CGFloat) -> some View {
-        NotchChrome(cornerRadius: cornerRadius, isExpanded: model.isExpanded, mode: model.mode)
+    private func chrome(cornerRadius: CGFloat, topRadius: CGFloat) -> some View {
+        NotchChrome(cornerRadius: cornerRadius, topRadius: topRadius, isExpanded: model.isExpanded, mode: model.mode)
     }
 }
 
@@ -200,64 +281,85 @@ public struct NotchRootView: View {
 /// dropping out of the notch rather than floating as a centered card.
 struct NotchChrome: View {
     let cornerRadius: CGFloat
+    var topRadius: CGFloat = 0
     let isExpanded: Bool
     let mode: ExpansionMode
 
     var body: some View {
-        let shape = NotchPanelShape(bottomRadius: cornerRadius)
+        let shape = NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius)
         ZStack {
-            // Real glass blur of whatever is behind the panel.
-            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow)
+            // Real glass blur — corner radius applied at the layer level so the
+            // blur is actually clipped (SwiftUI clipShape doesn't clip NSViews).
+            VisualEffectBackground(
+                material: .hudWindow,
+                blendingMode: .behindWindow,
+                cornerRadius: cornerRadius
+            )
 
-            // Deep near-black tint — panel reads as a dark glass slab rather
-            // than a bright frosted sheet.
+            // Deep near-black tint — slightly lighter than before so more of
+            // the real blur shows through, reinforcing the glass-slab read.
             LinearGradient(
                 colors: [
-                    Color.black.opacity(isExpanded ? 0.68 : 0.52),
-                    Color.black.opacity(isExpanded ? 0.80 : 0.64)
+                    Color.black.opacity(isExpanded ? 0.54 : 0.48),
+                    Color.black.opacity(isExpanded ? 0.72 : 0.60)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Specular sheen — a soft bright band raked across the top, the way
-            // light catches the curved top of a glass object. This is what sells
-            // "glass" rather than "frosted panel".
+            // Ambient notch glow — cool-blue radial bloom from the notch at
+            // top-centre. Gives the panel an illuminated, floating quality as
+            // if the display hardware is slightly backlit from behind the notch.
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: Color(red: 0.35, green: 0.55, blue: 0.90)
+                            .opacity(isExpanded ? 0.14 : 0), location: 0),
+                    .init(color: Color.clear, location: 1)
+                ]),
+                center: .init(x: 0.5, y: -0.15),
+                startRadius: 0,
+                endRadius: 480
+            )
+            .blendMode(.plusLighter)
+
+            // Specular sheen — bright band raked across the top like light
+            // catching the curved surface of a glass object.
             LinearGradient(
                 stops: [
-                    .init(color: .white.opacity(isExpanded ? 0.16 : 0.10), location: 0.0),
-                    .init(color: .white.opacity(0.03), location: 0.18),
-                    .init(color: .clear, location: 0.42)
+                    .init(color: .white.opacity(isExpanded ? 0.30 : 0.12), location: 0.0),
+                    .init(color: .white.opacity(isExpanded ? 0.10 : 0.04), location: 0.10),
+                    .init(color: .white.opacity(0.02), location: 0.25),
+                    .init(color: .clear, location: 0.45)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .blendMode(.plusLighter)
 
-            // Inner bottom shadow for depth, so the panel feels like a solid
-            // volume of glass rather than a flat sheet.
+            // Inner bottom vignette for depth — panel feels like a solid volume.
             LinearGradient(
-                colors: [.clear, .black.opacity(isExpanded ? 0.22 : 0.0)],
+                colors: [.clear, .black.opacity(isExpanded ? 0.32 : 0.0)],
                 startPoint: .center,
                 endPoint: .bottom
             )
 
-            // Crisp rim: bright at the top edge, fading down the sides.
+            // Crisp rim: bright top edge fading down the sides.
             shape
                 .stroke(
                     LinearGradient(
                         colors: [
-                            .white.opacity(isExpanded ? 0.30 : 0.16),
-                            .white.opacity(0.04)
+                            .white.opacity(isExpanded ? 0.36 : 0.18),
+                            .white.opacity(isExpanded ? 0.08 : 0.02)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     ),
-                    lineWidth: 0.8
+                    lineWidth: 0.75
                 )
         }
         .clipShape(shape)
-        .shadow(color: .black.opacity(isExpanded ? 0.5 : 0), radius: isExpanded ? 22 : 0, x: 0, y: isExpanded ? 12 : 0)
-        .animation(.easeOut(duration: 0.25), value: isExpanded)
+        // Shadow is rendered by the caller (panelBody) using an explicit shape
+        // so it never falls back to a rectangular silhouette when NSViews are present.
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isExpanded)
     }
 }

@@ -144,16 +144,16 @@ func notchStateMachineTests() {
         expect(outcome == .opening, "outcome is opening")
     }
 
-    test("tap on a hover preview promotes it to the dashboard without collapsing") {
+    test("tap on a hover preview collapses it (compact is interactive, not a gateway)") {
         let sm = NotchStateMachine()
         _ = sm.hoverChanged(true)
         _ = sm.completeExpand()
         expectEqual(sm.mode, .compact, "hover shows compact")
 
         let outcome = sm.tapped()
-        expectEqual(sm.state, .expanded, "promotion keeps the panel expanded")
-        expectEqual(sm.mode, .dashboard, "promotion switches to dashboard")
-        expect(outcome == .promoting, "outcome is promoting")
+        expectEqual(sm.state, .collapsing, "tap on compact background collapses it")
+        expectEqual(sm.mode, .compact, "mode stays compact during collapse")
+        expect(outcome == .collapsing, "outcome is collapsing")
     }
 
     test("tap on the dashboard collapses it") {

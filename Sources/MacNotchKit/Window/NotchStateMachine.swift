@@ -128,10 +128,6 @@ public final class NotchStateMachine {
             state = .expanding
             return .opening
         case .expanding, .expanded:
-            if mode == .compact {
-                mode = defaultExpandMode
-                return .promoting
-            }
             state = .collapsing
             return .collapsing
         }

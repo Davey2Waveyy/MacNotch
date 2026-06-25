@@ -14,7 +14,8 @@ struct MediaCollapsedView: View {
     }
 }
 
-/// Full now-playing card shown when the notch is expanded.
+/// Full now-playing card shown when the notch is expanded (compact hover panel).
+/// Intentionally compact — no progress bar — so it doesn't crowd other modules.
 struct MediaExpandedView: View {
     let np: NowPlaying?
     let onPrevious: () -> Void
@@ -23,44 +24,27 @@ struct MediaExpandedView: View {
 
     var body: some View {
         if let np {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 1, green: 0.42, blue: 0.62),
-                                         Color(red: 0.65, green: 0.42, blue: 1)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 40, height: 40)
-                        .overlay(Image(systemName: "music.note").foregroundStyle(.white.opacity(0.85)))
+            HStack(spacing: 10) {
+                artworkView(url: np.artworkURL, size: 44)
 
+                VStack(alignment: .leading, spacing: 6) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(np.title)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
                         Text("\(np.artist) · \(np.app)")
                             .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.55))
                             .lineLimit(1)
                     }
-                    Spacer(minLength: 0)
+                    HStack(spacing: 20) {
+                        controlButton("backward.fill", action: onPrevious)
+                        controlButton(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
+                        controlButton("forward.fill", action: onNext)
+                    }
                 }
-
-                HStack(spacing: 24) {
-                    controlButton("backward.fill", action: onPrevious)
-                    controlButton(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
-                    controlButton("forward.fill", action: onNext)
-                }
-                .frame(maxWidth: .infinity)
-
-                if let progress = np.progress {
-                    ProgressView(value: progress)
-                        .tint(.white)
-                        .scaleEffect(x: 1, y: 0.6, anchor: .center)
-                }
+                Spacer(minLength: 0)
             }
         } else {
             Text("Nothing playing")
@@ -80,6 +64,36 @@ struct MediaExpandedView: View {
     }
 }
 
+@ViewBuilder
+private func artworkView(url: URL?, size: CGFloat) -> some View {
+    let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+    if let url {
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case .success(let image):
+                image.resizable().scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(shape)
+            default:
+                musicNotePlaceholder(size: size)
+            }
+        }
+        .frame(width: size, height: size)
+    } else {
+        musicNotePlaceholder(size: size)
+    }
+}
+
+private func musicNotePlaceholder(size: CGFloat) -> some View {
+    RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(LinearGradient(
+            colors: [Color(red: 1, green: 0.42, blue: 0.62), Color(red: 0.65, green: 0.42, blue: 1)],
+            startPoint: .topLeading, endPoint: .bottomTrailing
+        ))
+        .frame(width: size, height: size)
+        .overlay(Image(systemName: "music.note").foregroundStyle(.white.opacity(0.85)))
+}
+
 /// Now-playing widget for the dashboard layout: artwork, track, transport.
 struct MediaDashboardTile: View {
     let np: NowPlaying?
@@ -93,16 +107,7 @@ struct MediaDashboardTile: View {
             Spacer(minLength: 0)
             if let np {
                 HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 1, green: 0.42, blue: 0.62),
-                                         Color(red: 0.65, green: 0.42, blue: 1)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 38, height: 38)
-                        .overlay(Image(systemName: "music.note").foregroundStyle(.white.opacity(0.85)))
+                    artworkView(url: np.artworkURL, size: 38)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(np.title)
                             .font(.system(size: 12, weight: .medium))
@@ -145,15 +150,9 @@ struct MediaDashboardTile: View {
         let isRunning = NSWorkspace.shared.runningApplications
             .contains { $0.bundleIdentifier == "com.spotify.client" }
         return Button {
-            if isRunning {
-                NSWorkspace.shared.runningApplications
-                    .first { $0.bundleIdentifier == "com.spotify.client" }?
-                    .activate(options: .activateIgnoringOtherApps)
-            } else {
-                NSWorkspace.shared.openApplication(
-                    at: URL(fileURLWithPath: "/Applications/Spotify.app"),
-                    configuration: NSWorkspace.OpenConfiguration())
-            }
+            NSWorkspace.shared.openApplication(
+                at: URL(fileURLWithPath: "/Applications/Spotify.app"),
+                configuration: NSWorkspace.OpenConfiguration())
         } label: {
             HStack(spacing: 6) {
                 Circle()

@@ -18,6 +18,10 @@ public protocol NotchModule: AnyObject {
     /// Return nil to opt out (default).
     func dashboardTile() -> AnyView?
 
+    /// When true the tile occupies its own full-width page in the dashboard
+    /// rather than sharing a row with up to four other tiles.
+    var isFullPageTile: Bool { get }
+
     /// Optional inline view for the wide-bar mode (status-strip across the top).
     /// Return nil to opt out (default).
     func wideBarView() -> AnyView?
@@ -25,5 +29,6 @@ public protocol NotchModule: AnyObject {
 
 public extension NotchModule {
     func dashboardTile() -> AnyView? { nil }
+    var isFullPageTile: Bool { false }
     func wideBarView() -> AnyView? { nil }
 }

@@ -321,6 +321,25 @@ func notchWindowTests() {
         }
     }
 
+    test("NotchWindow panel tap opens the dashboard footprint") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            let panel = notchWindowPanel(for: window)
+            let model = notchWindowModel(for: window)
+            let notchRect = currentNotchRect()
+
+            window.handlePanelTap()
+            waitForMainQueue(0.4)
+
+            expect(model.isExpanded, "panel tap expands the dashboard")
+            expectEqual(model.mode, .dashboard, "panel tap opens dashboard mode")
+            expectEqual(panel.frame.width, 1340, "dashboard width is applied")
+            expectEqual(panel.frame.height, 296, "dashboard height is applied")
+            expectEqual(panel.frame.midX, notchRect.midX, "dashboard stays centered on notch")
+            expectEqual(panel.frame.maxY, notchRect.maxY, "dashboard top stays aligned to notch")
+        }
+    }
+
     test("NotchWindow hover exit keeps expanded footprint through grace then collapses visually") {
         MainActor.assumeIsolated {
             let window = makeTestWindow()

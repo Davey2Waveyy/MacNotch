@@ -13,9 +13,13 @@ private final class HoverContainerView: NSView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         for area in trackingAreas { removeTrackingArea(area) }
+        // `.assumeInside` prevents AppKit from synthesizing a mouseEntered when
+        // the tracking area is (re)installed with the cursor already inside it.
+        // Without this, every collapse → tracking-area-rebuild on the shrunken
+        // notch fires a new mouseEntered and the panel spam-toggles.
         addTrackingArea(NSTrackingArea(
             rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways],
+            options: [.mouseEnteredAndExited, .activeAlways, .assumeInside],
             owner: self,
             userInfo: nil
         ))
@@ -30,6 +34,7 @@ private final class HoverContainerView: NSView {
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         owner?.applyDragHover(true)
+        owner?.updateMovability(dragInProgress: true)
         return .copy
     }
 
@@ -41,11 +46,20 @@ private final class HoverContainerView: NSView {
         // When the drag moves to a child (e.g. SwiftUI drop zone), AppKit calls
         // draggingExited on us even though the drag is still within our bounds.
         // Only collapse if the drag has truly left the panel.
-        guard let sender else { owner?.applyDragHover(false); return }
+        guard let sender else {
+            owner?.applyDragHover(false)
+            owner?.updateMovability(dragInProgress: false)
+            return
+        }
         let localPoint = convert(sender.draggingLocation, from: nil)
         if !bounds.contains(localPoint) {
             owner?.applyDragHover(false)
+            owner?.updateMovability(dragInProgress: false)
         }
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        owner?.updateMovability(dragInProgress: false)
     }
 
     override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
@@ -53,7 +67,21 @@ private final class HoverContainerView: NSView {
             .readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])?
             .compactMap { $0 as? URL } ?? []
         onDropped?(urls)
+        owner?.updateMovability(dragInProgress: false)
         return !urls.isEmpty
+    }
+}
+
+/// NSPanel that doesn't let AppKit reshape its frame to fit visibleFrame.
+/// The notch panel intentionally hugs the very top of the screen and must
+/// overlap the menu bar; the default constraint would push it down and clip
+/// the expanded panel's height to whatever vertical space remains.
+private final class UnconstrainedPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        return frameRect
     }
 }
 
@@ -66,7 +94,7 @@ public final class NotchWindow: NSObject {
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
-    private let dashboardSize = CGSize(width: 1080, height: 296)
+    private let dashboardSize = CGSize(width: 1340, height: 296)
     private let wideBarHeight: CGFloat = 56
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 520
@@ -78,6 +106,7 @@ public final class NotchWindow: NSObject {
     private let collapseAnimationDuration: TimeInterval = 0.2
     private var scheduledTransitionToken: UInt = 0
     private var activeModules: [any NotchModule] = []
+    private var isDragInProgress = false
     private var localClickMonitor: Any?
     private var globalClickMonitor: Any?
     private var globalMouseMoveMonitor: Any?
@@ -87,7 +116,7 @@ public final class NotchWindow: NSObject {
         self.registry = registry
         self.settings = settings
 
-        panel = NSPanel(
+        panel = UnconstrainedPanel(
             contentRect: .zero,
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -108,30 +137,36 @@ public final class NotchWindow: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         panel.ignoresMouseEvents = false
         panel.hidesOnDeactivate = false
+        panel.isMovableByWindowBackground = false
+        // Allow text fields (e.g. the Reminders input) to grab keyboard focus on
+        // click without making the whole panel key for routine hover interactions.
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.worksWhenModal = true
 
         let root = NotchRootView(
             model: model,
             collapsedSize: notchRect.size,
             modules: { [weak self] in self?.orderedModules() ?? [] },
             onPanelTap: { [weak self] in self?.handlePanelTap() },
-            onSwitchMode: { [weak self] mode in self?.setMode(mode) }
+            onSwitchMode: { [weak self] mode in self?.setMode(mode) },
+            onTogglePin: { [weak self] in self?.togglePin() },
+            onOpenDashboard: { [weak self] in self?.openDashboard() },
+            onExternalDrop: { [weak self] urls in self?.handleExternalDrop(urls) }
         )
         let hostingView = NSHostingView(rootView: root)
-        // NSHostingView centers its content by default. Disable autoresizing and
-        // manually pin to the TOP of the container so the panel drops from the
-        // notch rather than floating centered in a taller window frame.
-        hostingView.translatesAutoresizingMaskIntoConstraints = false
+        // Use autoresizing — NOT autolayout — so the panel's frame is driven by
+        // panel.setFrame() in `updateFrame`. With autolayout constraints, AppKit
+        // calls `_changeWindowFrameFromConstraintsIfNecessary` to shrink the
+        // window to fit the SwiftUI content's intrinsic size, which clobbers the
+        // expanded panel height back down to whatever the compact preview wants.
+        hostingView.translatesAutoresizingMaskIntoConstraints = true
+        hostingView.autoresizingMask = [.width, .height]
         let container = HoverContainerView()
         container.owner = self
         container.onDropped = { [weak self] urls in self?.handleExternalDrop(urls) }
         container.registerForDraggedTypes([.fileURL])
+        hostingView.frame = container.bounds
         container.addSubview(hostingView)
-        NSLayoutConstraint.activate([
-            hostingView.topAnchor.constraint(equalTo: container.topAnchor),
-            hostingView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            hostingView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-        ])
         panel.contentView = container
         compactHeightObserver = model.$compactContentHeight.sink { [weak self] height in
             MainActor.assumeIsolated { self?.applyCompactHeight(height) }
@@ -207,6 +242,8 @@ public final class NotchWindow: NSObject {
 
         if machine.state == .collapsed || canReopenFromCollapseAnimation {
             guard machine.clicked() else { return }
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKey()
         } else {
             guard machine.forceCollapse() else { return }
             transitionCoordinator.requestImmediateCollapse()
@@ -218,8 +255,14 @@ public final class NotchWindow: NSObject {
     /// the hover (compact) preview promotes it to the full dashboard instead of
     /// collapsing — so a single click always lands you on the dashboard.
     public func handlePanelTap() {
+        // Pinned panels don't collapse on background taps.
+        if model.isPinned, machine.state == .expanding || machine.state == .expanded { return }
         switch machine.tapped() {
         case .opening, .promoting:
+            // Dashboard mode hosts text fields (e.g. Add reminder). They can only
+            // receive keystrokes when the app is active and the panel is key.
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKey()
             sync()
         case .collapsing:
             transitionCoordinator.requestImmediateCollapse()
@@ -234,9 +277,12 @@ public final class NotchWindow: NSObject {
     }
 
     @objc public func mouseExited(with event: NSEvent) {
-        // Tracking area mouseExited is unreliable when the window grows (the
-        // cursor may already be inside the new bounds). The global mouse-move
-        // monitor installed by applyHover handles the real exit check.
+        // Tracking area mouseExited under-fires when the panel grows past the
+        // cursor (the cursor never actually leaves the new bounds). The global
+        // mouse-move monitor handles that case. We still forward this event
+        // because when it *does* fire (collapsed panel, cursor leaves notch)
+        // it's the cheapest, most reliable exit signal.
+        applyHover(false)
     }
 
     /// Install a global mouse-move monitor that collapses the compact hover
@@ -257,6 +303,7 @@ public final class NotchWindow: NSObject {
             removeMouseMoveMonitor()
             return
         }
+        guard !model.isPinned else { return }
         let mouse = NSEvent.mouseLocation
         let panelFrame = panel.frame
         if !panelFrame.contains(mouse) {
@@ -342,6 +389,38 @@ public final class NotchWindow: NSObject {
         sync()
     }
 
+    fileprivate func updateMovability(dragInProgress: Bool) {
+        isDragInProgress = dragInProgress
+        // Window movement is handled exclusively by WindowDragHandleView so
+        // isMovableByWindowBackground stays false — chip drags can't compete.
+    }
+
+    private func togglePin() {
+        model.isPinned.toggle()
+        if !model.isPinned {
+            if machine.mode == .compact, machine.state == .expanded {
+                let cursorInPanel = panel.frame.contains(NSEvent.mouseLocation)
+                if !cursorInPanel {
+                    _ = machine.hoverChanged(false)
+                    transitionCoordinator.requestGracefulCollapse()
+                    sync()
+                }
+            }
+        }
+    }
+
+    private func openDashboard() {
+        if machine.state == .collapsed || machine.state == .collapsing {
+            _ = machine.tapped()   // tapped() opens into defaultExpandMode (.dashboard)
+        } else {
+            _ = machine.switchMode(to: .dashboard)
+        }
+        model.isPinned = false
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKey()
+        sync()
+    }
+
     private func installClickMonitorsIfNeeded() {
         let eventMask: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown, .otherMouseDown]
 
@@ -377,6 +456,7 @@ public final class NotchWindow: NSObject {
 
     private func handleMonitoredClick(_ event: NSEvent) {
         guard panel.isVisible else { return }
+        guard !model.isPinned else { return }
 
         let screenPoint = screenPoint(for: event)
         guard NotchWindowInputPolicy.shouldCollapseForOutsideClick(
@@ -399,6 +479,8 @@ public final class NotchWindow: NSObject {
     }
 
     private func applyHover(_ inside: Bool) {
+        // While pinned any expanded mode ignores hover-out.
+        if !inside, model.isPinned { return }
         guard machine.hoverChanged(inside) else { return }
         if inside {
             // Install a global move monitor to detect when the cursor leaves the
@@ -407,6 +489,9 @@ public final class NotchWindow: NSObject {
             installMouseMoveMonitorIfNeeded()
         } else {
             removeMouseMoveMonitor()
+            // Give the user a brief grace window to come back without a
+            // disruptive snap collapse if they overshot the panel edge.
+            transitionCoordinator.requestGracefulCollapse()
         }
         sync()
     }

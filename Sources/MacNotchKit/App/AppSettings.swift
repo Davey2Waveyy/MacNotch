@@ -41,21 +41,25 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     public static let defaults = AppSettings(
         modules: [
-            // Page 1
-            ModuleSetting(id: "shelf",        isEnabled: true),
+            // Page 1 — Utility pane (media, toggles, timers, actions, shelf).
             ModuleSetting(id: "media",        isEnabled: true),
             ModuleSetting(id: "quickToggles", isEnabled: true),
-            ModuleSetting(id: "reminders",    isEnabled: true),
-            // Page 2
             ModuleSetting(id: "timers",       isEnabled: true),
-            ModuleSetting(id: "clipboard",    isEnabled: true),
-            ModuleSetting(id: "screenTime",   isEnabled: true),
-            ModuleSetting(id: "calendar",     isEnabled: true),
-            // Page 3
-            ModuleSetting(id: "system",       isEnabled: true),
             ModuleSetting(id: "actions",      isEnabled: true),
-            ModuleSetting(id: "launcher",     isEnabled: true),
+            ModuleSetting(id: "shelf",        isEnabled: true),
+            // Page 2 — Code CLI (solo tile, fills full width).
             ModuleSetting(id: "code",         isEnabled: true),
+            // Page 3 — Stocks (solo tile, fills full width).
+            ModuleSetting(id: "stocks",       isEnabled: true),
+            // Available via Settings but hidden by default.
+            ModuleSetting(id: "screenTime",   isEnabled: false),
+            ModuleSetting(id: "pomodoro",     isEnabled: false),
+            ModuleSetting(id: "reminders",    isEnabled: false),
+            ModuleSetting(id: "calendar",     isEnabled: false),
+            ModuleSetting(id: "clipboard",    isEnabled: false),
+            ModuleSetting(id: "system",       isEnabled: false),
+            ModuleSetting(id: "launcher",     isEnabled: false),
+            ModuleSetting(id: "customize",    isEnabled: false),
         ],
         launchAtLogin: false,
         defaultExpansionMode: .dashboard

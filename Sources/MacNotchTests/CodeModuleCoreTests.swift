@@ -1,7 +1,92 @@
 import Foundation
 import MacNotchKit
 
+@MainActor
+private func waitForCodeModuleCondition(
+    timeout: TimeInterval = 1.5,
+    _ predicate: @escaping () -> Bool
+) -> Bool {
+    let deadline = Date(timeIntervalSinceNow: timeout)
+    while Date() < deadline {
+        if predicate() { return true }
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
+    }
+    return predicate()
+}
+
 func codeModuleCoreTests() {
+    // ---- CodeCLITool / split panes ----
+    test("code cli: dashboard uses three fixed split panes") {
+        let tools = CodeCLITool.allCases
+        expectEqual(tools.map(\.rawValue), ["claude", "codex", "cursor"], "tool order")
+        expectEqual(CodeTerminalPaneDescriptor.defaultPanes.map(\.tool), tools, "one pane per tool")
+    }
+
+    test("code cli: pane descriptors expose launch commands and display names") {
+        let panes = CodeTerminalPaneDescriptor.defaultPanes
+        expectEqual(panes[0].displayName, "Claude", "claude title")
+        expectEqual(panes[1].command, "codex", "codex command")
+        expectEqual(panes[2].id, "cursor", "cursor id")
+    }
+
+    test("code cli: cursor resolves to the cursor-agent CLI, not the GUI launcher") {
+        // The bundled `cursor` only opens the GUI editor; the interactive agent is `cursor-agent`.
+        let agentPath = "/Users/example/.local/bin/cursor-agent"
+        let command = CodeCLIResolver.resolvedShellCommand(
+            for: .cursor,
+            environment: ["PATH": "/usr/bin:/bin"],
+            homeDirectory: URL(fileURLWithPath: "/Users/example"),
+            isExecutable: { $0 == agentPath }
+        )
+        expectEqual(command, agentPath, "cursor uses cursor-agent")
+        expectEqual(CodeCLITool.cursor.executableName, "cursor-agent", "cursor executable is cursor-agent")
+    }
+
+    test("code cli: resolver returns nil when a tool isn't installed") {
+        let missing = CodeCLIResolver.resolvedExecutablePath(
+            for: .cursor,
+            environment: ["PATH": "/usr/bin:/bin"],
+            homeDirectory: URL(fileURLWithPath: "/Users/example"),
+            isExecutable: { _ in false }
+        )
+        expect(missing == nil, "unresolved tool returns nil so the UI can show an install hint")
+    }
+
+    test("code cli: terminal environment includes user and app CLI paths") {
+        let env = CodeCLIResolver.terminalEnvironment(
+            from: ["PATH": "/usr/bin:/bin"],
+            homeDirectory: URL(fileURLWithPath: "/Users/example")
+        )
+        let pathParts = env["PATH"]?.split(separator: ":").map(String.init) ?? []
+        expect(pathParts.contains("/Users/example/.local/bin"), "home .local/bin is included")
+        expect(pathParts.contains("/Applications/Cursor.app/Contents/Resources/app/bin"), "Cursor CLI path is included")
+        expect(pathParts.contains("/Applications/Codex.app/Contents/Resources"), "Codex CLI path is included")
+        expect(pathParts.contains("/usr/bin"), "original PATH is preserved")
+    }
+
+    test("terminal: SwiftTerm PTY renders process output and forwards typed input") {
+        MainActor.assumeIsolated {
+            let terminal = NotchTerminal()
+            let env = CodeCLIResolver.terminalEnvironment(from: ["PATH": "/usr/bin:/bin"])
+            // `cat` echoes whatever we type back through the PTY into the emulator buffer.
+            terminal.launch(command: "cat", displayName: "input-test", environment: env)
+            expect(terminal.isRunning, "session reports running after launch")
+
+            terminal.sendInput("notch-roundtrip\r")
+            let echoed = waitForCodeModuleCondition {
+                terminal.snapshotText().contains("notch-roundtrip")
+            }
+            expect(echoed, "typed input round-trips through the SwiftTerm PTY")
+            terminal.stop()
+        }
+    }
+
+    test("code cli: missing-tool hint tells the user how to install cursor-agent") {
+        expect(CodeCLITool.cursor.missingHint.contains("cursor.com/install"),
+               "cursor hint includes the install command")
+        expect(CodeCLITool.claude.missingHint.contains("claude"), "claude hint names the tool")
+    }
+
     // ---- GitStatusParser ----
     test("git: parses branch, ahead/behind, and dirty flag") {
         let output = "## main...origin/main [ahead 1, behind 2]\n M file.swift\n?? new.txt"

@@ -7,20 +7,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: SettingsWindowController?
     private let registry = ModuleRegistry()
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
+    private var customizeModule: CustomizeModule?
 
-    private let moduleTitles = [
-        "screenTime": "Screen Time",
+    private let moduleTitles: [String: String] = [
+        "screenTime":   "Screen Time",
         "quickToggles": "Quick Toggles",
-        "timers": "Timers",
-        "actions": "Actions",
-        "launcher": "Launcher",
-        "media": "Now Playing",
-        "calendar": "Calendar",
-        "system": "Battery & System",
-        "shelf": "Drop Shelf",
-        "code": "Code",
-        "clipboard": "Clipboard",
-        "reminders": "Reminders",
+        "timers":       "Timers",
+        "pomodoro":     "Pomodoro",
+        "actions":      "Actions",
+        "launcher":     "Launcher",
+        "media":        "Now Playing",
+        "calendar":     "Calendar",
+        "system":       "Battery & System",
+        "shelf":        "Drop Shelf",
+        "code":         "Code",
+        "stocks":       "Stocks",
+        "clipboard":    "Clipboard",
+        "reminders":    "Reminders",
+        "customize":    "Customize",
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -36,9 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             titles: moduleTitles
         ) { [weak self] updated in
             guard let self else { return }
-            self.settings.replace(updated)
-            self.settings.save()
-            self.notchWindow?.reload()
+            self.applySettings(updated)
         }
         self.settingsWindowController = settingsWindowController
 
@@ -56,18 +58,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notchWindow?.tearDown()
     }
 
+    private func applySettings(_ updated: AppSettings) {
+        settings.replace(updated)
+        settings.save()
+        customizeModule?.sync(updated)
+        notchWindow?.reload()
+    }
+
     private func registerModules() {
-        registry.register(ScreenTimeModule())
+        // Page 1: Now Playing, Quick Toggles, Timers, Actions, Drop Shelf.
+        // Page 2: Code CLI tools (full-width solo tile).
+        // Page 3+: Stocks, System, Launcher, etc. based on settings order.
         registry.register(QuickTogglesModule())
+        registry.register(ScreenTimeModule())
         registry.register(TimersModule())
-        registry.register(ActionsModule())
-        registry.register(LauncherModule())
-        registry.register(MediaModule())
-        registry.register(CalendarModule())
-        registry.register(SystemModule())
+        registry.register(PomodoroModule())
         registry.register(ShelfModule())
-        registry.register(CodeModule())
-        registry.register(ClipboardModule())
+        registry.register(ActionsModule())
+        registry.register(MediaModule())
         registry.register(RemindersModule())
+        registry.register(CalendarModule())
+        registry.register(ClipboardModule())
+        registry.register(SystemModule())
+        registry.register(LauncherModule())
+        registry.register(CodeModule())
+        registry.register(StocksModule())
+
+        let customize = CustomizeModule(
+            settings: settings.settings,
+            titles: moduleTitles
+        ) { [weak self] updated in
+            self?.applySettings(updated)
+        }
+        customizeModule = customize
+        registry.register(customize)
     }
 }

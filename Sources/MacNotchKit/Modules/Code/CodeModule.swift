@@ -5,12 +5,16 @@ final class CodeModule: NotchModule {
     let id = "code"
     let title = "Code"
     var isEnabled = true
+    var isFullPageTile: Bool { true }
 
     final class StateBox: ObservableObject {
         @Published var projects: [CodeProjectDisplay] = []
     }
 
     private let state = StateBox()
+    private let terminals = Dictionary(
+        uniqueKeysWithValues: CodeCLITool.allCases.map { ($0, NotchTerminal()) }
+    )
     private let store = CodeProjectStore(url: CodeProjectStore.defaultURL())
     private var timer: Timer?
 
@@ -18,25 +22,26 @@ final class CodeModule: NotchModule {
         state.projects = store.projects.map { CodeProjectDisplay(name: $0.name, status: .unknown) }
     }
 
-    func collapsedView() -> AnyView? {
-        nil
-    }
+    func collapsedView() -> AnyView? { nil }
 
     func expandedView() -> AnyView? {
         AnyView(CodeBridge(
             box: state,
-            onAction: { [weak self] index, action in self?.perform(action, at: index) },
-            onRemove: { [weak self] index in self?.remove(at: index) },
-            onDrop: { [weak self] urls in self?.pin(urls) }
+            onAction:    { [weak self] index, action in self?.perform(action, at: index) },
+            onRemove:    { [weak self] index in self?.remove(at: index) },
+            onDrop:      { [weak self] urls in self?.pin(urls) },
+            onLaunchCLI: { [weak self] tool in self?.launchCLI(tool) }
         ))
     }
 
     func dashboardTile() -> AnyView? {
         AnyView(CodeDashboardBridge(
             box: state,
-            onAction: { [weak self] index, action in self?.perform(action, at: index) },
-            onRemove: { [weak self] index in self?.remove(at: index) },
-            onDrop: { [weak self] urls in self?.pin(urls) }
+            terminals: terminals,
+            onAction:    { [weak self] index, action in self?.perform(action, at: index) },
+            onRemove:    { [weak self] index in self?.remove(at: index) },
+            onDrop:      { [weak self] urls in self?.pin(urls) },
+            onLaunchCLI: { [weak self] tool in self?.launchCLI(tool) }
         ))
     }
 
@@ -52,6 +57,7 @@ final class CodeModule: NotchModule {
     func deactivate() {
         timer?.invalidate()
         timer = nil
+        terminals.values.forEach { $0.stop() }
     }
 
     func refresh() async {
@@ -85,6 +91,11 @@ final class CodeModule: NotchModule {
         Launcher.perform(action, path: url.path)
     }
 
+    private func launchCLI(_ tool: CodeCLITool) {
+        // Run inside the notch panel via PTY instead of opening a separate Terminal window.
+        terminals[tool]?.launch(tool: tool)
+    }
+
     private func startTimer() {
         guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
@@ -93,34 +104,42 @@ final class CodeModule: NotchModule {
     }
 }
 
+// MARK: - Bridges (ObservableObject glue for SwiftUI)
+
 private struct CodeBridge: View {
     @ObservedObject var box: CodeModule.StateBox
     let onAction: (Int, CodeAction) -> Void
     let onRemove: (Int) -> Void
     let onDrop: ([URL]) -> Void
+    var onLaunchCLI: ((CodeCLITool) -> Void)? = nil
 
     var body: some View {
         CodeExpandedView(
             projects: box.projects,
             onAction: onAction,
             onRemove: onRemove,
-            onDrop: onDrop
+            onDrop: onDrop,
+            onLaunchCLI: onLaunchCLI
         )
     }
 }
 
 private struct CodeDashboardBridge: View {
     @ObservedObject var box: CodeModule.StateBox
+    let terminals: [CodeCLITool: NotchTerminal]
     let onAction: (Int, CodeAction) -> Void
     let onRemove: (Int) -> Void
     let onDrop: ([URL]) -> Void
+    let onLaunchCLI: (CodeCLITool) -> Void
 
     var body: some View {
         CodeDashboardTile(
             projects: box.projects,
             onAction: onAction,
             onRemove: onRemove,
-            onDrop: onDrop
+            onDrop: onDrop,
+            onLaunchCLI: onLaunchCLI,
+            terminals: terminals
         )
     }
 }

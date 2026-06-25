@@ -1,16 +1,29 @@
+import AppKit
 import SwiftUI
 
-/// A pinned project plus its latest git status, for display.
+// MARK: - Model
+
 struct CodeProjectDisplay: Equatable, Sendable {
     var name: String
     var status: GitStatus
 }
+
+private func accent(for tool: CodeCLITool) -> Color {
+    switch tool {
+    case .claude: return Color(red: 0.78, green: 0.52, blue: 1.00)
+    case .codex: return Color(red: 0.36, green: 0.78, blue: 1.00)
+    case .cursor: return Color(red: 0.27, green: 0.98, blue: 0.72)
+    }
+}
+
+// MARK: - Compact expanded view
 
 struct CodeExpandedView: View {
     let projects: [CodeProjectDisplay]
     let onAction: (Int, CodeAction) -> Void
     let onRemove: (Int) -> Void
     let onDrop: ([URL]) -> Void
+    var onLaunchCLI: ((CodeCLITool) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -20,14 +33,12 @@ struct CodeExpandedView: View {
                 .foregroundStyle(.white.opacity(0.4))
 
             if projects.isEmpty {
-                Text("Drop a project folder here")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(maxWidth: .infinity, minHeight: 28)
+                cliQuickLaunch
             } else {
                 ForEach(projects.indices, id: \.self) { index in
                     row(projects[index], index: index)
                 }
+                cliQuickLaunch
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -36,6 +47,44 @@ struct CodeExpandedView: View {
             onDrop(urls)
             return true
         }
+    }
+
+    // Always-visible CLI quick-launch row so the tile is never empty.
+    @ViewBuilder
+    private var cliQuickLaunch: some View {
+        HStack(spacing: 6) {
+            ForEach(CodeTerminalPaneDescriptor.defaultPanes) { pane in
+                cliChip(pane)
+            }
+        }
+        if projects.isEmpty {
+            Text("drop a folder to pin it")
+                .font(.system(size: 9))
+                .foregroundStyle(.white.opacity(0.25))
+        }
+    }
+
+    private func cliChip(_ pane: CodeTerminalPaneDescriptor) -> some View {
+        Button { onLaunchCLI?(pane.tool) } label: {
+            HStack(spacing: 5) {
+                Image(systemName: pane.tool.systemImage)
+                    .font(.system(size: 10))
+                    .foregroundStyle(accent(for: pane.tool))
+                Text(pane.command)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.72))
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.black.opacity(0.35))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(accent(for: pane.tool).opacity(0.28), lineWidth: 0.5))
+            )
+        }
+        .buttonStyle(.plain)
+        .help("Open \(pane.displayName) in notch")
     }
 
     private func row(_ project: CodeProjectDisplay, index: Int) -> some View {
@@ -93,34 +142,187 @@ struct CodeExpandedView: View {
     }
 }
 
-/// Pinned-projects widget for the dashboard layout.
+// MARK: - Embedded SwiftTerm terminal (NSViewRepresentable)
+
+/// Hosts a session's persistent `LocalProcessTerminalView`. SwiftTerm handles all
+/// keyboard input, scrolling, and rendering; we only manage focus so keystrokes
+/// reach the right pane in the menu-bar panel.
+private struct EmbeddedTerminalView: NSViewRepresentable {
+    let terminal: NotchTerminal
+    let isFocused: Bool
+
+    func makeNSView(context: Context) -> NSView {
+        terminal.terminalView
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard isFocused else { return }
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            if !window.isKeyWindow {
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKey()
+            }
+            if window.firstResponder !== nsView {
+                window.makeFirstResponder(nsView)
+            }
+        }
+    }
+}
+
+// MARK: - Split terminal panes
+
+private struct SplitTerminalPane: View {
+    let descriptor: CodeTerminalPaneDescriptor
+    @ObservedObject var terminal: NotchTerminal
+    let isFocused: Bool
+    let onFocus: () -> Void
+    let onLaunch: () -> Void
+    let onStop: () -> Void
+
+    private var accentColor: Color { accent(for: descriptor.tool) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            titleBar
+            if terminal.activeCLI == nil {
+                idleBody
+            } else {
+                EmbeddedTerminalView(terminal: terminal, isFocused: isFocused)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.black.opacity(isFocused ? 0.58 : 0.44))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(accentColor.opacity(isFocused ? 0.55 : 0.18), lineWidth: 0.7)
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onFocus)
+    }
+
+    private var titleBar: some View {
+        HStack(spacing: 7) {
+            Image(systemName: descriptor.tool.systemImage)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(accentColor)
+                .frame(width: 14)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(descriptor.displayName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.82))
+                Text("$ \(descriptor.executableName)")
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.28))
+            }
+
+            Spacer(minLength: 4)
+
+            if terminal.activeCLI == nil {
+                Button(action: onLaunch) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(accentColor)
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .help("Run \(descriptor.displayName)")
+            } else {
+                Circle()
+                    .fill(terminal.isRunning ? Color(red: 0.26, green: 0.79, blue: 0.40) : .white.opacity(0.25))
+                    .frame(width: 5, height: 5)
+
+                Button(action: onStop) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.35))
+                        .frame(width: 22, height: 22)
+                }
+                .buttonStyle(.plain)
+                .help("Close \(descriptor.displayName)")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.white.opacity(isFocused ? 0.075 : 0.04))
+    }
+
+    private var idleBody: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Spacer(minLength: 0)
+            Image(systemName: "terminal")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(accentColor.opacity(0.70))
+            Text("ready")
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.55))
+            Button(action: onLaunch) {
+                HStack(spacing: 5) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 8, weight: .semibold))
+                    Text("run")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                }
+                .foregroundStyle(.black.opacity(0.78))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(accentColor.opacity(0.88)))
+            }
+            .buttonStyle(.plain)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Dashboard tile: full-width split CLI workspace
+
 struct CodeDashboardTile: View {
     let projects: [CodeProjectDisplay]
     let onAction: (Int, CodeAction) -> Void
     let onRemove: (Int) -> Void
     let onDrop: ([URL]) -> Void
+    let onLaunchCLI: (CodeCLITool) -> Void
+    let terminals: [CodeCLITool: NotchTerminal]
+
+    @State private var focusedTool: CodeCLITool = .claude
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TileHeader(title: "Code", systemImage: "chevron.left.forwardslash.chevron.right")
-            Spacer(minLength: 0)
-            if projects.isEmpty {
-                Text("Drop a project folder here")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.4))
-                    .frame(maxWidth: .infinity)
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(projects.indices, id: \.self) { index in
-                            row(projects[index], index: index)
-                        }
+            terminalTitleBar
+
+            HStack(spacing: 8) {
+                ForEach(CodeTerminalPaneDescriptor.defaultPanes) { descriptor in
+                    if let terminal = terminals[descriptor.tool] {
+                        SplitTerminalPane(
+                            descriptor: descriptor,
+                            terminal: terminal,
+                            isFocused: focusedTool == descriptor.tool,
+                            onFocus: { focusedTool = descriptor.tool },
+                            onLaunch: {
+                                focusedTool = descriptor.tool
+                                onLaunchCLI(descriptor.tool)
+                            },
+                            onStop: { terminal.stop() }
+                        )
                     }
                 }
             }
-            Spacer(minLength: 0)
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, projects.first == nil ? 10 : 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if let proj = projects.first {
+                projectFooter(proj)
+            }
         }
-        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .contentShape(Rectangle())
         .dropDestination(for: URL.self) { urls, _ in
@@ -129,48 +331,57 @@ struct CodeDashboardTile: View {
         }
     }
 
-    private func row(_ project: CodeProjectDisplay, index: Int) -> some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(project.name)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                HStack(spacing: 5) {
-                    if let branch = project.status.branch {
-                        Text(branch).foregroundStyle(.white.opacity(0.6))
-                        if project.status.isDirty {
-                            Circle().fill(Color(red: 1, green: 0.72, blue: 0.2)).frame(width: 5, height: 5)
-                        }
-                    } else {
-                        Text("no repo").foregroundStyle(.white.opacity(0.35))
-                    }
-                }
-                .font(.system(size: 9))
-            }
-            Spacer(minLength: 4)
-            actionButton("sparkles", help: "Launch Claude Code") { onAction(index, .claudeCode) }
-            actionButton("terminal", help: "Open Terminal") { onAction(index, .terminal) }
+    private var terminalTitleBar: some View {
+        HStack(spacing: 6) {
+            Circle().fill(Color(red: 0.93, green: 0.33, blue: 0.28)).frame(width: 8, height: 8)
+            Circle().fill(Color(red: 0.97, green: 0.73, blue: 0.21)).frame(width: 8, height: 8)
+            Circle().fill(Color(red: 0.26, green: 0.79, blue: 0.40)).frame(width: 8, height: 8)
+            Spacer()
+            Text("Code Split")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.35))
+            Spacer()
         }
-        .contextMenu {
-            Button("Reveal in Finder") { onAction(index, .reveal) }
-            Button("Remove", role: .destructive) { onRemove(index) }
-        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(Color.white.opacity(0.04))
     }
 
-    private func actionButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 18, height: 18)
+    private func projectFooter(_ proj: CodeProjectDisplay) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "folder")
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.22))
+            Text("~/\(proj.name)")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.28))
+            if let branch = proj.status.branch {
+                Text("·").foregroundStyle(.white.opacity(0.18))
+                Text(branch)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.28))
+                if proj.status.isDirty {
+                    Circle().fill(Color(red: 1, green: 0.72, blue: 0.2)).frame(width: 4, height: 4)
+                }
+                if proj.status.ahead > 0 {
+                    Text("↑\(proj.status.ahead)")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.22))
+                }
+            }
+            Spacer()
+            Text("drop to pin")
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.15))
         }
-        .buttonStyle(.plain)
-        .help(help)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
+        .background(Color.white.opacity(0.03))
     }
 }
 
-/// First-project summary for the wide bar.
+// MARK: - Wide bar
+
 struct CodeWideBar: View {
     let projects: [CodeProjectDisplay]
 

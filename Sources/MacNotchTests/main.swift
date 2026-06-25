@@ -15,6 +15,7 @@ calendarModuleTests()
 shelfStoreTests()
 settingsLogicTests()
 codeModuleCoreTests()
+codingIntelTests()
 screenTimeTrackerTests()
 timerSchedulerTests()
 

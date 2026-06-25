@@ -52,48 +52,70 @@ struct DashboardLayoutView: View {
     let activeMode: ExpansionMode
     var topInset: CGFloat = 0
     let onSwitchMode: (ExpansionMode) -> Void
+    var isPinned: Bool = false
+    var onTogglePin: () -> Void = {}
+    var onExternalDrop: ([URL]) -> Void = { _ in }
 
     @State private var page = 0
     @State private var slideDirection: Int = 1   // +1 = forward (trailing→), -1 = back (←leading)
 
-    private let tilesPerPage = 4
+    private let tilesPerPage = 5
     private let headerHeight: CGFloat = 18
-    private let toolbarHeight: CGFloat = 30
     private let tileSpacing: CGFloat = 10
     private let outerPadding: CGFloat = 14
     private let arrowWidth: CGFloat = 20
 
-    private var tiles: [(id: String, view: AnyView)] {
-        modules.compactMap { module -> (id: String, view: AnyView)? in
-            guard let tile = module.dashboardTile() else { return nil }
-            return (module.id, tile)
+    // Builds pages respecting isFullPageTile: full-page modules get their own
+    // page so they can fill the full width; others are grouped up to tilesPerPage.
+    private var pages: [[(id: String, view: AnyView)]] {
+        var result: [[(id: String, view: AnyView)]] = []
+        var current: [(id: String, view: AnyView)] = []
+
+        for module in modules {
+            guard let tile = module.dashboardTile() else { continue }
+            let entry = (module.id, tile)
+
+            if module.isFullPageTile {
+                if !current.isEmpty { result.append(current); current = [] }
+                result.append([entry])
+            } else {
+                current.append(entry)
+                if current.count == tilesPerPage { result.append(current); current = [] }
+            }
         }
+        if !current.isEmpty { result.append(current) }
+        return result
     }
 
-    private var pageCount: Int { max(1, Int(ceil(Double(tiles.count) / Double(tilesPerPage)))) }
+    private var pageCount: Int { max(1, pages.count) }
 
     private var pageTiles: [(id: String, view: AnyView)] {
-        let start = page * tilesPerPage
-        let end   = min(start + tilesPerPage, tiles.count)
-        guard start < tiles.count else { return [] }
-        return Array(tiles[start..<end])
+        guard page < pages.count else { return [] }
+        return pages[page]
     }
 
     var body: some View {
         VStack(spacing: 6) {
             header.frame(height: headerHeight)
             tilesArea.frame(maxWidth: .infinity, maxHeight: .infinity)
-            Rectangle()
-                .fill(NotchTheme.hairline)
-                .frame(height: 1)
-                .padding(.top, 6)
-            modeToolbar.frame(height: toolbarHeight)
         }
         .padding(.horizontal, outerPadding)
         .padding(.top, topInset + 4)
         .padding(.bottom, 4)
         .frame(width: size.width, height: size.height, alignment: .top)
         .background(ScrollWheelReader { dir in navigate(dir) })
+        .dropDestination(for: URL.self) { urls, _ in
+            onExternalDrop(urls)
+            return true
+        }
+        // Clamp to a valid page if the module list shrinks (e.g. after a toggle).
+        .onChange(of: pageCount) { _, newCount in
+            if page >= newCount {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                    page = max(0, newCount - 1)
+                }
+            }
+        }
     }
 
     // MARK: - Navigation
@@ -108,32 +130,63 @@ struct DashboardLayoutView: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(spacing: 5) {
-            Text("Dashboard")
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.95))
+        HStack(spacing: 6) {
+            Text("MacNotch")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
             Text(modeLabel)
-                .font(.system(size: 9, weight: .semibold))
-                .tracking(0.4)
+                .font(.system(size: 8.5, weight: .semibold))
+                .tracking(0.5)
                 .foregroundStyle(NotchTheme.accent)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1.5)
-                .background(Capsule().fill(NotchTheme.accent.opacity(0.16)))
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(NotchTheme.accent.opacity(0.15))
+                        .overlay(Capsule().strokeBorder(NotchTheme.accent.opacity(0.30), lineWidth: 0.5))
+                )
             Spacer()
             if pageCount > 1 { pageDots }
             Text(Self.dateLabel())
-                .font(.system(size: 10.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.45))
-                .padding(.leading, 8)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.white.opacity(0.40))
+                .padding(.leading, 6)
+            // Grip handle — only shown when pinned so the window can be repositioned.
+            // Uses a dedicated NSView so chip drags never compete with window movement.
+            if isPinned {
+                WindowDragHandleView()
+                    .frame(width: 22, height: 22)
+                    .overlay(
+                        Image(systemName: "grip.horizontal")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.40))
+                            .allowsHitTesting(false)
+                    )
+                    .padding(.leading, 2)
+            }
+            Button(action: onTogglePin) {
+                Image(systemName: isPinned ? "lock.fill" : "lock.open")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isPinned ? Color.white.opacity(0.85) : Color.white.opacity(0.30))
+                    .frame(width: 22, height: 22)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(isPinned ? Color.white.opacity(0.12) : Color.clear)
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 4)
         }
     }
 
     private var pageDots: some View {
         HStack(spacing: 4) {
             ForEach(0..<pageCount, id: \.self) { i in
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(i == page ? Color.white.opacity(0.80) : Color.white.opacity(0.22))
-                    .frame(width: i == page ? 14 : 5, height: 4)
+                Capsule()
+                    .fill(i == page ? NotchTheme.accent : Color.white.opacity(0.20))
+                    .frame(width: i == page ? 16 : 5, height: 4)
+                    .shadow(color: i == page ? NotchTheme.accent.opacity(0.5) : .clear,
+                            radius: 4, x: 0, y: 0)
                     .animation(.spring(response: 0.28, dampingFraction: 0.78), value: page)
             }
         }
@@ -160,7 +213,7 @@ struct DashboardLayoutView: View {
             navArrow(systemName: "chevron.left", enabled: page > 0) { navigate(-1) }
 
             ZStack {
-                if tiles.isEmpty {
+                if pages.isEmpty {
                     Text("No dashboard tiles yet")
                         .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.4))
@@ -184,13 +237,22 @@ struct DashboardLayoutView: View {
                 tile.view
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .dashboardTileSurface()
-                    .transition(.scale(scale: 0.96).combined(with: .opacity))
+                    .transition(
+                        .asymmetric(
+                            insertion: .scale(scale: 0.90, anchor: .center).combined(with: .opacity),
+                            removal:   .scale(scale: 0.94, anchor: .center).combined(with: .opacity)
+                        )
+                    )
             }
-            // Ghost spacers so tiles stay full-width on the last page
-            ForEach(0..<(tilesPerPage - pageTiles.count), id: \.self) { _ in
-                Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Ghost spacers keep tiles equal-width on partial pages,
+            // but omit them when there is only one tile so it fills the full width.
+            if pageTiles.count > 1 {
+                ForEach(0..<(tilesPerPage - pageTiles.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
+        .animation(.spring(response: 0.38, dampingFraction: 0.80), value: pageTiles.map { $0.id })
     }
 
     private var pageTransition: AnyTransition {
@@ -217,30 +279,4 @@ struct DashboardLayoutView: View {
         .animation(.easeOut(duration: 0.15), value: enabled)
     }
 
-    // MARK: - Mode toolbar
-
-    private var modeToolbar: some View {
-        HStack(spacing: 10) {
-            Spacer()
-            modeButton(.dashboard, system: "square.grid.2x2", label: "Dashboard")
-            modeButton(.compact,   system: "rectangle",        label: "Compact")
-            modeButton(.wideBar,   system: "rectangle.split.3x1", label: "Wide Bar")
-            Spacer()
-        }
-    }
-
-    private func modeButton(_ mode: ExpansionMode, system: String, label: String) -> some View {
-        Button { onSwitchMode(mode) } label: {
-            Image(systemName: system)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(activeMode == mode ? Color.white : .white.opacity(0.45))
-                .frame(width: 26, height: 22)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(activeMode == mode ? .white.opacity(0.12) : .clear)
-                )
-        }
-        .buttonStyle(.plain)
-        .help(label)
-    }
 }

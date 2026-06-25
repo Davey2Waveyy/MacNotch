@@ -49,17 +49,19 @@ func settingsStoreTests() {
         let store = SettingsStore(url: url)
         store.load()
 
-        // Persisted had ["system"(disabled), "legacy"(dropped), "media"]; new defaults prepend shelf +
-        // others before system/media. Merge: persisted known ids first, then unvisited defaults appended.
+        // Persisted had ["system"(disabled), "legacy"(dropped), "media"]; new defaults order is
+        // media, quickToggles, timers, actions, shelf, code, stocks, then disabled modules.
+        // Merge: persisted known ids first, then unvisited defaults appended in defaults order.
         expectEqual(
             store.settings.modules.map(\.id),
-            ["system", "media", "shelf", "quickToggles", "reminders",
-             "timers", "clipboard", "screenTime", "calendar", "actions", "launcher", "code"],
+            ["system", "media", "quickToggles", "timers", "actions", "shelf", "code",
+             "stocks", "screenTime", "pomodoro", "reminders", "calendar", "clipboard", "launcher",
+             "customize"],
             "known persisted order preserved and missing defaults appended"
         )
         expectEqual(
             store.settings.modules.map(\.isEnabled),
-            [false, true, true, true, true, true, true, true, true, true, true, true],
+            [false, true, true, true, true, true, true, true, false, false, false, false, false, false, false],
             "persisted enablement preserved and appended defaults keep default enablement"
         )
         expectEqual(store.settings.launchAtLogin, true, "other persisted settings survive merge")

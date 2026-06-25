@@ -38,6 +38,12 @@ public enum LaunchCommandBuilder {
         }
     }
 
+    /// Opens Terminal and runs a bare CLI command (no project path).
+    public static func openCLI(_ name: String) -> LaunchCommand {
+        let script = "tell application \"Terminal\"\nactivate\ndo script \"\(appleScriptEscape(name))\"\nend tell"
+        return LaunchCommand(executable: "/usr/bin/osascript", arguments: ["-e", script])
+    }
+
     /// Wraps a path in single quotes, safely escaping embedded single quotes.
     public static func shellSingleQuote(_ value: String) -> String {
         "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
