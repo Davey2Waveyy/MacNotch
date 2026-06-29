@@ -22,7 +22,7 @@ struct QuickTogglesView: View {
                        label: state.muted ? "Muted" : "Audio", on: state.muted) { controller?.toggleMute() }
             ToggleChip(icon: state.caffeinated ? "cup.and.saucer.fill" : "cup.and.saucer",
                        label: "Awake", on: state.caffeinated) { controller?.toggleCaffeinate() }
-            ToggleChip(icon: "bell.slash", label: "DND", on: false) { controller?.openDoNotDisturbShortcut() }
+            ToggleChip(icon: state.dndActive ? "bell.slash.fill" : "bell.slash", label: "DND", on: state.dndActive) { controller?.toggleDoNotDisturb() }
         }
     }
 }
@@ -61,7 +61,7 @@ struct QuickTogglesDashboardTile: View {
                        label: state.muted ? "Muted" : "Audio", on: state.muted) { controller?.toggleMute() }
             ToggleChip(icon: state.caffeinated ? "cup.and.saucer.fill" : "cup.and.saucer",
                        label: "Awake", on: state.caffeinated) { controller?.toggleCaffeinate() }
-            ToggleChip(icon: "bell.slash", label: "DND", on: false) { controller?.openDoNotDisturbShortcut() }
+            ToggleChip(icon: state.dndActive ? "bell.slash.fill" : "bell.slash", label: "DND", on: state.dndActive) { controller?.toggleDoNotDisturb() }
         }
     }
 }

@@ -151,19 +151,17 @@ struct DashboardLayoutView: View {
                 .font(.system(size: 10, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.40))
                 .padding(.leading, 6)
-            // Grip handle — only shown when pinned so the window can be repositioned.
-            // Uses a dedicated NSView so chip drags never compete with window movement.
-            if isPinned {
-                WindowDragHandleView()
-                    .frame(width: 22, height: 22)
-                    .overlay(
-                        Image(systemName: "grip.horizontal")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.40))
-                            .allowsHitTesting(false)
-                    )
-                    .padding(.leading, 2)
-            }
+            // Dedicated NSView drag handle so moving the panel is explicit.
+            WindowDragHandleView()
+                .frame(width: 22, height: 22)
+                .overlay(
+                    Image(systemName: "grip.horizontal")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.40))
+                        .allowsHitTesting(false)
+                )
+                .padding(.leading, 2)
+                .help("Drag panel")
             Button(action: onTogglePin) {
                 Image(systemName: isPinned ? "lock.fill" : "lock.open")
                     .font(.system(size: 10, weight: .medium))
@@ -244,12 +242,11 @@ struct DashboardLayoutView: View {
                         )
                     )
             }
-            // Ghost spacers keep tiles equal-width on partial pages,
-            // but omit them when there is only one tile so it fills the full width.
-            if pageTiles.count > 1 {
-                ForEach(0..<(tilesPerPage - pageTiles.count), id: \.self) { _ in
-                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
+            // Ghost spacers only on full pages to keep consistent tile widths.
+            // Partial pages let tiles expand to fill the available space naturally.
+            if pageTiles.count == tilesPerPage {
+                // All slots filled — no ghost spacers needed.
+                EmptyView()
             }
         }
         .animation(.spring(response: 0.38, dampingFraction: 0.80), value: pageTiles.map { $0.id })

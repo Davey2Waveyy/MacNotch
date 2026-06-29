@@ -94,7 +94,7 @@ private func musicNotePlaceholder(size: CGFloat) -> some View {
         .overlay(Image(systemName: "music.note").foregroundStyle(.white.opacity(0.85)))
 }
 
-/// Now-playing widget for the dashboard layout: artwork, track, transport.
+/// Now-playing widget for the dashboard layout: artwork, track, transport, and live lyrics.
 struct MediaDashboardTile: View {
     let np: NowPlaying?
     let onPrevious: () -> Void
@@ -104,36 +104,43 @@ struct MediaDashboardTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TileHeader(title: "Now Playing", systemImage: "music.note")
-            Spacer(minLength: 0)
             if let np {
-                HStack(spacing: 10) {
-                    artworkView(url: np.artworkURL, size: 38)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(np.title)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text(np.artist)
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                HStack(spacing: 20) {
-                    control("backward.fill", action: onPrevious)
-                    control(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
-                    control("forward.fill", action: onNext)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 4)
+                nowPlayingBody(np)
             } else {
                 nothingPlayingView
             }
-            Spacer(minLength: 0)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func nowPlayingBody(_ np: NowPlaying) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                artworkView(url: np.artworkURL, size: 42)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(np.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(np.artist)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 20) {
+                control("backward.fill", action: onPrevious)
+                control(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
+                control("forward.fill", action: onNext)
+            }
+            .padding(.top, 2)
+
+            LyricsView(lyricsResult: np.lyricsResult, elapsed: np.elapsed)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.top, 8)
     }
 
     private var nothingPlayingView: some View {
@@ -188,6 +195,99 @@ struct MediaDashboardTile: View {
                 .foregroundStyle(.white)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Live lyrics view
+
+private struct LyricsView: View {
+    let lyricsResult: LyricsResult?
+    let elapsed: Double?
+
+    var body: some View {
+        if let result = lyricsResult {
+            if result.hasSynced {
+                SyncedLyricsView(lines: result.synced, elapsed: elapsed ?? 0)
+            } else if let plain = result.plain, !plain.isEmpty {
+                PlainLyricsView(text: plain)
+            }
+        }
+        // nil = still loading; show nothing
+    }
+}
+
+private struct SyncedLyricsView: View {
+    let lines: [LyricsLine]
+    let elapsed: Double
+
+    private var currentIndex: Int {
+        var best = 0
+        for (i, line) in lines.enumerated() {
+            if line.time <= elapsed { best = i }
+        }
+        return best
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { i, line in
+                        let isCurrent = i == currentIndex
+                        Text(line.text)
+                            .font(.system(size: isCurrent ? 12 : 10,
+                                          weight: isCurrent ? .semibold : .regular))
+                            .foregroundStyle(isCurrent ? Color.white : Color.white.opacity(0.30))
+                            .animation(.easeOut(duration: 0.25), value: isCurrent)
+                            .id(i)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .mask(
+                LinearGradient(
+                    stops: [
+                        .init(color: .white, location: 0),
+                        .init(color: .white, location: 0.80),
+                        .init(color: .clear, location: 1)
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .onChange(of: currentIndex) { _, idx in
+                withAnimation(.easeOut(duration: 0.4)) {
+                    proxy.scrollTo(max(0, idx - 2), anchor: .top)
+                }
+            }
+        }
+    }
+}
+
+private struct PlainLyricsView: View {
+    let text: String
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            Text(text)
+                .font(.system(size: 10, weight: .regular))
+                .foregroundStyle(.white.opacity(0.40))
+                .lineSpacing(5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .mask(
+            LinearGradient(
+                stops: [
+                    .init(color: .white, location: 0),
+                    .init(color: .white, location: 0.80),
+                    .init(color: .clear, location: 1)
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+        )
     }
 }
 

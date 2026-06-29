@@ -200,7 +200,7 @@ public struct NotchRootView: View {
                 }
             }
 
-            // Footer: lock (pin open) on the left, drag handle when pinned, dashboard on the right.
+            // Footer: lock on the left, explicit drag handle beside it, dashboard on the right.
             HStack {
                 Button(action: onTogglePin) {
                     Image(systemName: model.isPinned ? "lock.fill" : "lock.open")
@@ -214,16 +214,19 @@ public struct NotchRootView: View {
                 }
                 .buttonStyle(.plain)
 
-                if model.isPinned {
-                    WindowDragHandleView()
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "grip.horizontal")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(Color.white.opacity(0.35))
-                                .allowsHitTesting(false)
-                        )
-                }
+                WindowDragHandleView()
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Image(systemName: "grip.horizontal")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.38))
+                            .allowsHitTesting(false)
+                    )
+                    .background(
+                        RoundedRectangle(cornerRadius: 7)
+                            .fill(Color.white.opacity(0.055))
+                    )
+                    .help("Drag panel")
 
                 Spacer()
 

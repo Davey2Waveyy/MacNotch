@@ -20,7 +20,7 @@ final class TimersModule: NotchModule {
 
     private let state = StateBox()
     private var scheduler = TimerScheduler()
-    private var tick: Timer?
+    private var scheduledTick: Timer?
     private var alarm: NSSound?
 
     func collapsedView() -> AnyView? {
@@ -39,17 +39,12 @@ final class TimersModule: NotchModule {
     }
 
     func activate() {
-        tick = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.pump() }
-        }
-        // Keep ticking while menus/scrolling hold the run loop in another mode.
-        if let tick { RunLoop.main.add(tick, forMode: .common) }
         pump()
     }
 
     func deactivate() {
-        tick?.invalidate()
-        tick = nil
+        scheduledTick?.invalidate()
+        scheduledTick = nil
         stopAlarm()
     }
 
@@ -71,6 +66,9 @@ final class TimersModule: NotchModule {
     }
 
     private func pump() {
+        scheduledTick?.invalidate()
+        scheduledTick = nil
+
         let now = Date()
         let fired = scheduler.collectExpired(now: now)
         if !fired.isEmpty {
@@ -79,8 +77,23 @@ final class TimersModule: NotchModule {
             NotificationCenter.default.post(name: .macNotchTimerFired, object: nil)
             NSApp.requestUserAttention(.criticalRequest)
         }
-        state.now = now
-        state.active = scheduler.active(now: now)
+
+        let active = scheduler.active(now: now)
+        if !active.isEmpty {
+            state.now = now
+        }
+        state.active = active
+        scheduleNextTick(active: active, now: now)
+    }
+
+    private func scheduleNextTick(active: [CountdownTimer], now: Date) {
+        guard let nextWake = TimerRefreshPolicy.nextWakeDate(active: active, now: now) else { return }
+        let timer = Timer(fire: nextWake, interval: 0, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.pump() }
+        }
+        timer.tolerance = min(0.1, max(0, nextWake.timeIntervalSince(now) * 0.2))
+        scheduledTick = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private func startAlarm() {

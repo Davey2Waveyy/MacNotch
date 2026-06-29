@@ -51,8 +51,8 @@ public struct TimerScheduler: Equatable, Sendable {
 
     /// Removes and returns any timers that have expired as of `now`.
     public mutating func collectExpired(now: Date) -> [CountdownTimer] {
-        let fired = timers.filter { $0.isExpired(at: now) }
-        timers.removeAll { $0.isExpired(at: now) }
+        var fired: [CountdownTimer] = []
+        timers.removeAll { t in t.isExpired(at: now) && { fired.append(t); return true }() }
         return fired
     }
 
@@ -73,5 +73,21 @@ public enum TimerFormat {
         let s = total % 60
         if h > 0 { return String(format: "%d:%02d:%02d", h, m, s) }
         return String(format: "%d:%02d", m, s)
+    }
+}
+
+public enum TimerRefreshPolicy {
+    public static func nextWakeDate(active timers: [CountdownTimer], now: Date) -> Date? {
+        timers
+            .map { nextWakeDelay(forRemaining: $0.endDate.timeIntervalSince(now)) }
+            .compactMap { $0 }
+            .min()
+            .map { now.addingTimeInterval($0) }
+    }
+
+    private static func nextWakeDelay(forRemaining remaining: TimeInterval) -> TimeInterval? {
+        guard remaining > 0 else { return nil }
+        let fractional = remaining - floor(remaining)
+        return fractional > 0 ? fractional : 1
     }
 }

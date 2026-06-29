@@ -26,13 +26,15 @@ struct CodeExpandedView: View {
     var onLaunchCLI: ((CodeCLITool) -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .center, spacing: 8) {
             Text("CODE")
                 .font(.system(size: 9, weight: .medium))
                 .tracking(0.5)
                 .foregroundStyle(.white.opacity(0.4))
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if projects.isEmpty {
+                emptyProject
                 cliQuickLaunch
             } else {
                 ForEach(projects.indices, id: \.self) { index in
@@ -41,7 +43,7 @@ struct CodeExpandedView: View {
                 cliQuickLaunch
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .contentShape(Rectangle())
         .dropDestination(for: URL.self) { urls, _ in
             onDrop(urls)
@@ -52,34 +54,29 @@ struct CodeExpandedView: View {
     // Always-visible CLI quick-launch row so the tile is never empty.
     @ViewBuilder
     private var cliQuickLaunch: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             ForEach(CodeTerminalPaneDescriptor.defaultPanes) { pane in
                 cliChip(pane)
             }
         }
-        if projects.isEmpty {
-            Text("drop a folder to pin it")
-                .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.25))
-        }
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func cliChip(_ pane: CodeTerminalPaneDescriptor) -> some View {
         Button { onLaunchCLI?(pane.tool) } label: {
             HStack(spacing: 5) {
-                Image(systemName: pane.tool.systemImage)
-                    .font(.system(size: 10))
-                    .foregroundStyle(accent(for: pane.tool))
+                CodeToolIcon(tool: pane.tool, size: 13)
                 Text(pane.command)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.72))
             }
-            .padding(.horizontal, 9)
+            .frame(minWidth: 64)
+            .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.black.opacity(0.35))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color.black.opacity(0.26))
+                    .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .strokeBorder(accent(for: pane.tool).opacity(0.28), lineWidth: 0.5))
             )
         }
@@ -87,21 +84,37 @@ struct CodeExpandedView: View {
         .help("Open \(pane.displayName) in notch")
     }
 
+    private var emptyProject: some View {
+        VStack(spacing: 2) {
+            Text("No folder pinned")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.82))
+            Text("drop a folder")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.white.opacity(0.32))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
+    }
+
     private func row(_ project: CodeProjectDisplay, index: Int) -> some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
+        VStack(spacing: 7) {
+            VStack(alignment: .center, spacing: 2) {
                 Text(project.name)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 statusLine(project.status)
             }
-            Spacer(minLength: 4)
-            actionButton("sparkles", help: "Launch Claude Code") { onAction(index, .claudeCode) }
-            actionButton("chevron.left.forwardslash.chevron.right", help: "Open in editor") { onAction(index, .editor) }
-            actionButton("terminal", help: "Open Terminal") { onAction(index, .terminal) }
+
+            HStack(spacing: 16) {
+                actionButton("sparkles", help: "Launch Claude Code") { onAction(index, .claudeCode) }
+                actionButton("chevron.left.forwardslash.chevron.right", help: "Open in editor") { onAction(index, .editor) }
+                actionButton("terminal", help: "Open Terminal") { onAction(index, .terminal) }
+            }
         }
-        .padding(.vertical, 3)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 2)
         .contextMenu {
             Button("Reveal in Finder") { onAction(index, .reveal) }
             Button("Remove", role: .destructive) { onRemove(index) }
@@ -128,6 +141,7 @@ struct CodeExpandedView: View {
             }
         }
         .font(.system(size: 9))
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func actionButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {
@@ -194,11 +208,11 @@ private struct SplitTerminalPane: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.black.opacity(isFocused ? 0.58 : 0.44))
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.black.opacity(isFocused ? 0.48 : 0.36))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .strokeBorder(accentColor.opacity(isFocused ? 0.55 : 0.18), lineWidth: 0.7)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(accentColor.opacity(isFocused ? 0.48 : 0.14), lineWidth: 0.7)
                 )
         )
         .contentShape(Rectangle())
@@ -207,10 +221,7 @@ private struct SplitTerminalPane: View {
 
     private var titleBar: some View {
         HStack(spacing: 7) {
-            Image(systemName: descriptor.tool.systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(accentColor)
-                .frame(width: 14)
+            CodeToolIcon(tool: descriptor.tool, size: 14)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(descriptor.displayName)
@@ -247,19 +258,18 @@ private struct SplitTerminalPane: View {
                 .help("Close \(descriptor.displayName)")
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.white.opacity(isFocused ? 0.075 : 0.04))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Color.white.opacity(isFocused ? 0.055 : 0.025))
     }
 
     private var idleBody: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Spacer(minLength: 0)
             Image(systemName: "terminal")
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(accentColor.opacity(0.70))
-            Text("ready")
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
+            Text("Ready")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.55))
             Button(action: onLaunch) {
                 HStack(spacing: 5) {
@@ -269,15 +279,17 @@ private struct SplitTerminalPane: View {
                         .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 }
                 .foregroundStyle(.black.opacity(0.78))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(accentColor.opacity(0.88)))
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(accentColor.opacity(0.88))
+                )
             }
             .buttonStyle(.plain)
-            Spacer(minLength: 0)
         }
         .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
 
@@ -295,9 +307,9 @@ struct CodeDashboardTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            terminalTitleBar
+            workspaceHeader
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(CodeTerminalPaneDescriptor.defaultPanes) { descriptor in
                     if let terminal = terminals[descriptor.tool] {
                         SplitTerminalPane(
@@ -314,9 +326,9 @@ struct CodeDashboardTile: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, projects.first == nil ? 10 : 0)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, projects.first == nil ? 8 : 0)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if let proj = projects.first {
@@ -331,20 +343,24 @@ struct CodeDashboardTile: View {
         }
     }
 
-    private var terminalTitleBar: some View {
-        HStack(spacing: 6) {
-            Circle().fill(Color(red: 0.93, green: 0.33, blue: 0.28)).frame(width: 8, height: 8)
-            Circle().fill(Color(red: 0.97, green: 0.73, blue: 0.21)).frame(width: 8, height: 8)
-            Circle().fill(Color(red: 0.26, green: 0.79, blue: 0.40)).frame(width: 8, height: 8)
-            Spacer()
-            Text("Code Split")
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.35))
-            Spacer()
+    private var workspaceHeader: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(NotchTheme.accent.opacity(0.86))
+                .frame(width: 14)
+            Text("CODE SPLIT")
+                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.42))
+            Spacer(minLength: 8)
+            Text(CodeTerminalPaneDescriptor.defaultPanes.map(\.executableName).joined(separator: " / "))
+                .font(.system(size: 8.5, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.28))
+                .lineLimit(1)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(Color.white.opacity(0.04))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.028))
     }
 
     private func projectFooter(_ proj: CodeProjectDisplay) -> some View {

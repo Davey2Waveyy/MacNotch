@@ -61,7 +61,7 @@ final class SystemModule: NotchModule {
     private func refreshTimer() {
         guard timer == nil else { return }
 
-        timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 await self?.refresh()
             }

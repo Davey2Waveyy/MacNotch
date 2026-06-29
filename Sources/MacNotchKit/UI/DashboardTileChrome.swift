@@ -4,18 +4,18 @@ import SwiftUI
 
 /// Shared visual constants so the dashboard and wide-bar layouts stay in sync.
 enum NotchTheme {
-    static let tileCornerRadius: CGFloat = 16
-    static let tileFill     = Color.white.opacity(0.09)
-    static let tileStroke   = Color.white.opacity(0.14)
+    static let tileCornerRadius: CGFloat = 8
+    static let tileFill     = Color.white.opacity(0.075)
+    static let tileStroke   = Color.white.opacity(0.10)
     static let hairline     = Color.white.opacity(0.10)
     static let accent       = Color(red: 0.36, green: 0.78, blue: 1)
 
-    // Gradient helpers used inside DashboardTileSurface
+    // Kept for older tile callers that still want a subtle top-to-bottom tint.
     static func tileFillGradient(hovered: Bool) -> LinearGradient {
         LinearGradient(
             colors: [
-                Color.white.opacity(hovered ? 0.17 : 0.13),
-                Color.white.opacity(hovered ? 0.06 : 0.045)
+                Color.white.opacity(hovered ? 0.10 : 0.075),
+                Color.white.opacity(hovered ? 0.08 : 0.060)
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -25,8 +25,8 @@ enum NotchTheme {
     static func tileStrokeGradient(hovered: Bool) -> LinearGradient {
         LinearGradient(
             colors: [
-                Color.white.opacity(hovered ? 0.44 : 0.30),
-                Color.white.opacity(hovered ? 0.10 : 0.07)
+                Color.white.opacity(hovered ? 0.18 : 0.10),
+                Color.white.opacity(hovered ? 0.10 : 0.06)
             ],
             startPoint: .top,
             endPoint: .bottom
@@ -36,14 +36,8 @@ enum NotchTheme {
 
 // MARK: - Tile surface
 
-/// Rounded card surface that frames each dashboard widget.
-///
-/// Visual language:
-/// • Gradient fill  — lighter at top, darker at bottom — simulates a light source above.
-/// • Gradient stroke — top edge is bright (specular rim), fades toward the bottom.
-/// • Inner specular crescent — thin bright band just inside the top edge.
-/// • Depth shadow   — subtle downward shadow so tiles float above the glass.
-/// • Hover lift     — brightness + scale micro-interaction matching macOS Control Center.
+/// Flat surface that frames each dashboard widget without making it feel like a
+/// separate floating bubble inside the notch.
 struct DashboardTileSurface: ViewModifier {
     @State private var isHovered = false
 
@@ -51,30 +45,13 @@ struct DashboardTileSurface: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: NotchTheme.tileCornerRadius, style: .continuous)
-                    .fill(NotchTheme.tileFillGradient(hovered: isHovered))
+                    .fill(Color.white.opacity(isHovered ? 0.095 : 0.070))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: NotchTheme.tileCornerRadius, style: .continuous)
-                    .strokeBorder(NotchTheme.tileStrokeGradient(hovered: isHovered), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(isHovered ? 0.18 : 0.09), lineWidth: 0.75)
             )
-            // Inner specular crescent at the top of each tile
-            .overlay(alignment: .top) {
-                LinearGradient(
-                    colors: [Color.white.opacity(isHovered ? 0.16 : 0.11), Color.clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 30)
-                .clipShape(RoundedRectangle(cornerRadius: NotchTheme.tileCornerRadius, style: .continuous))
-                .blendMode(.plusLighter)
-                .allowsHitTesting(false)
-            }
-            // Depth: tile floats above the glass panel
-            .shadow(color: .black.opacity(0.38), radius: 12, x: 0, y: 6)
-            // Hover: soft white ambient glow
-            .shadow(color: .white.opacity(isHovered ? 0.07 : 0), radius: 18, x: 0, y: 0)
-            .scaleEffect(isHovered ? 1.014 : 1, anchor: .center)
-            .animation(.spring(response: 0.22, dampingFraction: 0.76), value: isHovered)
+            .animation(.easeOut(duration: 0.12), value: isHovered)
             .onHover { isHovered = $0 }
     }
 }

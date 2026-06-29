@@ -98,9 +98,11 @@ final class CodeModule: NotchModule {
 
     private func startTimer() {
         guard timer == nil else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
+        let interval = EnergyRefreshPolicy.interval(base: 30, lowPowerMultiplier: 4)
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in await self?.refresh() }
         }
+        timer?.tolerance = EnergyRefreshPolicy.tolerance(for: interval)
     }
 }
 

@@ -43,7 +43,7 @@ final class ClipboardModule: NotchModule {
         // Sync the baseline change count so we only track NEW copies from here on.
         lastChangeCount = NSPasteboard.general.changeCount
         state.entries = store.entries
-        timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.poll() }
         }
         if let timer { RunLoop.main.add(timer, forMode: .common) }

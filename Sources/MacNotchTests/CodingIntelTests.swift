@@ -68,4 +68,18 @@ func codingIntelTests() {
         expect(skills.contains(InstalledCodingSkill(cli: .codex, name: "reviewer", sourcePath: codex.path)), "codex skill")
         expect(skills.contains(InstalledCodingSkill(cli: .claude, name: "planner", sourcePath: claude.path)), "claude skill")
     }
+
+    test("skills: presentation leads with skill names and treats cli as source metadata") {
+        let skills = [
+            InstalledCodingSkill(cli: .codex, name: "brainstorming", sourcePath: "/tmp/codex"),
+            InstalledCodingSkill(cli: .claude, name: "frontend-design", sourcePath: "/tmp/claude"),
+            InstalledCodingSkill(cli: .cursor, name: "rules", sourcePath: "/tmp/cursor"),
+        ]
+
+        let items = InstalledSkillPresentation.displayItems(from: skills, limit: 2)
+
+        expectEqual(items.map(\.name), ["brainstorming", "frontend-design"], "skill names are primary")
+        expectEqual(items.map(\.sourceName), ["Codex", "Claude"], "cli labels are secondary source metadata")
+        expectEqual(InstalledSkillPresentation.summaryLabel(total: skills.count, visible: items.count), "2 of 3 skills", "summary mentions skills")
+    }
 }

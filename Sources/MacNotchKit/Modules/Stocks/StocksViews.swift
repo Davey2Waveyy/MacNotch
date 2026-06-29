@@ -3,6 +3,7 @@ import SwiftUI
 
 struct StocksDashboardTile: View {
     let quotes: [StockQuote]
+    let tickers: [String]
     let trendingRepos: [TrendingRepository]
     let installedSkills: [InstalledCodingSkill]
     let isFetching: Bool
@@ -17,21 +18,16 @@ struct StocksDashboardTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
                 marketColumn
-                    .frame(width: 342)
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 repoColumn
-                    .frame(maxWidth: .infinity)
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 skillsColumn
-                    .frame(width: 330)
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, 10)
-            if isEditing {
-                addRow
-                    .padding(.top, 8)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            Spacer(minLength: 0)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -40,7 +36,7 @@ struct StocksDashboardTile: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 8) {
             Image(systemName: "chart.xyaxis.line")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(NotchTheme.accent)
@@ -48,7 +44,28 @@ struct StocksDashboardTile: View {
                 .font(.system(size: 9, weight: .semibold))
                 .tracking(0.8)
                 .foregroundStyle(.white.opacity(0.55))
+
+            if !tickers.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(Array(tickers.enumerated()), id: \.offset) { index, ticker in
+                            TickerSelectionChip(
+                                symbol: ticker,
+                                isEditing: isEditing,
+                                onRemove: {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.80)) {
+                                        onRemove(index)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                .frame(maxWidth: 130)
+            }
+
             Spacer(minLength: 0)
+
             Button {
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
                     isEditing.toggle()
@@ -62,15 +79,17 @@ struct StocksDashboardTile: View {
             .buttonStyle(.plain)
             .help(isEditing ? "Done" : "Add ticker")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Content
+    // MARK: - Market column
 
     @ViewBuilder
     private var marketColumn: some View {
         VStack(alignment: .leading, spacing: 7) {
             sectionLabel("Stocks", systemImage: "chart.line.uptrend.xyaxis")
+            if isEditing {
+                addRow.transition(.move(edge: .top).combined(with: .opacity))
+            }
             if isFetching && quotes.isEmpty {
                 emptyLine("Fetching quotes")
             } else if quotes.isEmpty {
@@ -78,29 +97,14 @@ struct StocksDashboardTile: View {
             } else {
                 VStack(spacing: 5) {
                     ForEach(quotes.indices, id: \.self) { i in
-                        HStack(spacing: 0) {
-                            StockRow(quote: quotes[i])
-                            if isEditing {
-                                Button {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.80)) {
-                                        onRemove(i)
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Color(red: 0.92, green: 0.37, blue: 0.37))
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.leading, 8)
-                                .transition(.scale(scale: 0.6).combined(with: .opacity))
-                            }
-                        }
-                        .animation(.spring(response: 0.25, dampingFraction: 0.80), value: isEditing)
+                        StockRow(quote: quotes[i])
                     }
                 }
             }
         }
     }
+
+    // MARK: - Repo column
 
     private var repoColumn: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -110,30 +114,36 @@ struct StocksDashboardTile: View {
             } else if trendingRepos.isEmpty {
                 emptyLine("No repo trends yet")
             } else {
-                VStack(spacing: 5) {
-                    ForEach(Array(trendingRepos.prefix(4))) { repo in
-                        RepoTrendRow(repo: repo)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 4) {
+                        ForEach(trendingRepos) { repo in
+                            RepoTrendRow(repo: repo)
+                        }
                     }
                 }
             }
         }
     }
 
+    // MARK: - Skills column
+
     private var skillsColumn: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            sectionLabel("Installed skills", systemImage: "terminal")
-            VStack(spacing: 6) {
-                ForEach(CodeCLITool.allCases) { tool in
-                    SkillGroupRow(
-                        tool: tool,
-                        skills: installedSkills.filter { $0.cli == tool }
-                    )
+        let trailing: String? = installedSkills.isEmpty ? nil : "\(installedSkills.count)"
+        return VStack(alignment: .leading, spacing: 7) {
+            sectionLabel("Skills", systemImage: "puzzlepiece.extension", trailing: trailing)
+            if installedSkills.isEmpty {
+                emptyLine("No skills found")
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    SkillsListView(skills: InstalledSkillPresentation.displayItems(from: installedSkills))
                 }
             }
         }
     }
 
-    private func sectionLabel(_ title: String, systemImage: String) -> some View {
+    // MARK: - Shared helpers
+
+    private func sectionLabel(_ title: String, systemImage: String, trailing: String? = nil) -> some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
                 .font(.system(size: 9, weight: .semibold))
@@ -142,6 +152,11 @@ struct StocksDashboardTile: View {
                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.35))
             Spacer(minLength: 0)
+            if let trailing {
+                Text(trailing)
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.28))
+            }
         }
     }
 
@@ -149,8 +164,8 @@ struct StocksDashboardTile: View {
         Text(text)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(.white.opacity(0.28))
-            .frame(maxWidth: .infinity, minHeight: 84, alignment: .center)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.035)))
+            .frame(maxWidth: .infinity, minHeight: 60, alignment: .center)
+            .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.03)))
     }
 
     // MARK: - Add ticker row
@@ -160,7 +175,7 @@ struct StocksDashboardTile: View {
             Text("$")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .foregroundStyle(NotchTheme.accent.opacity(0.70))
-            TextField("AAPL, TSLA…", text: $newTicker)
+            TextField("TSLA, BRK.B", text: $newTicker)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white)
                 .textFieldStyle(.plain)
@@ -172,127 +187,187 @@ struct StocksDashboardTile: View {
                     .foregroundStyle(newTicker.isEmpty ? .white.opacity(0.15) : NotchTheme.accent)
             }
             .buttonStyle(.plain)
-            .disabled(newTicker.trimmingCharacters(in: .whitespaces).isEmpty)
+            .disabled(StockTickerSelection.normalized(newTicker) == nil)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(Color.white.opacity(0.06))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .strokeBorder(NotchTheme.accent.opacity(0.25), lineWidth: 0.5)
                 )
         )
     }
 
     private func submitTicker() {
-        let clean = newTicker.uppercased().trimmingCharacters(in: .whitespaces)
-        guard !clean.isEmpty else { return }
-        onAdd(clean)
+        guard StockTickerSelection.normalized(newTicker) != nil else { return }
+        onAdd(newTicker)
         newTicker = ""
     }
 }
 
-// MARK: - Coding intel rows
+// MARK: - Ticker chip
+
+private struct TickerSelectionChip: View {
+    let symbol: String
+    let isEditing: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(symbol)
+                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.70))
+            if isEditing {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.38))
+                        .frame(width: 12, height: 12)
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity.combined(with: .scale(scale: 0.7)))
+            }
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, isEditing ? 4 : 7)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(Color.white.opacity(isEditing ? 0.072 : 0.044))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(Color.white.opacity(isEditing ? 0.12 : 0.06), lineWidth: 0.6)
+                )
+        )
+        .animation(.spring(response: 0.25, dampingFraction: 0.82), value: isEditing)
+    }
+}
+
+// MARK: - Repo row
 
 private struct RepoTrendRow: View {
     let repo: TrendingRepository
+    @State private var isHovered = false
+
+    private var starLabel: String {
+        repo.stars >= 1_000
+            ? String(format: "%.1fk", Double(repo.stars) / 1_000)
+            : "\(repo.stars)"
+    }
 
     var body: some View {
-        Button {
-            NSWorkspace.shared.open(repo.url)
-        } label: {
-            HStack(alignment: .center, spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
-                        Text(repo.fullName)
-                            .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.86))
-                            .lineLimit(1)
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 7, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.22))
-                    }
-                    Text(repo.description?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-                         ? repo.description ?? ""
-                         : "No description")
-                        .font(.system(size: 8.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.35))
+        Button { NSWorkspace.shared.open(repo.url) } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(repo.name)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(isHovered ? 1 : 0.90))
                         .lineLimit(1)
-                }
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(starLabel(repo.stars))
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(NotchTheme.accent.opacity(0.82))
-                    if let language = repo.language, !language.isEmpty {
-                        Text(language)
-                            .font(.system(size: 8, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.28))
+                    if let desc = repo.description?.trimmingCharacters(in: .whitespacesAndNewlines),
+                       !desc.isEmpty {
+                        Text(desc)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.42))
                             .lineLimit(1)
                     }
                 }
-                .frame(width: 54, alignment: .trailing)
+                Spacer(minLength: 6)
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundStyle(NotchTheme.accent.opacity(0.80))
+                        Text(starLabel)
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(NotchTheme.accent)
+                    }
+                    if let lang = repo.language, !lang.isEmpty {
+                        Text(lang)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.38))
+                    }
+                }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.045)))
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.white.opacity(isHovered ? 0.075 : 0.048))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Color.white.opacity(isHovered ? 0.13 : 0.07), lineWidth: 0.7)
+                    )
+            )
+            .animation(.easeOut(duration: 0.12), value: isHovered)
         }
         .buttonStyle(.plain)
-        .help("Open \(repo.fullName) on GitHub")
-    }
-
-    private func starLabel(_ count: Int) -> String {
-        guard count >= 1_000 else { return "\(count)" }
-        return String(format: "%.1fk", Double(count) / 1_000)
+        .onHover { isHovered = $0 }
+        .help("\(repo.fullName) on GitHub")
     }
 }
 
-private struct SkillGroupRow: View {
-    let tool: CodeCLITool
+// MARK: - Skill rows
+
+private struct SkillsListView: View {
     let skills: [InstalledCodingSkill]
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: tool.systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(codeAccent(for: tool))
-                .frame(width: 16, height: 18)
+    private var grouped: [(tool: CodeCLITool, skills: [InstalledCodingSkill])] {
+        var map: [CodeCLITool: [InstalledCodingSkill]] = [:]
+        for s in skills { map[s.cli, default: []].append(s) }
+        return CodeCLITool.allCases.compactMap { tool in
+            guard let group = map[tool], !group.isEmpty else { return nil }
+            return (tool, group)
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(tool.displayName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.78))
-                    Text("\(skills.count)")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.32))
-                }
-                if skills.isEmpty {
-                    Text("No skills found")
-                        .font(.system(size: 8.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.24))
-                } else {
-                    Text(skills.prefix(4).map(\.name).joined(separator: "  "))
-                        .font(.system(size: 8.5, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.38))
-                        .lineLimit(1)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(grouped, id: \.tool) { group in
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 5) {
+                        CodeToolIcon(tool: group.tool, size: 10)
+                            .frame(width: 12)
+                        Text(group.tool.displayName.uppercased())
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.28))
+                    }
+                    VStack(spacing: 3) {
+                        ForEach(group.skills, id: \.id) { skill in
+                            SkillChip(name: skill.name)
+                        }
+                    }
                 }
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.white.opacity(0.04)))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private func codeAccent(for tool: CodeCLITool) -> Color {
-    switch tool {
-    case .claude: return Color(red: 0.78, green: 0.52, blue: 1.00)
-    case .codex: return Color(red: 0.36, green: 0.78, blue: 1.00)
-    case .cursor: return Color(red: 0.27, green: 0.98, blue: 0.72)
+private struct SkillChip: View {
+    let name: String
+    @State private var isHovered = false
+
+    var body: some View {
+        Text(name)
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .foregroundStyle(.white.opacity(isHovered ? 0.90 : 0.70))
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.white.opacity(isHovered ? 0.068 : 0.038))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .strokeBorder(Color.white.opacity(isHovered ? 0.11 : 0.06), lineWidth: 0.6)
+                    )
+            )
+            .animation(.easeOut(duration: 0.10), value: isHovered)
+            .onHover { isHovered = $0 }
     }
 }
 
@@ -313,11 +388,9 @@ struct StockRow: View {
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
                 .frame(width: 48, alignment: .leading)
-
             SparklineView(values: quote.history, color: trendColor)
                 .frame(height: 22)
                 .frame(maxWidth: .infinity)
-
             VStack(alignment: .trailing, spacing: 1) {
                 Text(String(format: "$%.2f", quote.price))
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -332,8 +405,8 @@ struct StockRow: View {
         .padding(.vertical, 5)
         .padding(.horizontal, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.white.opacity(0.045))
         )
         .frame(maxWidth: .infinity)
     }

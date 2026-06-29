@@ -110,4 +110,19 @@ func mediaControllerTests() {
                             isPlaying: true, elapsed: nil, duration: nil)
         expectEqual(np.marquee, "Podcast", "no trailing dash for blank artist")
     }
+
+    test("media: elapsed refresh policy only ticks playing synced lyrics") {
+        expect(
+            MediaRefreshPolicy.needsElapsedTick(isPlaying: true, hasSyncedLyrics: true),
+            "playing synced lyrics need elapsed ticks"
+        )
+        expect(
+            !MediaRefreshPolicy.needsElapsedTick(isPlaying: true, hasSyncedLyrics: false),
+            "playing media without synced lyrics does not need elapsed ticks"
+        )
+        expect(
+            !MediaRefreshPolicy.needsElapsedTick(isPlaying: false, hasSyncedLyrics: true),
+            "paused synced lyrics do not need elapsed ticks"
+        )
+    }
 }

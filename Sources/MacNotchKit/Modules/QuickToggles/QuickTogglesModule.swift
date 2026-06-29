@@ -16,38 +16,50 @@ final class QuickTogglesModule: NotchModule {
 
     private let state = StateBox()
     private var caffeinateTask: Process?
-    private var poll: Timer?
+
+    // Observers — no polling timers at all.
+    private var themeObserver: NSObjectProtocol?
+    private var audioObserver: NSObjectProtocol?
 
     init() {
-        refreshState()
+        snapshotState()
     }
 
     func collapsedView() -> AnyView? { nil }
-
-    // Dashboard-only — compact view skips this module.
     func expandedView() -> AnyView? { nil }
-
     func dashboardTile() -> AnyView? {
         AnyView(QuickTogglesDashboardTile(state: state, controller: self))
     }
-
     func wideBarView() -> AnyView? { nil }
 
     func activate() {
-        refreshState()
-        poll = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.refreshState() }
+        snapshotState()
+
+        // Dark mode changes come via distributed notification — zero cost vs polling.
+        themeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.state.darkMode = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+        }
+
+        // Audio changes via workspace notification (fires on system volume/mute change).
+        audioObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.sound.settingsChangedNotification"),
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.refreshMute()
         }
     }
 
     func deactivate() {
-        poll?.invalidate()
-        poll = nil
+        if let themeObserver { DistributedNotificationCenter.default().removeObserver(themeObserver) }
+        if let audioObserver { DistributedNotificationCenter.default().removeObserver(audioObserver) }
+        themeObserver = nil
+        audioObserver = nil
     }
 
-    func refresh() async {
-        refreshState()
-    }
+    func refresh() async { snapshotState() }
 
     // MARK: - Actions
 
@@ -65,8 +77,7 @@ final class QuickTogglesModule: NotchModule {
 
     func toggleMute() {
         state.muted.toggle()
-        let target = state.muted ? "true" : "false"
-        runOsascript("set volume output muted \(target)")
+        runOsascript("set volume output muted \(state.muted)")
     }
 
     func toggleCaffeinate() {
@@ -88,26 +99,83 @@ final class QuickTogglesModule: NotchModule {
         }
     }
 
-    func openDoNotDisturbShortcut() {
-        // macOS no longer exposes DND via AppleScript reliably; open Control Center.
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
-            NSWorkspace.shared.open(url)
+    func toggleDoNotDisturb() {
+        // Requires Accessibility permission. Check first and guide if not granted.
+        guard AXIsProcessTrusted() else {
+            let opts = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            AXIsProcessTrustedWithOptions(opts)
+            return
+        }
+
+        let script = """
+        tell application "System Events"
+            tell process "ControlCenter"
+                try
+                    if exists (menu bar item "Focus" of menu bar 1) then
+                        click (menu bar item "Focus" of menu bar 1)
+                        return
+                    end if
+                end try
+                click (menu bar item "Control Center" of menu bar 1)
+                delay 0.35
+                try
+                    set cc to window "Control Center"
+                    set focusBtn to first button of cc whose description contains "Focus" or name contains "Focus"
+                    click focusBtn
+                    return
+                end try
+                key code 53
+            end tell
+        end tell
+        """
+        runOsascript(script)
+        // Re-read state after a brief delay for the Focus menu bar item to appear/disappear.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+            self?.refreshDND()
         }
     }
 
-    private func refreshState() {
-        // Dark mode
-        let style = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-        state.darkMode = (style == "Dark")
-        // Mute
-        let muteScript = "output muted of (get volume settings)"
-        if let result = readOsascript(muteScript) {
-            state.muted = result.contains("true")
+    // MARK: - Private
+
+    private func snapshotState() {
+        state.darkMode = UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+        state.caffeinated = caffeinateTask?.isRunning == true
+        refreshMute()
+        refreshDND()
+    }
+
+    private func refreshMute() {
+        Task.detached(priority: .utility) { [weak self] in
+            let script = "output muted of (get volume settings)"
+            let result = Self.runScript(script)
+            await MainActor.run { [weak self] in
+                if let result { self?.state.muted = result.contains("true") }
+            }
+        }
+    }
+
+    private func refreshDND() {
+        guard AXIsProcessTrusted() else { return }
+        let script = """
+        tell application "System Events"
+            tell process "ControlCenter"
+                return exists (menu bar item "Focus" of menu bar 1)
+            end tell
+        end tell
+        """
+        Task.detached(priority: .utility) { [weak self] in
+            let result = Self.runScript(script)
+            await MainActor.run { [weak self] in
+                self?.state.dndActive = result?.contains("true") ?? false
+            }
         }
     }
 
     @discardableResult
-    private func runOsascript(_ source: String) -> String? {
+    private func runOsascript(_ source: String) -> String? { Self.runScript(source) }
+
+    @discardableResult
+    private nonisolated static func runScript(_ source: String) -> String? {
         let task = Process()
         task.launchPath = "/usr/bin/osascript"
         task.arguments = ["-e", source]
@@ -122,9 +190,5 @@ final class QuickTogglesModule: NotchModule {
         } catch {
             return nil
         }
-    }
-
-    private func readOsascript(_ source: String) -> String? {
-        runOsascript(source)
     }
 }

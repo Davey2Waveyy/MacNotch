@@ -16,6 +16,8 @@ public struct TrendingRepository: Equatable, Identifiable, Sendable {
     }
 
     public var id: String { fullName }
+    /// Just the repo name, without the owner prefix.
+    public var name: String { fullName.components(separatedBy: "/").last ?? fullName }
 }
 
 public enum GitHubTrendingRequest {
@@ -68,26 +70,6 @@ public enum GitHubTrendingParser {
     }
 }
 
-public enum GitHubTrendingFetcher {
-    public static func fetch(now: Date = Date(), limit: Int = 5) async -> [TrendingRepository] {
-        let since = Calendar(identifier: .gregorian)
-            .date(byAdding: .day, value: -1, to: now) ?? now
-        let url = GitHubTrendingRequest.url(since: since, limit: limit)
-        var request = URLRequest(url: url, timeoutInterval: 8)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        request.setValue("MacNotch", forHTTPHeaderField: "User-Agent")
-
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
-            return (try? GitHubTrendingParser.parse(data)) ?? []
-        } catch {
-            return []
-        }
-    }
-}
-
 public struct SkillSearchRoot: Equatable, Sendable {
     public var cli: CodeCLITool
     public var url: URL
@@ -110,6 +92,29 @@ public struct InstalledCodingSkill: Equatable, Identifiable, Sendable {
     }
 
     public var id: String { "\(cli.rawValue):\(sourcePath):\(name)" }
+    public var sourceName: String { cli.displayName }
+}
+
+public enum InstalledSkillPresentation {
+    public static func displayItems(
+        from skills: [InstalledCodingSkill],
+        limit: Int? = nil
+    ) -> [InstalledCodingSkill] {
+        let sorted = skills.sorted {
+            if $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedSame {
+                return $0.cli.rawValue < $1.cli.rawValue
+            }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        guard let limit else { return sorted }
+        return Array(sorted.prefix(max(0, limit)))
+    }
+
+    public static func summaryLabel(total: Int, visible: Int) -> String {
+        if total == 0 { return "No skills found" }
+        if visible >= total { return "\(total) \(total == 1 ? "skill" : "skills")" }
+        return "\(visible) of \(total) skills"
+    }
 }
 
 public enum CodingSkillDiscovery {

@@ -51,4 +51,29 @@ func timerSchedulerTests() {
         expect(abs(t.progress(at: base.addingTimeInterval(25)) - 0.25) < 0.001, "25% elapsed")
         expect(abs(t.progress(at: base.addingTimeInterval(100)) - 1.0) < 0.001, "100% at end")
     }
+
+    test("timer refresh policy sleeps when no countdowns are active") {
+        let next = TimerRefreshPolicy.nextWakeDate(active: [], now: base)
+        expect(next == nil, "no idle countdown wakeup is scheduled")
+    }
+
+    test("timer refresh policy wakes on the next visible countdown boundary") {
+        let now = base.addingTimeInterval(0.25)
+        let t = CountdownTimer(label: "x", duration: 10.75, endDate: now.addingTimeInterval(10.75))
+
+        let next = TimerRefreshPolicy.nextWakeDate(active: [t], now: now)
+
+        expect(abs((next?.timeIntervalSince(now) ?? 0) - 0.75) < 0.001,
+               "fractional countdown wakes when the rounded display will change")
+    }
+
+    test("timer refresh policy wakes at expiry when it comes before the next display boundary") {
+        let now = base.addingTimeInterval(0.25)
+        let t = CountdownTimer(label: "x", duration: 0.20, endDate: now.addingTimeInterval(0.20))
+
+        let next = TimerRefreshPolicy.nextWakeDate(active: [t], now: now)
+
+        expect(abs((next?.timeIntervalSince(now) ?? 0) - 0.20) < 0.001,
+               "near-expiry countdown wakes at the exact firing boundary")
+    }
 }

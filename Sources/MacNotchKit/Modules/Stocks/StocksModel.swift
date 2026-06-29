@@ -14,6 +14,32 @@ struct StockQuote: Equatable, Sendable {
     var isUp: Bool { changePercent >= 0 }
 }
 
+public enum StockTickerSelection {
+    public static func normalized(_ symbol: String) -> String? {
+        let clean = symbol
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+        guard !clean.isEmpty else { return nil }
+        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-")
+        guard clean.unicodeScalars.allSatisfy({ allowed.contains($0) }) else { return nil }
+        return clean
+    }
+
+    public static func add(_ symbol: String, to tickers: [String]) -> [String] {
+        guard let clean = normalized(symbol),
+              !tickers.contains(where: { $0.caseInsensitiveCompare(clean) == .orderedSame })
+        else { return tickers }
+        return tickers + [clean]
+    }
+
+    public static func remove(at index: Int, from tickers: [String]) -> [String] {
+        guard tickers.indices.contains(index) else { return tickers }
+        var next = tickers
+        next.remove(at: index)
+        return next
+    }
+}
+
 enum StocksFetcher {
     static func fetch(symbols: [String]) async -> [StockQuote] {
         await withTaskGroup(of: (Int, StockQuote?).self) { group in

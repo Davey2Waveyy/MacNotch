@@ -27,6 +27,14 @@ public enum CodeCLITool: String, CaseIterable, Codable, Hashable, Identifiable, 
         }
     }
 
+    public var appIconCandidatePaths: [String] {
+        switch self {
+        case .claude: return ["/Applications/Claude.app"]
+        case .codex: return ["/Applications/Codex.app"]
+        case .cursor: return ["/Applications/Cursor.app"]
+        }
+    }
+
     /// Shown in the terminal pane when the executable can't be found on PATH.
     public var missingHint: String {
         switch self {

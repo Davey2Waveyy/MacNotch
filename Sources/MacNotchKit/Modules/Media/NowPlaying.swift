@@ -9,6 +9,7 @@ public struct NowPlaying: Equatable, Sendable {
     public var elapsed: Double?
     public var duration: Double?
     public var artworkURL: URL?
+    public var lyricsResult: LyricsResult?
 
     public init(
         title: String,
@@ -17,7 +18,8 @@ public struct NowPlaying: Equatable, Sendable {
         isPlaying: Bool,
         elapsed: Double?,
         duration: Double?,
-        artworkURL: URL? = nil
+        artworkURL: URL? = nil,
+        lyricsResult: LyricsResult? = nil
     ) {
         self.title = title
         self.artist = artist
@@ -26,6 +28,7 @@ public struct NowPlaying: Equatable, Sendable {
         self.elapsed = elapsed
         self.duration = duration
         self.artworkURL = artworkURL
+        self.lyricsResult = lyricsResult
     }
 
     /// Playback fraction in 0...1 when both elapsed and duration are known.
@@ -39,5 +42,20 @@ public struct NowPlaying: Equatable, Sendable {
     public var marquee: String {
         let trimmedArtist = artist.trimmingCharacters(in: .whitespaces)
         return trimmedArtist.isEmpty ? title : "\(title) — \(trimmedArtist)"
+    }
+}
+
+public enum MediaRefreshPolicy {
+    public static let elapsedTickInterval: TimeInterval = 0.5
+
+    public static func needsElapsedTick(isPlaying: Bool, hasSyncedLyrics: Bool) -> Bool {
+        isPlaying && hasSyncedLyrics
+    }
+
+    public static func needsElapsedTick(for nowPlaying: NowPlaying?) -> Bool {
+        needsElapsedTick(
+            isPlaying: nowPlaying?.isPlaying == true,
+            hasSyncedLyrics: nowPlaying?.lyricsResult?.hasSynced == true
+        )
     }
 }

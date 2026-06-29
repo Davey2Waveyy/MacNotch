@@ -29,6 +29,12 @@ func codeModuleCoreTests() {
         expectEqual(panes[2].id, "cursor", "cursor id")
     }
 
+    test("code cli: tools expose app bundle candidates for real icon rendering") {
+        expectEqual(CodeCLITool.claude.appIconCandidatePaths, ["/Applications/Claude.app"], "claude app icon path")
+        expectEqual(CodeCLITool.codex.appIconCandidatePaths, ["/Applications/Codex.app"], "codex app icon path")
+        expectEqual(CodeCLITool.cursor.appIconCandidatePaths, ["/Applications/Cursor.app"], "cursor app icon path")
+    }
+
     test("code cli: cursor resolves to the cursor-agent CLI, not the GUI launcher") {
         // The bundled `cursor` only opens the GUI editor; the interactive agent is `cursor-agent`.
         let agentPath = "/Users/example/.local/bin/cursor-agent"
