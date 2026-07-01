@@ -1,7 +1,7 @@
 # NotchApple Public Product Roadmap Design
 
 **Date:** 2026-07-01
-**Status:** Approved in conversation, pending written spec review
+**Status:** Approved
 **Product:** NotchApple, evolved from the current MacNotch app
 **Intended operator:** Fable 5
 
