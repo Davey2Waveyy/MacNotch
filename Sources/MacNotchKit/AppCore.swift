@@ -2,5 +2,6 @@ import Foundation
 
 public enum AppCore {
     public static let version = "0.1.0"
-    public static let bundleID = "io.local.macnotch"
+    public static let displayName = NotchBrand.productName
+    public static let bundleID = NotchBrand.bundleIdentifier
 }
