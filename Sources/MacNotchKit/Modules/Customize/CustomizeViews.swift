@@ -5,7 +5,7 @@ struct CustomizeDashboardTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TileHeader(title: "MacNotch", systemImage: "gearshape.fill")
+            TileHeader(title: "Design Studio", systemImage: "slider.horizontal.3")
                 .padding(.bottom, 8)
 
             // Module toggles — exclude "customize" itself to avoid chicken-and-egg

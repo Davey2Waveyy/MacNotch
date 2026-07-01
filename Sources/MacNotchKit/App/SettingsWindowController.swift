@@ -22,7 +22,7 @@ final class SettingsWindowController {
                 backing: .buffered,
                 defer: false
             )
-            window.title = "MacNotch Settings"
+            window.title = NotchBrand.settingsTitle
             window.isReleasedWhenClosed = false
             window.center()
             self.window = window

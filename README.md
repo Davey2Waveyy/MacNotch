@@ -22,6 +22,17 @@ make package  # just build the signed .app into ./build
 `make run` launches MacNotch as a **menu-bar agent** (no Dock icon). Use the
 menu-bar icon for **Open Settings…**, **Toggle Notch**, and **Quit**.
 
+## Public identity checks
+
+Before a public build:
+
+```bash
+rg -n '"MacNotch"|>MacNotch<|Quit MacNotch|MacNotch Settings|com.macnotch.app' \
+  Sources Scripts Makefile README.md website/index.html
+```
+
+Expected: no public-facing launch copy remains except legacy migration code, internal target names, and historical documentation that explicitly says it is legacy.
+
 > Tests use a self-contained runner (`Sources/MacNotchTests`) instead of XCTest,
 > because XCTest ships only with Xcode. Run them with `swift run MacNotchTests`;
 > the process exits non-zero if any check fails.

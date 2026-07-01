@@ -10,16 +10,16 @@ final class MenuBarController {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.image = NSImage(
             systemSymbolName: "rectangle.topthird.inset.filled",
-            accessibilityDescription: "MacNotch"
+            accessibilityDescription: NotchBrand.productName
         )
 
         let menu = NSMenu()
+        menu.addItem(withTitle: "Open NotchApple", action: #selector(toggleNotch), keyEquivalent: "")
+            .target = self
         menu.addItem(withTitle: "Open Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self
-        menu.addItem(withTitle: "Toggle Notch", action: #selector(toggleNotch), keyEquivalent: "")
-            .target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit MacNotch", action: #selector(quit), keyEquivalent: "q")
+        menu.addItem(withTitle: NotchBrand.quitMenuTitle, action: #selector(quit), keyEquivalent: "q")
             .target = self
         item.menu = menu
     }

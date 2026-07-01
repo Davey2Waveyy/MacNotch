@@ -131,7 +131,7 @@ struct DashboardLayoutView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Text("MacNotch")
+            Text(NotchBrand.productName)
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
             Text(modeLabel)

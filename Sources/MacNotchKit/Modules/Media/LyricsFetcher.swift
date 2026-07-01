@@ -33,7 +33,7 @@ enum LyricsFetcher {
             return nil
         }
         var req = URLRequest(url: url, timeoutInterval: 8)
-        req.setValue("MacNotch/1.0", forHTTPHeaderField: "User-Agent")
+        req.setValue(NotchBrand.userAgent, forHTTPHeaderField: "User-Agent")
         guard let (data, _) = try? await URLSession.shared.data(for: req),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }

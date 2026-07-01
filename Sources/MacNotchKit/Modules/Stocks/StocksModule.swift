@@ -97,7 +97,7 @@ final class StocksModule: NotchModule {
         var request = URLRequest(url: url, timeoutInterval: 8)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-        request.setValue("MacNotch", forHTTPHeaderField: "User-Agent")
+        request.setValue(NotchBrand.userAgent, forHTTPHeaderField: "User-Agent")
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
