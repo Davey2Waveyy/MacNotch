@@ -12,24 +12,14 @@ struct DashboardTileSurface: ViewModifier {
         content
             .background(
                 RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
-                    .fill(tokens.tileFillTint.opacity(tokens.tileFillOpacity + (isHovered ? 0.025 : 0)))
+                    .fill(tokens.tileFillColor(hovered: isHovered))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
-                    .strokeBorder(hoveredStrokeColor, lineWidth: 0.75)
+                    .strokeBorder(tokens.tileStrokeColor(hovered: isHovered), lineWidth: 0.75)
             )
             .animation(tokens.hoverAnimation, value: isHovered)
             .onHover { isHovered = $0 }
-    }
-
-    /// Same base color as `tileStrokeColor` (accent for terminal, else white),
-    /// with hover raising the opacity by +0.09 over the resting value.
-    private var hoveredStrokeColor: Color {
-        let isTerminal = tokens.fontDesign == .monospaced
-        let base = isTerminal ? tokens.accent : Color.white
-        var opacity = isTerminal ? tokens.strokeOpacity + 0.10 : tokens.strokeOpacity
-        if isHovered { opacity += 0.09 }
-        return base.opacity(opacity)
     }
 }
 

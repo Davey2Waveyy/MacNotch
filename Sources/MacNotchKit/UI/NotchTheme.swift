@@ -22,11 +22,23 @@ public struct NotchThemeTokens: Equatable, Sendable {
     /// Every other preset uses a plain white hairline at `strokeOpacity`.
     /// `fontDesign == .monospaced` is the terminal preset's own signal, so it
     /// doubles as the check here rather than adding a redundant stored flag.
-    public var tileStrokeColor: Color {
-        fontDesign == .monospaced ? accent.opacity(strokeOpacity + 0.10) : .white.opacity(strokeOpacity)
+    /// Hover raises the opacity by +0.09 over the resting value.
+    public func tileStrokeColor(hovered: Bool = false) -> Color {
+        let isTerminal = fontDesign == .monospaced
+        let base = isTerminal ? accent : Color.white
+        var opacity = isTerminal ? strokeOpacity + 0.10 : strokeOpacity
+        if hovered { opacity += 0.09 }
+        return base.opacity(opacity)
     }
 
-    public var tileFillColor: Color { tileFillTint.opacity(tileFillOpacity) }
+    /// Fill opacity is scaled by `glassOpacity / 0.62` so the Glass Intensity
+    /// setting visibly affects tile fill (0.62 is the `.balanced` baseline,
+    /// so `.balanced` renders identically to the unscaled value).
+    /// Hover adds +0.025 before scaling.
+    public func tileFillColor(hovered: Bool = false) -> Color {
+        let opacity = tileFillOpacity + (hovered ? 0.025 : 0)
+        return tileFillTint.opacity(opacity * glassOpacity / 0.62)
+    }
 }
 
 /// Shared visual constants so the dashboard and wide-bar layouts stay in sync.

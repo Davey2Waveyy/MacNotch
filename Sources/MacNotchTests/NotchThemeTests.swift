@@ -100,4 +100,17 @@ func notchThemeTests() {
         let studioTokens = NotchTheme.tokens(for: appearance, reduceMotion: false)
         expectEqual(studioTokens.backgroundTint, .clear, "studioGlass background tint stays clear")
     }
+
+    test("glass intensity scales tile fill opacity: vivid differs from balanced") {
+        var appearance = NotchAppearance.defaults
+
+        appearance.glassIntensity = .balanced
+        let balancedTokens = NotchTheme.tokens(for: appearance, reduceMotion: false)
+
+        appearance.glassIntensity = .vivid
+        let vividTokens = NotchTheme.tokens(for: appearance, reduceMotion: false)
+
+        expectEqual(vividTokens.tileFillColor(hovered: false) == balancedTokens.tileFillColor(hovered: false), false,
+                     "vivid tile fill differs from balanced tile fill")
+    }
 }
