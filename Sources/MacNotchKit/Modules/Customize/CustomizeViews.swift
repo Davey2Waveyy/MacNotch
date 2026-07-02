@@ -2,10 +2,66 @@ import SwiftUI
 
 struct CustomizeDashboardTile: View {
     @ObservedObject var proxy: CustomizeModule.SettingsProxy
+    @Environment(\.notchTokens) private var tokens
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             TileHeader(title: "Design Studio", systemImage: "slider.horizontal.3")
+                .padding(.bottom, 8)
+
+            Text("PRESET")
+                .font(.system(size: 8, weight: .semibold, design: tokens.fontDesign))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.42))
+                .padding(.bottom, 4)
+
+            HStack(spacing: 5) {
+                ForEach(AppearancePreset.launchPresets, id: \.self) { preset in
+                    Button(shortLabel(for: preset)) {
+                        proxy.update { $0.appearance.preset = preset }
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 8.5, weight: .semibold, design: tokens.fontDesign))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(proxy.settings.appearance.preset == preset ? tokens.accent.opacity(0.20) : .white.opacity(0.06))
+                    )
+                    .accessibilityLabel("Use \(label(for: preset)) theme")
+                }
+            }
+            .padding(.bottom, 8)
+
+            Text("ACCENT")
+                .font(.system(size: 8, weight: .semibold, design: tokens.fontDesign))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.42))
+                .padding(.bottom, 4)
+
+            HStack(spacing: 6) {
+                ForEach(AccentColorChoice.allCases, id: \.self) { choice in
+                    let isSelected = proxy.settings.appearance.accentColor == choice
+                    Button {
+                        proxy.update { $0.appearance.accentColor = choice }
+                    } label: {
+                        Circle()
+                            .fill(NotchTheme.accentColor(for: choice))
+                            .frame(width: 14, height: 14)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(tokens.accent, lineWidth: isSelected ? 1.5 : 0)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Use \(accentName(for: choice)) accent")
+                }
+            }
+            .padding(.bottom, 8)
+
+            Divider()
+                .background(Color.white.opacity(0.12))
                 .padding(.bottom, 8)
 
             // Module toggles — exclude "customize" itself to avoid chicken-and-egg
@@ -59,10 +115,7 @@ struct CustomizeDashboardTile: View {
     private func modeChip(_ mode: ExpansionMode, label: String) -> some View {
         let active = proxy.settings.defaultExpansionMode == mode
         return Button(label) {
-            var s = proxy.settings
-            s.defaultExpansionMode = mode
-            proxy.settings = s
-            proxy.onChange(s)
+            proxy.update { $0.defaultExpansionMode = mode }
         }
         .buttonStyle(.plain)
         .font(.system(size: 9, weight: .semibold))
@@ -79,12 +132,11 @@ struct CustomizeDashboardTile: View {
         Binding(
             get: { proxy.settings.modules.first { $0.id == id }?.isEnabled ?? false },
             set: { isOn in
-                var s = proxy.settings
-                if let i = s.modules.firstIndex(where: { $0.id == id }) {
-                    s.modules[i].isEnabled = isOn
+                proxy.update { settings in
+                    if let i = settings.modules.firstIndex(where: { $0.id == id }) {
+                        settings.modules[i].isEnabled = isOn
+                    }
                 }
-                proxy.settings = s
-                proxy.onChange(s)
             }
         )
     }
@@ -93,12 +145,40 @@ struct CustomizeDashboardTile: View {
         Binding(
             get: { proxy.settings.launchAtLogin },
             set: { isOn in
-                var s = proxy.settings
-                s.launchAtLogin = isOn
-                proxy.settings = s
-                proxy.onChange(s)
+                proxy.update { $0.launchAtLogin = isOn }
             }
         )
+    }
+
+    private func shortLabel(for preset: AppearancePreset) -> String {
+        switch preset {
+        case .studioGlass: return "Studio"
+        case .minimalGraphite: return "Graphite"
+        case .aurora: return "Aurora"
+        case .terminal: return "Terminal"
+        case .paper: return "Paper"
+        }
+    }
+
+    private func label(for preset: AppearancePreset) -> String {
+        switch preset {
+        case .studioGlass: return "Studio Glass"
+        case .minimalGraphite: return "Minimal Graphite"
+        case .aurora: return "Aurora"
+        case .terminal: return "Terminal"
+        case .paper: return "Paper"
+        }
+    }
+
+    private func accentName(for choice: AccentColorChoice) -> String {
+        switch choice {
+        case .cyan: return "Cyan"
+        case .blue: return "Blue"
+        case .purple: return "Purple"
+        case .green: return "Green"
+        case .amber: return "Amber"
+        case .red: return "Red"
+        }
     }
 }
 
