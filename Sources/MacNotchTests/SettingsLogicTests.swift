@@ -51,4 +51,20 @@ func settingsLogicTests() {
         expect(!shouldPersist, "failed login-item update does not persist")
         expect(!settings.launchAtLogin, "launch-at-login reverts to the actual system state")
     }
+
+    test("appearance mutations update settings") {
+        var settings = AppSettings.defaults
+        SettingsLogic.setAppearancePreset(&settings, preset: .terminal)
+        SettingsLogic.setMotionStyle(&settings, motionStyle: .calm)
+        SettingsLogic.setPanelDensity(&settings, density: .compact)
+        SettingsLogic.setAccentColor(&settings, accentColor: .purple)
+        SettingsLogic.setGlassIntensity(&settings, glassIntensity: .vivid)
+        SettingsLogic.setCornerStyle(&settings, cornerStyle: .pill)
+        expectEqual(settings.appearance.preset, .terminal, "preset changed")
+        expectEqual(settings.appearance.motionStyle, .calm, "motion changed")
+        expectEqual(settings.appearance.panelDensity, .compact, "density changed")
+        expectEqual(settings.appearance.accentColor, .purple, "accent changed")
+        expectEqual(settings.appearance.glassIntensity, .vivid, "glass intensity changed")
+        expectEqual(settings.appearance.cornerStyle, .pill, "corner style changed")
+    }
 }

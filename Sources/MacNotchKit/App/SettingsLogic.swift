@@ -12,6 +12,30 @@ public enum SettingsLogic {
         settings.modules.move(fromOffsets: fromOffsets, toOffset: toOffset)
     }
 
+    public static func setAppearancePreset(_ settings: inout AppSettings, preset: AppearancePreset) {
+        settings.appearance.preset = preset
+    }
+
+    public static func setMotionStyle(_ settings: inout AppSettings, motionStyle: MotionStyle) {
+        settings.appearance.motionStyle = motionStyle
+    }
+
+    public static func setPanelDensity(_ settings: inout AppSettings, density: PanelDensity) {
+        settings.appearance.panelDensity = density
+    }
+
+    public static func setAccentColor(_ settings: inout AppSettings, accentColor: AccentColorChoice) {
+        settings.appearance.accentColor = accentColor
+    }
+
+    public static func setGlassIntensity(_ settings: inout AppSettings, glassIntensity: GlassIntensity) {
+        settings.appearance.glassIntensity = glassIntensity
+    }
+
+    public static func setCornerStyle(_ settings: inout AppSettings, cornerStyle: CornerStyle) {
+        settings.appearance.cornerStyle = cornerStyle
+    }
+
     @discardableResult
     public static func applyLaunchAtLoginResult(
         _ settings: inout AppSettings,

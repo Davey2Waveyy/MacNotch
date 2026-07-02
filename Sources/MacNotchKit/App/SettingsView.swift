@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @State private var settings: AppSettings
+    @State private var selectedSection: SettingsSection = .general
     private let titles: [String: String]
     private let loginItemIsEnabled: () -> Bool
     private let setLoginItemEnabled: (Bool) -> Bool
@@ -22,20 +23,35 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        Form {
-            Section("Modules") {
-                List {
-                    ForEach(settings.modules, id: \.id) { module in
-                        Toggle(titles[module.id] ?? module.id, isOn: enabledBinding(for: module.id))
-                    }
-                    .onMove(perform: moveModules)
-                }
-                .frame(height: 140)
-                Text("Drag to reorder. Changes apply to the notch immediately.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        HStack(spacing: 0) {
+            List(SettingsSection.allCases, selection: $selectedSection) { section in
+                Text(section.rawValue).tag(section)
             }
+            .frame(width: 150)
 
+            Group {
+                switch selectedSection {
+                case .general:
+                    generalSection
+                case .modules:
+                    modulesSection
+                case .design:
+                    DesignSettingsView(settings: $settings, onChange: onChange)
+                case .privacy:
+                    privacySection
+                case .shortcuts:
+                    shortcutsSection
+                case .about:
+                    aboutSection
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 720, height: 520)
+    }
+
+    private var generalSection: some View {
+        Form {
             Section("Expansion") {
                 Picker("Click opens", selection: Binding(
                     get: { settings.defaultExpansionMode },
@@ -70,7 +86,55 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 360, height: 320)
+    }
+
+    private var modulesSection: some View {
+        Form {
+            Section("Modules") {
+                List {
+                    ForEach(settings.modules, id: \.id) { module in
+                        Toggle(titles[module.id] ?? module.id, isOn: enabledBinding(for: module.id))
+                    }
+                    .onMove(perform: moveModules)
+                }
+                .frame(height: 280)
+                Text("Drag to reorder. Changes apply to the notch immediately.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var privacySection: some View {
+        Form {
+            Section("Privacy") {
+                Text(NotchBrand.affiliationDisclaimer)
+                Text("NotchApple stores settings locally in Application Support and only asks for permissions when a module needs them.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var shortcutsSection: some View {
+        Form {
+            Section("Shortcuts") {
+                Text("Keyboard shortcut customization is coming soon.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var aboutSection: some View {
+        Form {
+            Section("About") {
+                Text(NotchBrand.productName)
+                Text(NotchBrand.affiliationDisclaimer)
+            }
+        }
+        .formStyle(.grouped)
     }
 
     private func enabledBinding(for id: String) -> Binding<Bool> {
