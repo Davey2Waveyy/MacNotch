@@ -46,6 +46,10 @@ public final class ClipboardStore {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(entries) else { return }
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         try? data.write(to: url, options: .atomic)
     }
 

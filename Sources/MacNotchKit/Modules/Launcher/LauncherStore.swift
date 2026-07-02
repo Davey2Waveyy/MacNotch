@@ -41,6 +41,10 @@ final class LauncherStore {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(apps) else { return }
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         try? data.write(to: url, options: .atomic)
     }
 }

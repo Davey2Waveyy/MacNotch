@@ -43,6 +43,10 @@ public final class RemindersStore {
 
     private func save() {
         guard let data = try? JSONEncoder().encode(reminders) else { return }
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         try? data.write(to: url, options: .atomic)
     }
 

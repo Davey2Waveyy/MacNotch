@@ -97,6 +97,10 @@ final class ScreenTimeModule: NotchModule {
     private func saveSwitchCount() {
         let p = Persisted(day: Calendar.current.startOfDay(for: Date()), switches: state.switches)
         if let data = try? JSONEncoder().encode(p) {
+            try? FileManager.default.createDirectory(
+                at: storeURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             try? data.write(to: storeURL, options: .atomic)
         }
     }

@@ -38,4 +38,22 @@ func appDataMigratorTests() {
             "current settings not overwritten"
         )
     }
+
+    test("migration does not overwrite an existing destination file before marker exists") {
+        let base = root()
+        let locations = AppDataLocations(baseApplicationSupportURL: base)
+        try! FileManager.default.createDirectory(at: locations.legacyDirectory, withIntermediateDirectories: true)
+        try! Data("legacy".utf8).write(to: locations.legacyDirectory.appendingPathComponent("settings.json"))
+        try! FileManager.default.createDirectory(at: locations.currentDirectory, withIntermediateDirectories: true)
+        try! Data("current".utf8).write(to: locations.currentDirectory.appendingPathComponent("settings.json"))
+
+        let migrator = AppDataMigrator(locations: locations)
+        expect(migrator.migrateIfNeeded(), "migration succeeds with an existing destination file")
+        expectEqual(
+            try! String(contentsOf: locations.currentDirectory.appendingPathComponent("settings.json")),
+            "current",
+            "existing destination file is preserved"
+        )
+        expect(FileManager.default.fileExists(atPath: locations.migrationMarkerURL.path), "marker written after preserve")
+    }
 }
