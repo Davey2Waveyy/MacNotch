@@ -1,13 +1,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @State private var settings: AppSettings
-    let onComplete: (AppSettings) -> Void
-
-    init(settings: AppSettings, onComplete: @escaping (AppSettings) -> Void) {
-        _settings = State(initialValue: settings)
-        self.onComplete = onComplete
-    }
+    let onComplete: (OnboardingState) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -25,12 +19,8 @@ struct OnboardingView: View {
             }
             .font(.system(size: 12))
             Spacer()
-            Button("Start Using NotchApple") {
-                settings.onboarding = OnboardingState(
-                    hasCompletedFirstRun: true,
-                    completedVersion: AppCore.version
-                )
-                onComplete(settings)
+            Button("Start Using \(NotchBrand.productName)") {
+                onComplete(OnboardingState(hasCompletedFirstRun: true, completedVersion: AppCore.version))
             }
             .keyboardShortcut(.defaultAction)
         }

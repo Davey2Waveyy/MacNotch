@@ -56,8 +56,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.menuBar = menuBar
 
         let onboarding = OnboardingWindowController()
-        onboarding.showIfNeeded(settings: settings.settings) { [weak self] updated in
-            self?.applySettings(updated)
+        onboarding.showIfNeeded(settings: settings.settings) { [weak self] state in
+            guard let self else { return }
+            var current = self.settings.settings
+            current.onboarding = state
+            self.applySettings(current)
+            self.onboardingWindowController = nil
         }
         self.onboardingWindowController = onboarding
     }

@@ -5,7 +5,7 @@ import SwiftUI
 final class OnboardingWindowController {
     private var window: NSWindow?
 
-    func showIfNeeded(settings: AppSettings, onComplete: @escaping (AppSettings) -> Void) {
+    func showIfNeeded(settings: AppSettings, onComplete: @escaping (OnboardingState) -> Void) {
         guard !settings.onboarding.hasCompletedFirstRun else { return }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
@@ -16,7 +16,11 @@ final class OnboardingWindowController {
         window.title = "Welcome to \(NotchBrand.productName)"
         window.isReleasedWhenClosed = false
         window.center()
-        window.contentView = NSHostingView(rootView: OnboardingView(settings: settings, onComplete: onComplete))
+        window.contentView = NSHostingView(rootView: OnboardingView(onComplete: { [weak self] state in
+            onComplete(state)
+            self?.window?.close()
+            self?.window = nil
+        }))
         self.window = window
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
