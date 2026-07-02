@@ -57,6 +57,26 @@ struct SettingsView: View {
 
     private var generalSection: some View {
         Form {
+            Section("Workspace") {
+                Picker("Workspace", selection: Binding(
+                    get: { settings.activeWorkspaceProfileID ?? "custom" },
+                    set: { id in
+                        if let profile = WorkspaceProfile.defaults.first(where: { $0.id == id }) {
+                            profile.apply(to: &settings)
+                            onChange(settings)
+                        }
+                    }
+                )) {
+                    Text("Custom").tag("custom")
+                    ForEach(WorkspaceProfile.defaults) { profile in
+                        Text(profile.name).tag(profile.id)
+                    }
+                }
+                Text("Switching a workspace applies its theme, modules, and default mode.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Expansion") {
                 Picker("Click opens", selection: Binding(
                     get: { settings.defaultExpansionMode },

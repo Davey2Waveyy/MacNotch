@@ -28,5 +28,6 @@ screenTimeTrackerTests()
 timerSchedulerTests()
 onboardingStateTests()
 featureFlagsTests()
+workspaceProfileTests()
 
 exit(Int32(TestRunner.shared.runAll()))

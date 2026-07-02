@@ -9,6 +9,36 @@ struct CustomizeDashboardTile: View {
             TileHeader(title: "Design Studio", systemImage: "slider.horizontal.3")
                 .padding(.bottom, 8)
 
+            Text("WORKSPACE")
+                .font(.system(size: 8, weight: .semibold, design: tokens.fontDesign))
+                .tracking(0.5)
+                .foregroundStyle(.white.opacity(0.42))
+                .padding(.bottom, 4)
+
+            // ponytail: horizontal scroll — five chips don't fit a shared-page tile width.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(WorkspaceProfile.defaults) { profile in
+                        let isSelected = proxy.settings.activeWorkspaceProfileID == profile.id
+                        Button(profile.name) {
+                            proxy.update { profile.apply(to: &$0) }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 8.5, weight: .semibold, design: tokens.fontDesign))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(isSelected ? tokens.accent.opacity(0.20) : .white.opacity(0.06))
+                        )
+                        .accessibilityLabel("Use \(profile.name) workspace")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
+                }
+            }
+            .padding(.bottom, 8)
+
             Text("PRESET")
                 .font(.system(size: 8, weight: .semibold, design: tokens.fontDesign))
                 .tracking(0.5)
