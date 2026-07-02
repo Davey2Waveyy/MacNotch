@@ -17,9 +17,11 @@ final class OnboardingWindowController {
         window.isReleasedWhenClosed = false
         window.center()
         window.contentView = NSHostingView(rootView: OnboardingView(onComplete: { [weak self] state in
-            onComplete(state)
+            // Close before completing: onComplete synchronously drops the last
+            // strong reference to this controller, so weak self must resolve first.
             self?.window?.close()
             self?.window = nil
+            onComplete(state)
         }))
         self.window = window
         NSApp.activate(ignoringOtherApps: true)
