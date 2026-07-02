@@ -296,6 +296,7 @@ private struct SplitTerminalPane: View {
 // MARK: - Dashboard tile: full-width split CLI workspace
 
 struct CodeDashboardTile: View {
+    @Environment(\.notchTokens) private var tokens
     let projects: [CodeProjectDisplay]
     let onAction: (Int, CodeAction) -> Void
     let onRemove: (Int) -> Void
@@ -347,7 +348,7 @@ struct CodeDashboardTile: View {
         HStack(spacing: 7) {
             Image(systemName: "chevron.left.forwardslash.chevron.right")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchTheme.accent.opacity(0.86))
+                .foregroundStyle(tokens.accent.opacity(0.86))
                 .frame(width: 14)
             Text("CODE SPLIT")
                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))

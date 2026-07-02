@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RemindersDashboardTile: View {
+    @Environment(\.notchTokens) private var tokens
     let reminders: [Reminder]
     let onAdd: (String) -> Void
     let onToggle: (UUID) -> Void
@@ -40,7 +41,7 @@ struct RemindersDashboardTile: View {
                     Button { submit() } label: {
                         Image(systemName: "return")
                             .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(NotchTheme.accent)
+                            .foregroundStyle(tokens.accent)
                     }
                     .buttonStyle(.plain)
                 }
@@ -52,7 +53,7 @@ struct RemindersDashboardTile: View {
                     .fill(inputFocused ? Color.white.opacity(0.08) : Color.white.opacity(0.04))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(inputFocused ? NotchTheme.accent.opacity(0.5) : Color.white.opacity(0.07), lineWidth: 0.75)
+                            .strokeBorder(inputFocused ? tokens.accent.opacity(0.5) : Color.white.opacity(0.07), lineWidth: 0.75)
                     )
             )
             .animation(.easeOut(duration: 0.12), value: inputFocused)
@@ -89,6 +90,7 @@ struct RemindersDashboardTile: View {
 }
 
 private struct ReminderRow: View {
+    @Environment(\.notchTokens) private var tokens
     let reminder: Reminder
     let onToggle: (UUID) -> Void
     let onRemove: (UUID) -> Void
@@ -100,7 +102,7 @@ private struct ReminderRow: View {
             Button { onToggle(reminder.id) } label: {
                 Image(systemName: reminder.isDone ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(reminder.isDone ? NotchTheme.accent.opacity(0.7) : .white.opacity(0.5))
+                    .foregroundStyle(reminder.isDone ? tokens.accent.opacity(0.7) : .white.opacity(0.5))
             }
             .buttonStyle(.plain)
 

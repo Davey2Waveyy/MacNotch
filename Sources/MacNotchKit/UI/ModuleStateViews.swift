@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ModuleEmptyStateView: View {
+    @Environment(\.notchTokens) private var tokens
     let title: String
     let message: String
     let systemImage: String
@@ -9,7 +10,7 @@ struct ModuleEmptyStateView: View {
         VStack(spacing: 8) {
             Image(systemName: systemImage)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(NotchTheme.accent.opacity(0.85))
+                .foregroundStyle(tokens.accent.opacity(0.85))
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.90))
@@ -38,6 +39,7 @@ struct ModuleLoadingStateView: View {
 }
 
 struct ModulePermissionStateView: View {
+    @Environment(\.notchTokens) private var tokens
     let title: String
     let message: String
     let actionTitle: String
@@ -51,7 +53,7 @@ struct ModulePermissionStateView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 7).fill(NotchTheme.accent.opacity(0.18)))
+                .background(RoundedRectangle(cornerRadius: 7).fill(tokens.accent.opacity(0.18)))
         }
     }
 }

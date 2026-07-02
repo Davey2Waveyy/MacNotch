@@ -67,6 +67,7 @@ struct QuickTogglesDashboardTile: View {
 }
 
 struct ToggleChip: View {
+    @Environment(\.notchTokens) private var tokens
     let icon: String
     let label: String
     let on: Bool
@@ -79,7 +80,7 @@ struct ToggleChip: View {
             VStack(spacing: 3) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(on ? NotchTheme.accent : .white.opacity(0.85))
+                    .foregroundStyle(on ? tokens.accent : .white.opacity(0.85))
                 Text(label)
                     .font(.system(size: 8.5, weight: .medium))
                     .foregroundStyle(.white.opacity(on ? 0.95 : 0.55))
@@ -88,11 +89,11 @@ struct ToggleChip: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(on ? NotchTheme.accent.opacity(0.18) : (hovering ? .white.opacity(0.06) : .white.opacity(0.025)))
+                    .fill(on ? tokens.accent.opacity(0.18) : (hovering ? .white.opacity(0.06) : .white.opacity(0.025)))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(on ? NotchTheme.accent.opacity(0.45) : .white.opacity(hovering ? 0.16 : 0.07),
+                    .strokeBorder(on ? tokens.accent.opacity(0.45) : .white.opacity(hovering ? 0.16 : 0.07),
                                   lineWidth: 0.75)
             )
         }

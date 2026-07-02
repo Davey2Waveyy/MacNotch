@@ -186,6 +186,8 @@ struct CustomizeDashboardTile: View {
 
 /// Minimal checkbox-style toggle that works well at small sizes inside tiles.
 private struct CompactCheckToggleStyle: ToggleStyle {
+    @Environment(\.notchTokens) private var tokens
+
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
@@ -193,7 +195,7 @@ private struct CompactCheckToggleStyle: ToggleStyle {
             HStack(spacing: 5) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(configuration.isOn ? NotchTheme.accent : Color.white.opacity(0.08))
+                        .fill(configuration.isOn ? tokens.accent : Color.white.opacity(0.08))
                         .frame(width: 13, height: 13)
                     if configuration.isOn {
                         Image(systemName: "checkmark")

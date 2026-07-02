@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct StocksDashboardTile: View {
+    @Environment(\.notchTokens) private var tokens
     let quotes: [StockQuote]
     let tickers: [String]
     let trendingRepos: [TrendingRepository]
@@ -39,7 +40,7 @@ struct StocksDashboardTile: View {
         HStack(spacing: 8) {
             Image(systemName: "chart.xyaxis.line")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(NotchTheme.accent)
+                .foregroundStyle(tokens.accent)
             Text("MARKETS + CODE")
                 .font(.system(size: 9, weight: .semibold))
                 .tracking(0.8)
@@ -74,7 +75,7 @@ struct StocksDashboardTile: View {
             } label: {
                 Image(systemName: isEditing ? "checkmark.circle.fill" : "plus.circle")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isEditing ? NotchTheme.accent : .white.opacity(0.35))
+                    .foregroundStyle(isEditing ? tokens.accent : .white.opacity(0.35))
             }
             .buttonStyle(.plain)
             .help(isEditing ? "Done" : "Add ticker")
@@ -147,7 +148,7 @@ struct StocksDashboardTile: View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(NotchTheme.accent.opacity(0.85))
+                .foregroundStyle(tokens.accent.opacity(0.85))
             Text(title.uppercased())
                 .font(.system(size: 8, weight: .bold, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.35))
@@ -174,7 +175,7 @@ struct StocksDashboardTile: View {
         HStack(spacing: 8) {
             Text("$")
                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(NotchTheme.accent.opacity(0.70))
+                .foregroundStyle(tokens.accent.opacity(0.70))
             TextField("TSLA, BRK.B", text: $newTicker)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white)
@@ -184,7 +185,7 @@ struct StocksDashboardTile: View {
             Button { submitTicker() } label: {
                 Image(systemName: "arrow.right.circle.fill")
                     .font(.system(size: 14))
-                    .foregroundStyle(newTicker.isEmpty ? .white.opacity(0.15) : NotchTheme.accent)
+                    .foregroundStyle(newTicker.isEmpty ? .white.opacity(0.15) : tokens.accent)
             }
             .buttonStyle(.plain)
             .disabled(StockTickerSelection.normalized(newTicker) == nil)
@@ -196,7 +197,7 @@ struct StocksDashboardTile: View {
                 .fill(Color.white.opacity(0.06))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(NotchTheme.accent.opacity(0.25), lineWidth: 0.5)
+                        .strokeBorder(tokens.accent.opacity(0.25), lineWidth: 0.5)
                 )
         )
     }
@@ -249,6 +250,7 @@ private struct TickerSelectionChip: View {
 // MARK: - Repo row
 
 private struct RepoTrendRow: View {
+    @Environment(\.notchTokens) private var tokens
     let repo: TrendingRepository
     @State private var isHovered = false
 
@@ -279,10 +281,10 @@ private struct RepoTrendRow: View {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill")
                             .font(.system(size: 7.5, weight: .bold))
-                            .foregroundStyle(NotchTheme.accent.opacity(0.80))
+                            .foregroundStyle(tokens.accent.opacity(0.80))
                         Text(starLabel)
                             .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(NotchTheme.accent)
+                            .foregroundStyle(tokens.accent)
                     }
                     if let lang = repo.language, !lang.isEmpty {
                         Text(lang)

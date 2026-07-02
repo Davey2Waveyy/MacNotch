@@ -10,7 +10,7 @@ struct DesignSettingsView: View {
                 Picker("Theme", selection: Binding(
                     get: { settings.appearance.preset },
                     set: { preset in
-                        settings.appearance.preset = preset
+                        SettingsLogic.setAppearancePreset(&settings, preset: preset)
                         onChange(settings)
                     }
                 )) {
@@ -24,7 +24,7 @@ struct DesignSettingsView: View {
                 Picker("Accent Color", selection: Binding(
                     get: { settings.appearance.accentColor },
                     set: { accent in
-                        settings.appearance.accentColor = accent
+                        SettingsLogic.setAccentColor(&settings, accentColor: accent)
                         onChange(settings)
                     }
                 )) {
@@ -36,7 +36,7 @@ struct DesignSettingsView: View {
                 Picker("Glass Intensity", selection: Binding(
                     get: { settings.appearance.glassIntensity },
                     set: { intensity in
-                        settings.appearance.glassIntensity = intensity
+                        SettingsLogic.setGlassIntensity(&settings, glassIntensity: intensity)
                         onChange(settings)
                     }
                 )) {
@@ -48,7 +48,7 @@ struct DesignSettingsView: View {
                 Picker("Corner Style", selection: Binding(
                     get: { settings.appearance.cornerStyle },
                     set: { corner in
-                        settings.appearance.cornerStyle = corner
+                        SettingsLogic.setCornerStyle(&settings, cornerStyle: corner)
                         onChange(settings)
                     }
                 )) {
@@ -60,7 +60,7 @@ struct DesignSettingsView: View {
                 Picker("Density", selection: Binding(
                     get: { settings.appearance.panelDensity },
                     set: { density in
-                        settings.appearance.panelDensity = density
+                        SettingsLogic.setPanelDensity(&settings, density: density)
                         onChange(settings)
                     }
                 )) {
@@ -72,7 +72,7 @@ struct DesignSettingsView: View {
                 Picker("Motion", selection: Binding(
                     get: { settings.appearance.motionStyle },
                     set: { motion in
-                        settings.appearance.motionStyle = motion
+                        SettingsLogic.setMotionStyle(&settings, motionStyle: motion)
                         onChange(settings)
                     }
                 )) {

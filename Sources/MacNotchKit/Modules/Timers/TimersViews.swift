@@ -14,6 +14,7 @@ struct PulseEffect: ViewModifier {
 }
 
 struct TimersDashboardTile: View {
+    @Environment(\.notchTokens) private var tokens
     let active: [CountdownTimer]
     let now: Date
     let firing: [CountdownTimer]
@@ -52,7 +53,7 @@ struct TimersDashboardTile: View {
         VStack(spacing: 6) {
             Image(systemName: "bell.fill")
                 .font(.system(size: 18))
-                .foregroundStyle(NotchTheme.accent)
+                .foregroundStyle(tokens.accent)
                 .modifier(PulseEffect())
             Text("\(timer.label) done")
                 .font(.system(size: 12, weight: .semibold))
@@ -63,7 +64,7 @@ struct TimersDashboardTile: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 4)
-                    .background(Capsule().fill(NotchTheme.accent))
+                    .background(Capsule().fill(tokens.accent))
             }
             .buttonStyle(.plain)
         }
@@ -102,7 +103,7 @@ struct TimersDashboardTile: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(NotchTheme.accent.opacity(0.85)))
+                        .fill(tokens.accent.opacity(0.85)))
             }
             .buttonStyle(.plain)
         }
@@ -139,7 +140,7 @@ struct TimersDashboardTile: View {
         HStack(spacing: 8) {
             Text(TimerFormat.clock(timer.remaining(at: now)))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(NotchTheme.accent)
+                .foregroundStyle(tokens.accent)
             Text(timer.label)
                 .font(.system(size: 9.5))
                 .foregroundStyle(.white.opacity(0.65))
