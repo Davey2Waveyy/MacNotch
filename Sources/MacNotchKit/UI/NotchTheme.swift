@@ -18,6 +18,15 @@ public struct NotchThemeTokens: Equatable, Sendable {
     /// nil when motion is reduced — feed straight into .animation(_:value:)
     public var hoverAnimation: Animation? { motionStyle == .reduced ? nil : .easeOut(duration: 0.12) }
 
+    /// Panel/root state transitions (expand, collapse, page changes).
+    /// Falls back to a quick fade-style ease when motion is reduced, matching
+    /// the system Reduce Motion preference folded into `motionStyle`.
+    public var panelAnimation: Animation {
+        motionStyle == .reduced
+            ? .easeOut(duration: 0.12)
+            : .spring(response: 0.34, dampingFraction: 0.82)
+    }
+
     /// Terminal reads as wireframe-on-black: stroke uses the accent, boosted.
     /// Every other preset uses a plain white hairline at `strokeOpacity`.
     /// `fontDesign == .monospaced` is the terminal preset's own signal, so it

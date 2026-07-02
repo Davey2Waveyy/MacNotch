@@ -33,6 +33,7 @@ struct WideBarLayoutView: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Back to dashboard")
             .help("Back to dashboard")
         }
         .padding(.horizontal, 18)

@@ -76,7 +76,8 @@ struct ShelfExpandedView: View {
         if let resolvedURL = resolve(item) {
             chipBody.onDrag { NSItemProvider(object: resolvedURL as NSURL) }
         } else {
-            chipBody
+            // Bookmark no longer resolves — tell VoiceOver the file is stale.
+            chipBody.accessibilityLabel("\(item.name), file unavailable")
         }
     }
 }
@@ -93,15 +94,11 @@ struct ShelfDashboardTile: View {
             TileHeader(title: "Drop Shelf", systemImage: "tray.full")
             Spacer(minLength: 0)
             if items.isEmpty {
-                VStack(spacing: 4) {
-                    Image(systemName: "arrow.down.doc")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.35))
-                    Text("Drop files here")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                .frame(maxWidth: .infinity)
+                ModuleEmptyStateView(
+                    title: "Drop Shelf Empty",
+                    message: "Drop files onto the notch to keep them ready.",
+                    systemImage: "tray"
+                )
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 5) {
@@ -158,7 +155,8 @@ struct ShelfDashboardTile: View {
         if let resolvedURL = resolve(item) {
             chipBody.onDrag { NSItemProvider(object: resolvedURL as NSURL) }
         } else {
-            chipBody
+            // Bookmark no longer resolves — tell VoiceOver the file is stale.
+            chipBody.accessibilityLabel("\(item.name), file unavailable")
         }
     }
 }

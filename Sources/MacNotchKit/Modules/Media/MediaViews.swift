@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Thin "is playing" glance shown in the collapsed notch bar.
 struct MediaCollapsedView: View {
+    @Environment(\.notchTokens) private var tokens
     let isPlaying: Bool
 
     var body: some View {
@@ -9,7 +10,10 @@ struct MediaCollapsedView: View {
             Image(systemName: "waveform")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white)
-                .symbolEffect(.variableColor.iterative, options: .repeating)
+                // Static glyph under Reduce Motion — no repeating animation.
+                .symbolEffect(.variableColor.iterative, options: .repeating,
+                              isActive: tokens.motionStyle != .reduced)
+                .accessibilityLabel("Music playing")
         }
     }
 }
@@ -39,9 +43,10 @@ struct MediaExpandedView: View {
                             .lineLimit(1)
                     }
                     HStack(spacing: 20) {
-                        controlButton("backward.fill", action: onPrevious)
-                        controlButton(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
-                        controlButton("forward.fill", action: onNext)
+                        controlButton("backward.fill", label: "Previous track", action: onPrevious)
+                        controlButton(np.isPlaying ? "pause.fill" : "play.fill",
+                                      label: np.isPlaying ? "Pause" : "Play", action: onPlayPause)
+                        controlButton("forward.fill", label: "Next track", action: onNext)
                     }
                 }
                 Spacer(minLength: 0)
@@ -54,13 +59,16 @@ struct MediaExpandedView: View {
         }
     }
 
-    private func controlButton(_ systemName: String, action: @escaping () -> Void) -> some View {
+    private func controlButton(_ systemName: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 13))
                 .foregroundStyle(.white)
+                // Pad the tap target toward 30pt without changing the glyph size.
+                .contentShape(Rectangle().inset(by: -8))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -131,9 +139,10 @@ struct MediaDashboardTile: View {
                 Spacer(minLength: 0)
             }
             HStack(spacing: 20) {
-                control("backward.fill", action: onPrevious)
-                control(np.isPlaying ? "pause.fill" : "play.fill", action: onPlayPause)
-                control("forward.fill", action: onNext)
+                control("backward.fill", label: "Previous track", action: onPrevious)
+                control(np.isPlaying ? "pause.fill" : "play.fill",
+                        label: np.isPlaying ? "Pause" : "Play", action: onPlayPause)
+                control("forward.fill", label: "Next track", action: onNext)
             }
             .padding(.top, 2)
 
@@ -144,13 +153,16 @@ struct MediaDashboardTile: View {
     }
 
     private var nothingPlayingView: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Nothing playing")
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.45))
+        VStack(spacing: 10) {
+            ModuleEmptyStateView(
+                title: "No Active Track",
+                message: "Start Music or Spotify to control playback here.",
+                systemImage: "music.note"
+            )
             spotifyButton
+                .padding(.bottom, 4)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var spotifyButton: some View {
@@ -188,13 +200,16 @@ struct MediaDashboardTile: View {
         .buttonStyle(.plain)
     }
 
-    private func control(_ systemName: String, action: @escaping () -> Void) -> some View {
+    private func control(_ systemName: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 13))
                 .foregroundStyle(.white)
+                // Pad the tap target toward 30pt without changing the glyph size.
+                .contentShape(Rectangle().inset(by: -8))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -303,8 +318,11 @@ struct MediaWideBar: View {
                     Image(systemName: np.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.white)
+                        // Pad the tap target toward 30pt without changing the glyph size.
+                        .contentShape(Rectangle().inset(by: -8))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(np.isPlaying ? "Pause" : "Play")
                 Text(np.marquee)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white)

@@ -114,7 +114,7 @@ struct DashboardLayoutView: View {
         // Clamp to a valid page if the module list shrinks (e.g. after a toggle).
         .onChange(of: pageCount) { _, newCount in
             if page >= newCount {
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+                withAnimation(tokens.panelAnimation) {
                     page = max(0, newCount - 1)
                 }
             }
@@ -127,7 +127,7 @@ struct DashboardLayoutView: View {
         let target = page + dir
         guard target >= 0, target < pageCount else { return }
         slideDirection = dir
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) { page = target }
+        withAnimation(tokens.panelAnimation) { page = target }
     }
 
     // MARK: - Header
@@ -174,6 +174,8 @@ struct DashboardLayoutView: View {
                         RoundedRectangle(cornerRadius: 5)
                             .fill(isPinned ? Color.white.opacity(0.12) : Color.clear)
                     )
+                    // Pad the tap target to 30pt without changing the visual size.
+                    .contentShape(Rectangle().inset(by: -4))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isPinned ? "Unpin notch panel" : "Pin notch panel")
@@ -190,9 +192,12 @@ struct DashboardLayoutView: View {
                     .frame(width: i == page ? 16 : 5, height: 4)
                     .shadow(color: i == page ? tokens.accent.opacity(0.5) : .clear,
                             radius: 4, x: 0, y: 0)
-                    .animation(.spring(response: 0.28, dampingFraction: 0.78), value: page)
+                    .animation(tokens.panelAnimation, value: page)
             }
         }
+        // Decorative dots read as one element announcing the current page.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Dashboard page \(page + 1) of \(pageCount)")
     }
 
     private var modeLabel: String {
@@ -254,10 +259,12 @@ struct DashboardLayoutView: View {
                 EmptyView()
             }
         }
-        .animation(.spring(response: 0.38, dampingFraction: 0.80), value: pageTiles.map { $0.id })
+        .animation(tokens.panelAnimation, value: pageTiles.map { $0.id })
     }
 
     private var pageTransition: AnyTransition {
+        // Reduce Motion: cross-fade instead of sliding pages across the panel.
+        guard tokens.motionStyle != .reduced else { return .opacity }
         let insertEdge: Edge = slideDirection > 0 ? .trailing : .leading
         let removeEdge: Edge = slideDirection > 0 ? .leading  : .trailing
         return .asymmetric(
@@ -269,9 +276,10 @@ struct DashboardLayoutView: View {
     // MARK: - Nav arrows
 
     private func navArrow(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        NotchIconButton(
+        let base = systemName == "chevron.left" ? "Previous dashboard page" : "Next dashboard page"
+        return NotchIconButton(
             systemName: systemName,
-            accessibilityLabel: systemName == "chevron.left" ? "Previous dashboard page" : "Next dashboard page",
+            accessibilityLabel: enabled ? base : "\(base) unavailable",
             size: 20,
             iconSize: 10,
             action: action

@@ -7,6 +7,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Welcome to \(NotchBrand.productName)")
                 .font(.system(size: 28, weight: .bold))
+                .accessibilityAddTraits(.isHeader)
             Text("Your notch becomes a customizable command center for media, code, timers, reminders, files, and focused work.")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -18,6 +19,8 @@ struct OnboardingView: View {
                 Text(NotchBrand.affiliationDisclaimer)
             }
             .font(.system(size: 12))
+            // VoiceOver reads the permission notes as one grouped element.
+            .accessibilityElement(children: .combine)
             Spacer()
             Button("Start Using \(NotchBrand.productName)") {
                 onComplete(OnboardingState(hasCompletedFirstRun: true, completedVersion: AppCore.version))

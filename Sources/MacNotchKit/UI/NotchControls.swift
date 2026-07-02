@@ -12,7 +12,9 @@ struct NotchIconButton: View {
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .semibold))
                 .frame(width: size, height: size)
-                .contentShape(Rectangle())
+                // Negative inset grows the hit area to at least 30×30pt without
+                // changing the button's layout size (glyphs stay small on purpose).
+                .contentShape(Rectangle().inset(by: min(0, (size - 30) / 2)))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)

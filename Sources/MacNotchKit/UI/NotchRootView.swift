@@ -65,9 +65,9 @@ public struct NotchRootView: View {
     public var body: some View {
         panelBody
             .environment(\.notchTokens, themeTokens)
-            .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.isExpanded)
-            .animation(.spring(response: 0.32, dampingFraction: 0.84), value: model.mode)
-            .animation(.spring(response: 0.30, dampingFraction: 0.86), value: model.compactContentHeight)
+            .animation(themeTokens.panelAnimation, value: model.isExpanded)
+            .animation(themeTokens.panelAnimation, value: model.mode)
+            .animation(themeTokens.panelAnimation, value: model.compactContentHeight)
             .onPreferenceChange(CompactContentHeightKey.self) { height in
                 guard height > 1 else { return }
                 let clamped = min(max(height, Self.minCompactHeight), Self.maxCompactHeight)
@@ -118,7 +118,7 @@ public struct NotchRootView: View {
                     radius: model.isExpanded ? 28 : 0,
                     x: 0, y: model.isExpanded ? 14 : 0
                 )
-                .animation(.spring(response: 0.38, dampingFraction: 0.82), value: model.isExpanded)
+                .animation(themeTokens.panelAnimation, value: model.isExpanded)
                 .allowsHitTesting(false)
 
             chrome(cornerRadius: cornerRadius, topRadius: topRadius)
@@ -221,6 +221,8 @@ public struct NotchRootView: View {
                             RoundedRectangle(cornerRadius: 7)
                                 .fill(model.isPinned ? Color.white.opacity(0.14) : Color.clear)
                         )
+                        // Pad the tap target to 30pt without changing the visual size.
+                        .contentShape(Rectangle().inset(by: -1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(model.isPinned ? "Unpin notch panel" : "Pin notch panel")
@@ -303,6 +305,7 @@ public struct NotchRootView: View {
 /// soft drop shadow when expanded. Square top + rounded bottom so it reads as
 /// dropping out of the notch rather than floating as a centered card.
 struct NotchChrome: View {
+    @Environment(\.notchTokens) private var tokens
     let cornerRadius: CGFloat
     var topRadius: CGFloat = 0
     let isExpanded: Bool
@@ -383,6 +386,6 @@ struct NotchChrome: View {
         .clipShape(shape)
         // Shadow is rendered by the caller (panelBody) using an explicit shape
         // so it never falls back to a rectangular silhouette when NSViews are present.
-        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: isExpanded)
+        .animation(tokens.panelAnimation, value: isExpanded)
     }
 }

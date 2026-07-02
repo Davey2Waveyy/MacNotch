@@ -2,13 +2,20 @@ import SwiftUI
 
 /// Gentle repeating scale/opacity pulse — a macOS 14-compatible stand-in for
 /// the `.symbolEffect(.bounce, options: .repeating)` that needs macOS 15.
+/// Stays static when the resolved theme motion is reduced.
 struct PulseEffect: ViewModifier {
+    @Environment(\.notchTokens) private var tokens
     @State private var on = false
     func body(content: Content) -> some View {
         content
             .scaleEffect(on ? 1.12 : 0.94)
             .opacity(on ? 1 : 0.7)
-            .animation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true), value: on)
+            .animation(
+                tokens.motionStyle == .reduced
+                    ? nil
+                    : .easeInOut(duration: 0.6).repeatForever(autoreverses: true),
+                value: on
+            )
             .onAppear { on = true }
     }
 }
@@ -90,12 +97,12 @@ struct TimersDashboardTile: View {
 
     private var customRow: some View {
         HStack(spacing: 6) {
-            stepButton("minus") { customMinutes = max(1, customMinutes - 1) }
+            stepButton("minus", label: "Decrease minutes") { customMinutes = max(1, customMinutes - 1) }
             Text("\(customMinutes)m")
                 .font(.system(size: 11, weight: .semibold).monospacedDigit())
                 .foregroundStyle(.white)
                 .frame(minWidth: 28)
-            stepButton("plus") { customMinutes = min(180, customMinutes + 1) }
+            stepButton("plus", label: "Increase minutes") { customMinutes = min(180, customMinutes + 1) }
             Button { onStart(Double(customMinutes), "\(customMinutes)m") } label: {
                 Text("Start")
                     .font(.system(size: 10, weight: .semibold))
@@ -109,7 +116,7 @@ struct TimersDashboardTile: View {
         }
     }
 
-    private func stepButton(_ icon: String, _ action: @escaping () -> Void) -> some View {
+    private func stepButton(_ icon: String, label: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 9, weight: .bold))
@@ -117,16 +124,21 @@ struct TimersDashboardTile: View {
                 .frame(width: 20, height: 20)
                 .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .fill(.white.opacity(0.08)))
+                // Pad the tap target to 30pt without changing the visual size.
+                .contentShape(Rectangle().inset(by: -5))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     @ViewBuilder
     private var runningList: some View {
         if active.isEmpty {
-            Text("No timers running")
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.4))
+            ModuleEmptyStateView(
+                title: "No Timers",
+                message: "Create a timer to keep it visible in the notch.",
+                systemImage: "timer"
+            )
         } else {
             VStack(spacing: 4) {
                 ForEach(active.prefix(2)) { timer in

@@ -77,17 +77,25 @@ private final class HoverContainerView: NSView {
 /// overlap the menu bar; the default constraint would push it down and clip
 /// the expanded panel's height to whatever vertical space remains.
 private final class UnconstrainedPanel: NSPanel {
+    /// Fired when Escape reaches the panel (via the responder chain's
+    /// `cancelOperation`) so the owner can collapse the expanded notch.
+    var onEscape: (() -> Void)?
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         return frameRect
     }
+
+    override func cancelOperation(_ sender: Any?) {
+        onEscape?()
+    }
 }
 
 @MainActor
 public final class NotchWindow: NSObject {
-    private let panel: NSPanel
+    private let panel: UnconstrainedPanel
     private let model = NotchWindowModel()
     private let machine = NotchStateMachine()
     private let transitionCoordinator = NotchWindowTransitionCoordinator()
@@ -124,6 +132,10 @@ public final class NotchWindow: NSObject {
         )
 
         super.init()
+
+        // Escape closes the expanded panel when it is key (e.g. after a click
+        // opened the dashboard). Same collapse path as an outside click.
+        panel.onEscape = { [weak self] in self?.collapseForEscape() }
 
         machine.defaultExpandMode = settings.settings.defaultExpansionMode
         panel.isFloatingPanel = true
@@ -468,6 +480,13 @@ public final class NotchWindow: NSObject {
             phase: transitionCoordinator.phase
         ) else { return }
 
+        guard machine.forceCollapse() else { return }
+        transitionCoordinator.requestImmediateCollapse()
+        sync()
+    }
+
+    /// Escape is an explicit dismissal, so it collapses even a pinned panel.
+    private func collapseForEscape() {
         guard machine.forceCollapse() else { return }
         transitionCoordinator.requestImmediateCollapse()
         sync()
