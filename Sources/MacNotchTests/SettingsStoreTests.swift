@@ -96,4 +96,34 @@ func settingsStoreTests() {
         reloaded.load()
         expectEqual(reloaded.settings.defaultExpansionMode, .wideBar, "mode persists across reload")
     }
+
+    test("appearance and activeWorkspaceProfileID survive load merge") {
+        let url = tempURL()
+        let persisted = AppSettings(
+            modules: [ModuleSetting(id: "media", isEnabled: true)],
+            launchAtLogin: false,
+            defaultExpansionMode: .dashboard,
+            appearance: NotchAppearance(
+                preset: .terminal,
+                accentColor: .green,
+                glassIntensity: .vivid,
+                panelDensity: .compact,
+                cornerStyle: .precise,
+                motionStyle: .calm,
+                dashboardLayout: .priority,
+                menuBarIconStyle: .accent
+            ),
+            activeWorkspaceProfileID: "workspace-42"
+        )
+        let data = try! JSONEncoder().encode(persisted)
+        try! data.write(to: url, options: .atomic)
+
+        let store = SettingsStore(url: url)
+        store.load()
+
+        expectEqual(store.settings.appearance.preset, .terminal, "appearance preset survives merge")
+        expectEqual(store.settings.appearance.accentColor, .green, "appearance accent survives merge")
+        expectEqual(store.settings.appearance.motionStyle, .calm, "appearance motion survives merge")
+        expectEqual(store.settings.activeWorkspaceProfileID, "workspace-42", "workspace profile survives merge")
+    }
 }
