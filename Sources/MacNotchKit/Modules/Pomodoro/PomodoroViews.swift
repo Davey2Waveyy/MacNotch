@@ -3,6 +3,7 @@ import SwiftUI
 // MARK: - Shared ring component
 
 struct PomodoroRing: View {
+    @Environment(\.notchTokens) private var tokens
     let progress: Double
     let phase: PomodoroPhase
     let remaining: TimeInterval
@@ -48,7 +49,13 @@ struct PomodoroRing: View {
             }
         }
         .scaleEffect(isRunning ? 1.0 : 0.97)
-        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: isRunning)
+        // Breathing pulse stays static when the resolved theme motion is reduced.
+        .animation(
+            tokens.motionStyle == .reduced
+                ? nil
+                : .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+            value: isRunning
+        )
     }
 
     private func formatTime(_ t: TimeInterval) -> String {

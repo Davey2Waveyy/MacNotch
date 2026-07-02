@@ -217,7 +217,9 @@ struct DashboardLayoutView: View {
     // MARK: - Tiles area
 
     private var tilesArea: some View {
-        HStack(spacing: 0) {
+        // 3pt gap keeps the arrows' padded (30pt) hit targets from overlapping
+        // the tiles' hover edges on either side.
+        HStack(spacing: 3) {
             navArrow(systemName: "chevron.left", enabled: page > 0) { navigate(-1) }
 
             ZStack {
@@ -245,12 +247,7 @@ struct DashboardLayoutView: View {
                 tile.view
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .dashboardTileSurface()
-                    .transition(
-                        .asymmetric(
-                            insertion: .scale(scale: 0.90, anchor: .center).combined(with: .opacity),
-                            removal:   .scale(scale: 0.94, anchor: .center).combined(with: .opacity)
-                        )
-                    )
+                    .transition(tileTransition)
             }
             // Ghost spacers only on full pages to keep consistent tile widths.
             // Partial pages let tiles expand to fill the available space naturally.
@@ -260,6 +257,15 @@ struct DashboardLayoutView: View {
             }
         }
         .animation(tokens.panelAnimation, value: pageTiles.map { $0.id })
+    }
+
+    private var tileTransition: AnyTransition {
+        // Reduce Motion: fade tiles in/out instead of scaling them.
+        guard tokens.motionStyle != .reduced else { return .opacity }
+        return .asymmetric(
+            insertion: .scale(scale: 0.90, anchor: .center).combined(with: .opacity),
+            removal:   .scale(scale: 0.94, anchor: .center).combined(with: .opacity)
+        )
     }
 
     private var pageTransition: AnyTransition {

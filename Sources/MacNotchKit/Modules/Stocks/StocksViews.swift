@@ -54,7 +54,7 @@ struct StocksDashboardTile: View {
                                 symbol: ticker,
                                 isEditing: isEditing,
                                 onRemove: {
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.80)) {
+                                    withAnimation(tokens.panelAnimation) {
                                         onRemove(index)
                                     }
                                 }
@@ -68,7 +68,7 @@ struct StocksDashboardTile: View {
             Spacer(minLength: 0)
 
             Button {
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                withAnimation(tokens.panelAnimation) {
                     isEditing.toggle()
                     if isEditing { inputFocused = true }
                 }
@@ -212,6 +212,7 @@ struct StocksDashboardTile: View {
 // MARK: - Ticker chip
 
 private struct TickerSelectionChip: View {
+    @Environment(\.notchTokens) private var tokens
     let symbol: String
     let isEditing: Bool
     let onRemove: () -> Void
@@ -243,7 +244,7 @@ private struct TickerSelectionChip: View {
                         .strokeBorder(Color.white.opacity(isEditing ? 0.12 : 0.06), lineWidth: 0.6)
                 )
         )
-        .animation(.spring(response: 0.25, dampingFraction: 0.82), value: isEditing)
+        .animation(tokens.panelAnimation, value: isEditing)
     }
 }
 
