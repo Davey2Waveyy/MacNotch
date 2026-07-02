@@ -39,9 +39,9 @@ public enum CodeCLITool: String, CaseIterable, Codable, Hashable, Identifiable, 
     public var missingHint: String {
         switch self {
         case .claude:
-            return "claude not found on PATH.\nInstall Claude Code, then relaunch MacNotch."
+            return "claude not found on PATH.\nInstall Claude Code, then relaunch \(NotchBrand.productName)."
         case .codex:
-            return "codex not found on PATH.\nInstall the Codex CLI, then relaunch MacNotch."
+            return "codex not found on PATH.\nInstall the Codex CLI, then relaunch \(NotchBrand.productName)."
         case .cursor:
             return "cursor-agent not found.\nInstall it with:  curl https://cursor.com/install -fsS | bash"
         }

@@ -8,6 +8,7 @@ func notchBrandTests() {
         expectEqual(NotchBrand.bundleIdentifier, "io.notchapple.NotchApple", "bundle id")
         expectEqual(NotchBrand.applicationSupportDirectoryName, "NotchApple", "new support directory")
         expectEqual(NotchBrand.legacyApplicationSupportDirectoryName, "MacNotch", "legacy support directory")
+        expectEqual(NotchBrand.userAgent, "NotchApple/1.0", "user agent")
         expect(NotchBrand.affiliationDisclaimer.contains("not affiliated with Apple"), "affiliation disclaimer is explicit")
     }
 

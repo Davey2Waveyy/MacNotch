@@ -17,7 +17,7 @@ public enum LoginItem {
             }
             return true
         } catch {
-            NSLog("MacNotch: login item update failed: \(error.localizedDescription)")
+            NSLog("\(NotchBrand.productName): login item update failed: \(error.localizedDescription)")
             return false
         }
     }

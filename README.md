@@ -20,7 +20,7 @@ make package  # just build the signed .app into ./build
 ```
 
 `make run` launches NotchApple as a **menu-bar agent** (no Dock icon). Use the
-menu-bar icon for **Open Settings…**, **Toggle Notch**, and **Quit**.
+menu-bar icon for **Open NotchApple**, **Open Settings…**, and **Quit**.
 
 ## Public identity checks
 

@@ -15,7 +15,7 @@ release:
 	git push origin v$(VERSION)
 	gh release create v$(VERSION) build/NotchApple.dmg \
 	  --title "NotchApple v$(VERSION)" \
-	  --notes "Download NotchApple.dmg, open it, drag NotchApple to Applications.\n\nFirst launch: right-click → Open to bypass Gatekeeper."
+	  --notes "Download NotchApple.dmg, open it, drag NotchApple to Applications.\n\nAfter notarization, NotchApple should open normally. If macOS still blocks launch, right-click NotchApple and choose Open as a fallback."
 clean:
 	swift package clean
 	rm -rf build
