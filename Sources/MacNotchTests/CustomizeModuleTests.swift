@@ -26,4 +26,16 @@ func customizeModuleTests() {
             expectEqual(proxy.settings.appearance.accentColor, .amber, "accent color updated")
         }
     }
+
+    test("SettingsWindowModel.sync republishes the latest persisted settings") {
+        MainActor.assumeIsolated {
+            let model = SettingsWindowModel(.defaults)
+
+            var updated = AppSettings.defaults
+            updated.appearance.preset = .aurora
+            model.sync(updated)
+
+            expectEqual(model.settings.appearance.preset, .aurora, "model reflects externally-persisted change")
+        }
+    }
 }

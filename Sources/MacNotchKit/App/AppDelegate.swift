@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settings.replace(updated)
         settings.save()
         customizeModule?.sync(updated)
+        settingsWindowController?.sync(updated)
         notchWindow?.reload()
     }
 

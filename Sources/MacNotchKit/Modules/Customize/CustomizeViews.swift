@@ -30,6 +30,7 @@ struct CustomizeDashboardTile: View {
                             .fill(proxy.settings.appearance.preset == preset ? tokens.accent.opacity(0.20) : .white.opacity(0.06))
                     )
                     .accessibilityLabel("Use \(label(for: preset)) theme")
+                    .accessibilityAddTraits(proxy.settings.appearance.preset == preset ? .isSelected : [])
                 }
             }
             .padding(.bottom, 8)
@@ -51,11 +52,12 @@ struct CustomizeDashboardTile: View {
                             .frame(width: 14, height: 14)
                             .overlay(
                                 Circle()
-                                    .strokeBorder(tokens.accent, lineWidth: isSelected ? 1.5 : 0)
+                                    .strokeBorder(.white.opacity(0.9), lineWidth: isSelected ? 1.5 : 0)
                             )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Use \(accentName(for: choice)) accent")
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
             .padding(.bottom, 8)

@@ -1,21 +1,26 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var settings: AppSettings
+    @ObservedObject var model: SettingsWindowModel
     @State private var selectedSection: SettingsSection = .general
     private let titles: [String: String]
     private let loginItemIsEnabled: () -> Bool
     private let setLoginItemEnabled: (Bool) -> Bool
     private let onChange: (AppSettings) -> Void
 
+    private var settings: AppSettings {
+        get { model.settings }
+        nonmutating set { model.settings = newValue }
+    }
+
     init(
-        settings: AppSettings,
+        model: SettingsWindowModel,
         titles: [String: String],
         loginItemIsEnabled: @escaping () -> Bool = LoginItem.isEnabled,
         setLoginItemEnabled: @escaping (Bool) -> Bool = LoginItem.setEnabled,
         onChange: @escaping (AppSettings) -> Void
     ) {
-        _settings = State(initialValue: settings)
+        self.model = model
         self.titles = titles
         self.loginItemIsEnabled = loginItemIsEnabled
         self.setLoginItemEnabled = setLoginItemEnabled
@@ -36,7 +41,7 @@ struct SettingsView: View {
                 case .modules:
                     modulesSection
                 case .design:
-                    DesignSettingsView(settings: $settings, onChange: onChange)
+                    DesignSettingsView(settings: $model.settings, onChange: onChange)
                 case .privacy:
                     privacySection
                 case .shortcuts:
