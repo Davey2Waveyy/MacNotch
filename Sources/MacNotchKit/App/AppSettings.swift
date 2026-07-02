@@ -15,17 +15,23 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool
     /// Which mode a click on the notch opens into (hover always uses compact).
     public var defaultExpansionMode: ExpansionMode
+    public var appearance: NotchAppearance
+    public var activeWorkspaceProfileID: String?
 
     public init(modules: [ModuleSetting],
                 launchAtLogin: Bool,
-                defaultExpansionMode: ExpansionMode = .dashboard) {
+                defaultExpansionMode: ExpansionMode = .dashboard,
+                appearance: NotchAppearance = .defaults,
+                activeWorkspaceProfileID: String? = nil) {
         self.modules = modules
         self.launchAtLogin = launchAtLogin
         self.defaultExpansionMode = defaultExpansionMode
+        self.appearance = appearance
+        self.activeWorkspaceProfileID = activeWorkspaceProfileID
     }
 
     private enum CodingKeys: String, CodingKey {
-        case modules, launchAtLogin, defaultExpansionMode
+        case modules, launchAtLogin, defaultExpansionMode, appearance, activeWorkspaceProfileID
     }
 
     // Custom decoding so settings files written before `defaultExpansionMode`
@@ -37,6 +43,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         launchAtLogin = try container.decode(Bool.self, forKey: .launchAtLogin)
         defaultExpansionMode = try container.decodeIfPresent(
             ExpansionMode.self, forKey: .defaultExpansionMode) ?? .dashboard
+        appearance = try container.decodeIfPresent(NotchAppearance.self, forKey: .appearance) ?? .defaults
+        activeWorkspaceProfileID = try container.decodeIfPresent(String.self, forKey: .activeWorkspaceProfileID)
     }
 
     public static let defaults = AppSettings(
@@ -80,6 +88,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
         return AppSettings(modules: modules,
                            launchAtLogin: persisted.launchAtLogin,
-                           defaultExpansionMode: persisted.defaultExpansionMode)
+                           defaultExpansionMode: persisted.defaultExpansionMode,
+                           appearance: persisted.appearance,
+                           activeWorkspaceProfileID: persisted.activeWorkspaceProfileID)
     }
 }
