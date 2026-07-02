@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController?
     private var notchWindow: NotchWindow?
     private var settingsWindowController: SettingsWindowController?
+    private var onboardingWindowController: OnboardingWindowController?
     private let registry = ModuleRegistry()
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
     private var customizeModule: CustomizeModule?
@@ -53,6 +54,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             settingsWindowController?.show()
         }
         self.menuBar = menuBar
+
+        let onboarding = OnboardingWindowController()
+        onboarding.showIfNeeded(settings: settings.settings) { [weak self] updated in
+            self?.applySettings(updated)
+        }
+        self.onboardingWindowController = onboarding
     }
 
     func applicationWillTerminate(_ notification: Notification) {

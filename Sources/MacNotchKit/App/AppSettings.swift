@@ -17,21 +17,24 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var defaultExpansionMode: ExpansionMode
     public var appearance: NotchAppearance
     public var activeWorkspaceProfileID: String?
+    public var onboarding: OnboardingState
 
     public init(modules: [ModuleSetting],
                 launchAtLogin: Bool,
                 defaultExpansionMode: ExpansionMode = .dashboard,
                 appearance: NotchAppearance = .defaults,
-                activeWorkspaceProfileID: String? = nil) {
+                activeWorkspaceProfileID: String? = nil,
+                onboarding: OnboardingState = .defaults) {
         self.modules = modules
         self.launchAtLogin = launchAtLogin
         self.defaultExpansionMode = defaultExpansionMode
         self.appearance = appearance
         self.activeWorkspaceProfileID = activeWorkspaceProfileID
+        self.onboarding = onboarding
     }
 
     private enum CodingKeys: String, CodingKey {
-        case modules, launchAtLogin, defaultExpansionMode, appearance, activeWorkspaceProfileID
+        case modules, launchAtLogin, defaultExpansionMode, appearance, activeWorkspaceProfileID, onboarding
     }
 
     // Custom decoding so settings files written before `defaultExpansionMode`
@@ -45,6 +48,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
             ExpansionMode.self, forKey: .defaultExpansionMode) ?? .dashboard
         appearance = try container.decodeIfPresent(NotchAppearance.self, forKey: .appearance) ?? .defaults
         activeWorkspaceProfileID = try container.decodeIfPresent(String.self, forKey: .activeWorkspaceProfileID)
+        onboarding = try container.decodeIfPresent(OnboardingState.self, forKey: .onboarding) ?? .defaults
     }
 
     public static let defaults = AppSettings(
@@ -90,6 +94,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
                            launchAtLogin: persisted.launchAtLogin,
                            defaultExpansionMode: persisted.defaultExpansionMode,
                            appearance: persisted.appearance,
-                           activeWorkspaceProfileID: persisted.activeWorkspaceProfileID)
+                           activeWorkspaceProfileID: persisted.activeWorkspaceProfileID,
+                           onboarding: persisted.onboarding)
     }
 }
