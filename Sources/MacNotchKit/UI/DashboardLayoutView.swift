@@ -273,8 +273,11 @@ struct DashboardLayoutView: View {
         NotchIconButton(
             systemName: systemName,
             accessibilityLabel: systemName == "chevron.left" ? "Previous dashboard page" : "Next dashboard page",
+            size: 20,
+            iconSize: 10,
             action: action
         )
+        .foregroundStyle(.white.opacity(0.55))
         .opacity(enabled ? 1 : 0)
         .disabled(!enabled)
         .animation(.easeOut(duration: 0.15), value: enabled)

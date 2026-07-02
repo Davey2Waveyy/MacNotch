@@ -3,13 +3,15 @@ import SwiftUI
 struct NotchIconButton: View {
     let systemName: String
     let accessibilityLabel: String
+    var size: CGFloat = 30
+    var iconSize: CGFloat = 12
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 12, weight: .semibold))
-                .frame(width: 30, height: 30)
+                .font(.system(size: iconSize, weight: .semibold))
+                .frame(width: size, height: size)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
