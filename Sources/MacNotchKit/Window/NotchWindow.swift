@@ -178,6 +178,7 @@ public final class NotchWindow: NSObject {
             MainActor.assumeIsolated { self?.popOpenForAlarm() }
         }
         sync()
+        model.appearance = settings.settings.appearance
     }
 
     /// Pops the notch open to the dashboard so a fired timer's alarm is visible.
@@ -229,6 +230,7 @@ public final class NotchWindow: NSObject {
     /// the SwiftUI tree to re-read the module list.
     public func reload() {
         machine.defaultExpandMode = settings.settings.defaultExpansionMode
+        model.appearance = settings.settings.appearance
         deactivateModulesIfNeeded()
         activateModulesIfNeeded()
         model.objectWillChange.send()

@@ -1,39 +1,5 @@
 import SwiftUI
 
-// MARK: - Theme
-
-/// Shared visual constants so the dashboard and wide-bar layouts stay in sync.
-enum NotchTheme {
-    static let tileCornerRadius: CGFloat = 8
-    static let tileFill     = Color.white.opacity(0.075)
-    static let tileStroke   = Color.white.opacity(0.10)
-    static let hairline     = Color.white.opacity(0.10)
-    static let accent       = Color(red: 0.36, green: 0.78, blue: 1)
-
-    // Kept for older tile callers that still want a subtle top-to-bottom tint.
-    static func tileFillGradient(hovered: Bool) -> LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.white.opacity(hovered ? 0.10 : 0.075),
-                Color.white.opacity(hovered ? 0.08 : 0.060)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-
-    static func tileStrokeGradient(hovered: Bool) -> LinearGradient {
-        LinearGradient(
-            colors: [
-                Color.white.opacity(hovered ? 0.18 : 0.10),
-                Color.white.opacity(hovered ? 0.10 : 0.06)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-}
-
 // MARK: - Tile surface
 
 /// Flat surface that frames each dashboard widget without making it feel like a

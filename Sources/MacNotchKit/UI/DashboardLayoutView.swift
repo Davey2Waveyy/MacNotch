@@ -55,6 +55,7 @@ struct DashboardLayoutView: View {
     var isPinned: Bool = false
     var onTogglePin: () -> Void = {}
     var onExternalDrop: ([URL]) -> Void = { _ in }
+    var themeTokens: NotchThemeTokens = NotchTheme.tokens(for: .defaults, reduceMotion: false)
 
     @State private var page = 0
     @State private var slideDirection: Int = 1   // +1 = forward (trailing→), -1 = back (←leading)
@@ -88,6 +89,10 @@ struct DashboardLayoutView: View {
     }
 
     private var pageCount: Int { max(1, pages.count) }
+
+    /// Accent color resolved from the current theme tokens; falls back to the
+    /// default accent for any surface not yet threaded through appearance.
+    private var themedAccent: Color { NotchTheme.accentColor(for: themeTokens.accentName) }
 
     private var pageTiles: [(id: String, view: AnyView)] {
         guard page < pages.count else { return [] }
@@ -137,13 +142,13 @@ struct DashboardLayoutView: View {
             Text(modeLabel)
                 .font(.system(size: 8.5, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(NotchTheme.accent)
+                .foregroundStyle(themedAccent)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
                 .background(
                     Capsule()
-                        .fill(NotchTheme.accent.opacity(0.15))
-                        .overlay(Capsule().strokeBorder(NotchTheme.accent.opacity(0.30), lineWidth: 0.5))
+                        .fill(themedAccent.opacity(0.15))
+                        .overlay(Capsule().strokeBorder(themedAccent.opacity(0.30), lineWidth: 0.5))
                 )
             Spacer()
             if pageCount > 1 { pageDots }

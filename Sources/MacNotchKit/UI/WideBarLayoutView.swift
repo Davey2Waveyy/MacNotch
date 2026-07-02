@@ -7,6 +7,7 @@ struct WideBarLayoutView: View {
     let modules: [any NotchModule]
     let size: CGSize
     let onSwitchMode: (ExpansionMode) -> Void
+    var themeTokens: NotchThemeTokens = NotchTheme.tokens(for: .defaults, reduceMotion: false)
 
     var body: some View {
         HStack(spacing: 12) {
@@ -38,7 +39,7 @@ struct WideBarLayoutView: View {
         .frame(width: size.width, height: size.height, alignment: .leading)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(NotchTheme.hairline)
+                .fill(Color.white.opacity(themeTokens.strokeOpacity))
                 .frame(height: 1)
         }
     }

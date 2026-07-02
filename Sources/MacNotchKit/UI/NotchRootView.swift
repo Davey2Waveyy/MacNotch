@@ -19,12 +19,15 @@ public final class NotchWindowModel: ObservableObject {
     @Published public var compactContentHeight: CGFloat = 320
     /// When true the compact preview stays pinned open even after the cursor leaves.
     @Published public var isPinned = false
+    /// User's appearance settings, synced from `SettingsStore` on load/reload.
+    @Published public var appearance = NotchAppearance.defaults
 
     public init() {}
 }
 
 public struct NotchRootView: View {
     @ObservedObject private var model: NotchWindowModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let collapsedSize: CGSize
     private let modules: () -> [any NotchModule]
     private let onPanelTap: () -> Void
@@ -170,13 +173,15 @@ public struct NotchRootView: View {
                 onSwitchMode: onSwitchMode,
                 isPinned: model.isPinned,
                 onTogglePin: onTogglePin,
-                onExternalDrop: onExternalDrop
+                onExternalDrop: onExternalDrop,
+                themeTokens: themeTokens
             )
         case .wideBar:
             WideBarLayoutView(
                 modules: currentModules,
                 size: size,
-                onSwitchMode: onSwitchMode
+                onSwitchMode: onSwitchMode,
+                themeTokens: themeTokens
             )
         }
     }
@@ -272,6 +277,12 @@ public struct NotchRootView: View {
     /// Physical notch bar height — used to push content below the hardware notch.
     /// Uses safeAreaInsets.top (≈37pt on notched Macs, 0 on non-notched).
     private var notchInset: CGFloat { NSScreen.main?.safeAreaInsets.top ?? 37 }
+
+    /// Resolved theme tokens for the current appearance settings, re-derived
+    /// whenever appearance changes or the system reduced-motion setting flips.
+    private var themeTokens: NotchThemeTokens {
+        NotchTheme.tokens(for: model.appearance, reduceMotion: reduceMotion)
+    }
 
     private func chrome(cornerRadius: CGFloat, topRadius: CGFloat) -> some View {
         NotchChrome(cornerRadius: cornerRadius, topRadius: topRadius, isExpanded: model.isExpanded, mode: model.mode)
