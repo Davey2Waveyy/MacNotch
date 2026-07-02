@@ -218,6 +218,8 @@ public struct NotchRootView: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(model.isPinned ? "Unpin notch panel" : "Pin notch panel")
+                .help(model.isPinned ? "Unpin notch panel" : "Pin notch panel")
 
                 WindowDragHandleView()
                     .frame(width: 28, height: 28)
@@ -251,6 +253,8 @@ public struct NotchRootView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Open dashboard")
+                .help("Open dashboard")
             }
             .padding(.horizontal, 4)
         }

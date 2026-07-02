@@ -64,7 +64,6 @@ struct DashboardLayoutView: View {
     private let headerHeight: CGFloat = 18
     private let tileSpacing: CGFloat = 10
     private let outerPadding: CGFloat = 14
-    private let arrowWidth: CGFloat = 20
 
     // Builds pages respecting isFullPageTile: full-page modules get their own
     // page so they can fill the full width; others are grouped up to tilesPerPage.
@@ -178,6 +177,8 @@ struct DashboardLayoutView: View {
                     )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(isPinned ? "Unpin notch panel" : "Pin notch panel")
+            .help(isPinned ? "Unpin notch panel" : "Pin notch panel")
             .padding(.leading, 4)
         }
     }
@@ -269,14 +270,12 @@ struct DashboardLayoutView: View {
     // MARK: - Nav arrows
 
     private func navArrow(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(enabled ? .white.opacity(0.55) : .clear)
-                .frame(width: arrowWidth, height: arrowWidth)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        NotchIconButton(
+            systemName: systemName,
+            accessibilityLabel: systemName == "chevron.left" ? "Previous dashboard page" : "Next dashboard page",
+            action: action
+        )
+        .opacity(enabled ? 1 : 0)
         .disabled(!enabled)
         .animation(.easeOut(duration: 0.15), value: enabled)
     }
