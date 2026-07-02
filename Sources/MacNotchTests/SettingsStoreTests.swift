@@ -121,9 +121,7 @@ func settingsStoreTests() {
         let store = SettingsStore(url: url)
         store.load()
 
-        expectEqual(store.settings.appearance.preset, .terminal, "appearance preset survives merge")
-        expectEqual(store.settings.appearance.accentColor, .green, "appearance accent survives merge")
-        expectEqual(store.settings.appearance.motionStyle, .calm, "appearance motion survives merge")
+        expectEqual(store.settings.appearance, persisted.appearance, "appearance survives merge")
         expectEqual(store.settings.activeWorkspaceProfileID, "workspace-42", "workspace profile survives merge")
     }
 }

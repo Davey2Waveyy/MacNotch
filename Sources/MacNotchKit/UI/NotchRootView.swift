@@ -64,6 +64,7 @@ public struct NotchRootView: View {
 
     public var body: some View {
         panelBody
+            .environment(\.notchTokens, themeTokens)
             .animation(.spring(response: 0.34, dampingFraction: 0.82), value: model.isExpanded)
             .animation(.spring(response: 0.32, dampingFraction: 0.84), value: model.mode)
             .animation(.spring(response: 0.30, dampingFraction: 0.86), value: model.compactContentHeight)
@@ -124,6 +125,12 @@ public struct NotchRootView: View {
                 .contentShape(NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius))
                 .onTapGesture(perform: onPanelTap)
 
+            // Preset background wash (e.g. Aurora's accent tint); clear for
+            // presets that don't define one, so this is a no-op visually.
+            NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius)
+                .fill(themeTokens.backgroundTint)
+                .allowsHitTesting(false)
+
             ZStack(alignment: .top) {
                 HStack(spacing: 6) {
                     ForEach(currentModules, id: \.id) { module in
@@ -173,15 +180,13 @@ public struct NotchRootView: View {
                 onSwitchMode: onSwitchMode,
                 isPinned: model.isPinned,
                 onTogglePin: onTogglePin,
-                onExternalDrop: onExternalDrop,
-                themeTokens: themeTokens
+                onExternalDrop: onExternalDrop
             )
         case .wideBar:
             WideBarLayoutView(
                 modules: currentModules,
                 size: size,
-                onSwitchMode: onSwitchMode,
-                themeTokens: themeTokens
+                onSwitchMode: onSwitchMode
             )
         }
     }

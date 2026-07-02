@@ -4,10 +4,10 @@ import SwiftUI
 /// Modules opt in by implementing `wideBarView()`. Clicking the trailing
 /// chevron returns to the dashboard.
 struct WideBarLayoutView: View {
+    @Environment(\.notchTokens) private var tokens
     let modules: [any NotchModule]
     let size: CGSize
     let onSwitchMode: (ExpansionMode) -> Void
-    var themeTokens: NotchThemeTokens = NotchTheme.tokens(for: .defaults, reduceMotion: false)
 
     var body: some View {
         HStack(spacing: 12) {
@@ -39,7 +39,7 @@ struct WideBarLayoutView: View {
         .frame(width: size.width, height: size.height, alignment: .leading)
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.white.opacity(themeTokens.strokeOpacity))
+                .fill(Color.white.opacity(tokens.strokeOpacity))
                 .frame(height: 1)
         }
     }

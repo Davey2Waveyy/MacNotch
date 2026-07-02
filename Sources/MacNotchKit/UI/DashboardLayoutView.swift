@@ -47,6 +47,7 @@ private struct ScrollWheelReader: NSViewRepresentable {
 /// Modules opt in by implementing `dashboardTile()`; others are skipped.
 /// Shows 4 tiles per page with < > arrow navigation and two-finger swipe.
 struct DashboardLayoutView: View {
+    @Environment(\.notchTokens) private var tokens
     let modules: [any NotchModule]
     let size: CGSize
     let activeMode: ExpansionMode
@@ -55,15 +56,17 @@ struct DashboardLayoutView: View {
     var isPinned: Bool = false
     var onTogglePin: () -> Void = {}
     var onExternalDrop: ([URL]) -> Void = { _ in }
-    var themeTokens: NotchThemeTokens = NotchTheme.tokens(for: .defaults, reduceMotion: false)
 
     @State private var page = 0
     @State private var slideDirection: Int = 1   // +1 = forward (trailing→), -1 = back (←leading)
 
     private let tilesPerPage = 5
     private let headerHeight: CGFloat = 18
-    private let tileSpacing: CGFloat = 10
-    private let outerPadding: CGFloat = 14
+    private let baseTileSpacing: CGFloat = 10
+    private let baseOuterPadding: CGFloat = 14
+
+    private var tileSpacing: CGFloat { (baseTileSpacing * tokens.spacingScale).rounded() }
+    private var outerPadding: CGFloat { (baseOuterPadding * tokens.spacingScale).rounded() }
 
     // Builds pages respecting isFullPageTile: full-page modules get their own
     // page so they can fill the full width; others are grouped up to tilesPerPage.
@@ -88,10 +91,6 @@ struct DashboardLayoutView: View {
     }
 
     private var pageCount: Int { max(1, pages.count) }
-
-    /// Accent color resolved from the current theme tokens; falls back to the
-    /// default accent for any surface not yet threaded through appearance.
-    private var themedAccent: Color { NotchTheme.accentColor(for: themeTokens.accentName) }
 
     private var pageTiles: [(id: String, view: AnyView)] {
         guard page < pages.count else { return [] }
@@ -141,13 +140,13 @@ struct DashboardLayoutView: View {
             Text(modeLabel)
                 .font(.system(size: 8.5, weight: .semibold))
                 .tracking(0.5)
-                .foregroundStyle(themedAccent)
+                .foregroundStyle(tokens.accent)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
                 .background(
                     Capsule()
-                        .fill(themedAccent.opacity(0.15))
-                        .overlay(Capsule().strokeBorder(themedAccent.opacity(0.30), lineWidth: 0.5))
+                        .fill(tokens.accent.opacity(0.15))
+                        .overlay(Capsule().strokeBorder(tokens.accent.opacity(0.30), lineWidth: 0.5))
                 )
             Spacer()
             if pageCount > 1 { pageDots }
@@ -187,9 +186,9 @@ struct DashboardLayoutView: View {
         HStack(spacing: 4) {
             ForEach(0..<pageCount, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? NotchTheme.accent : Color.white.opacity(0.20))
+                    .fill(i == page ? tokens.accent : Color.white.opacity(0.20))
                     .frame(width: i == page ? 16 : 5, height: 4)
-                    .shadow(color: i == page ? NotchTheme.accent.opacity(0.5) : .clear,
+                    .shadow(color: i == page ? tokens.accent.opacity(0.5) : .clear,
                             radius: 4, x: 0, y: 0)
                     .animation(.spring(response: 0.28, dampingFraction: 0.78), value: page)
             }

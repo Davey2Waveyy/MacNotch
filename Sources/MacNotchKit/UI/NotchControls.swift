@@ -46,12 +46,13 @@ struct NotchSegmentedControl<Option: Hashable, Label: View>: View {
 }
 
 struct NotchFocusRing: ViewModifier {
+    @Environment(\.notchTokens) private var tokens
     let isFocused: Bool
 
     func body(content: Content) -> some View {
         content.overlay(
-            RoundedRectangle(cornerRadius: NotchTheme.tileCornerRadius)
-                .strokeBorder(isFocused ? NotchTheme.accent.opacity(0.85) : .clear, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: tokens.tileCornerRadius)
+                .strokeBorder(isFocused ? tokens.accent.opacity(0.85) : .clear, lineWidth: 1.5)
         )
     }
 }
