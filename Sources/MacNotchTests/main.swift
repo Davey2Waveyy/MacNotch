@@ -27,5 +27,6 @@ stocksSelectionTests()
 screenTimeTrackerTests()
 timerSchedulerTests()
 onboardingStateTests()
+featureFlagsTests()
 
 exit(Int32(TestRunner.shared.runAll()))
