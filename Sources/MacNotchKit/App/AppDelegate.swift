@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        _ = AppDataMigrator().migrateIfNeeded()
         settings.load()
         registerModules()
 

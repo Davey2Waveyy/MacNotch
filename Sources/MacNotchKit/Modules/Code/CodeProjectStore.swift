@@ -60,7 +60,7 @@ public final class CodeProjectStore {
     }
 
     public static func defaultURL() -> URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("MacNotch/code-projects.json")
+        let dir = AppDataLocations().currentDirectory
+        return dir.appendingPathComponent("code-projects.json")
     }
 }

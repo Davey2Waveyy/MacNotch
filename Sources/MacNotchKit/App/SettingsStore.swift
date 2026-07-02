@@ -48,8 +48,6 @@ public final class SettingsStore {
 
     /// Default store location in Application Support.
     public static func defaultURL() -> URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory,
-                                            in: .userDomainMask)[0]
-        return base.appendingPathComponent("MacNotch/settings.json")
+        AppDataLocations().settingsURL
     }
 }

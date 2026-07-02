@@ -116,7 +116,7 @@ public final class ShelfStore {
     }
 
     public static func defaultURL() -> URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("MacNotch/shelf.json")
+        let dir = AppDataLocations().currentDirectory
+        return dir.appendingPathComponent("shelf.json")
     }
 }

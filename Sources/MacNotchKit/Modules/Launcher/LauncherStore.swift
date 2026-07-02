@@ -18,10 +18,7 @@ final class LauncherStore {
     }
 
     static func defaultURL() -> URL {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
-        let dir = support.appendingPathComponent("MacNotch", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dir = AppDataLocations().currentDirectory
         return dir.appendingPathComponent("launcher.json")
     }
 
