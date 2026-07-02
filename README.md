@@ -1,4 +1,4 @@
-# MacNotch (personal build)
+# NotchApple (personal build)
 
 A native macOS notch dashboard: a borderless panel that hugs the MacBook notch and
 expands on hover into a stack of modules — **Now Playing**, **Calendar**,
@@ -15,11 +15,11 @@ Built entirely with Swift Package Manager — **no Xcode required**.
 
 ```bash
 make test     # build and run the unit suite (swift run MacNotchTests)
-make run      # build, package MacNotch.app, and launch it
+make run      # build, package NotchApple.app, and launch it
 make package  # just build the signed .app into ./build
 ```
 
-`make run` launches MacNotch as a **menu-bar agent** (no Dock icon). Use the
+`make run` launches NotchApple as a **menu-bar agent** (no Dock icon). Use the
 menu-bar icon for **Open Settings…**, **Toggle Notch**, and **Quit**.
 
 ## Public identity checks
@@ -72,14 +72,14 @@ pure logic headlessly):
 - [ ] Calendar shows today's events after access is granted; "Grant access" opens System Settings when denied.
 - [ ] Battery / CPU / RAM update live.
 - [ ] Drag a file onto the expanded panel → a chip appears; it survives a relaunch; drag the chip back into Finder.
-- [ ] Settings toggles/reorders modules live; "Launch at login" registers MacNotch in System Settings → General → Login Items.
+- [ ] Settings toggles/reorders modules live; "Launch at login" registers NotchApple in System Settings → General → Login Items.
 
 ## Architecture
 
 Design spec: [`docs/superpowers/specs/2026-06-22-macnotch-phase1-design.md`](docs/superpowers/specs/2026-06-22-macnotch-phase1-design.md).
 
-All code lives in the `MacNotchKit` library; the `MacNotch` executable is a thin
-entry point. Each feature conforms to the `NotchModule` protocol, and the window
+All code lives in the `MacNotchKit` library; the internal `MacNotch` executable
+target is a thin entry point. Each feature conforms to the `NotchModule` protocol, and the window
 renders whatever modules are enabled, in order — adding a module is drop-in.
 
 This is **Phase 1**. Later modules (weather, Pomodoro, GitHub, notifications,
