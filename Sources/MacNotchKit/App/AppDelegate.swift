@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "system":       "Battery & System",
         "shelf":        "Drop Shelf",
         "code":         "Code",
+        "commandPalette": "Command Palette",
         "stocks":       "Stocks",
         "clipboard":    "Clipboard",
         "reminders":    "Reminders",
@@ -95,6 +96,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(SystemModule())
         registry.register(LauncherModule())
         registry.register(CodeModule())
+        registry.register(CommandPaletteModule(commands: defaultCommands()))
         registry.register(StocksModule())
 
         let customize = CustomizeModule(
@@ -105,5 +107,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         customizeModule = customize
         registry.register(customize)
+    }
+
+    private func defaultCommands() -> [CommandPaletteCommand] {
+        var commands = [
+            CommandPaletteCommand(id: "open-settings", title: "Open Settings", keywords: ["preferences"]) { [weak self] in
+                self?.settingsWindowController?.show()
+            },
+            CommandPaletteCommand(id: "toggle-notch", title: "Toggle Notch", keywords: ["panel", "dashboard"]) { [weak self] in
+                self?.notchWindow?.toggle()
+            }
+        ]
+        for profile in WorkspaceProfile.defaults {
+            commands.append(CommandPaletteCommand(
+                id: "workspace-\(profile.id)",
+                title: "Use \(profile.name) Workspace",
+                keywords: ["workspace", "profile", profile.id]
+            ) { [weak self] in
+                guard let self else { return }
+                var current = self.settings.settings
+                profile.apply(to: &current)
+                self.applySettings(current)
+            })
+        }
+        return commands
     }
 }

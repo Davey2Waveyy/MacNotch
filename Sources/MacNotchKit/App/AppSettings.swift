@@ -61,6 +61,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
             ModuleSetting(id: "shelf",        isEnabled: true),
             // Page 2 — Code CLI (solo tile, fills full width).
             ModuleSetting(id: "code",         isEnabled: true),
+            ModuleSetting(id: "commandPalette", isEnabled: true),
             // Page 3 — Stocks (solo tile, fills full width).
             ModuleSetting(id: "stocks",       isEnabled: true),
             // Available via Settings but hidden by default.

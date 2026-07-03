@@ -29,5 +29,6 @@ timerSchedulerTests()
 onboardingStateTests()
 featureFlagsTests()
 workspaceProfileTests()
+commandPaletteTests()
 
 exit(Int32(TestRunner.shared.runAll()))

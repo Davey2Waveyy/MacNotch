@@ -55,13 +55,13 @@ func settingsStoreTests() {
         expectEqual(
             store.settings.modules.map(\.id),
             ["system", "media", "quickToggles", "timers", "actions", "shelf", "code",
-             "stocks", "screenTime", "pomodoro", "reminders", "calendar", "clipboard", "launcher",
+             "commandPalette", "stocks", "screenTime", "pomodoro", "reminders", "calendar", "clipboard", "launcher",
              "customize"],
             "known persisted order preserved and missing defaults appended"
         )
         expectEqual(
             store.settings.modules.map(\.isEnabled),
-            [false, true, true, true, true, true, true, true, false, false, false, false, false, false, false],
+            [false, true, true, true, true, true, true, true, true, false, false, false, false, false, false, false],
             "persisted enablement preserved and appended defaults keep default enablement"
         )
         expectEqual(store.settings.launchAtLogin, true, "other persisted settings survive merge")
