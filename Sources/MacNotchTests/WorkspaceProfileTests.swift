@@ -21,4 +21,17 @@ func workspaceProfileTests() {
         expect(settings.modules.first { $0.id == "code" }?.isEnabled == true, "code enabled")
         expect(settings.modules.first { $0.id == "stocks" }?.isEnabled == false, "stocks disabled")
     }
+
+    test("every default profile keeps recovery surfaces enabled") {
+        for profile in WorkspaceProfile.defaults {
+            expect(profile.enabledModuleIDs.contains("customize"), "\(profile.id) keeps customize")
+            expect(profile.enabledModuleIDs.contains("commandPalette"), "\(profile.id) keeps commandPalette")
+        }
+    }
+
+    test("default profiles map to expected appearance presets") {
+        let profiles = WorkspaceProfile.defaults
+        expectEqual(profiles[0].appearance.preset, .terminal, "coding preset")
+        expectEqual(profiles[2].appearance.preset, .aurora, "music preset")
+    }
 }

@@ -20,11 +20,11 @@ public struct WorkspaceProfile: Codable, Equatable, Identifiable, Sendable {
     }
 
     public static let defaults: [WorkspaceProfile] = [
-        WorkspaceProfile(id: "coding", name: "Coding", defaultExpansionMode: .dashboard, appearance: .defaults(preset: .terminal, accentColor: .green), enabledModuleIDs: ["code", "timers", "shelf", "customize"]),
-        WorkspaceProfile(id: "focus", name: "Focus", defaultExpansionMode: .compact, appearance: .defaults(preset: .minimalGraphite), enabledModuleIDs: ["timers", "pomodoro", "reminders", "calendar", "customize"]),
-        WorkspaceProfile(id: "music", name: "Music", defaultExpansionMode: .wideBar, appearance: .defaults(preset: .aurora, accentColor: .purple), enabledModuleIDs: ["media", "quickToggles", "shelf", "customize"]),
-        WorkspaceProfile(id: "meetings", name: "Meetings", defaultExpansionMode: .dashboard, appearance: .defaults, enabledModuleIDs: ["calendar", "reminders", "timers", "quickToggles", "customize"]),
-        WorkspaceProfile(id: "personal", name: "Personal", defaultExpansionMode: .dashboard, appearance: .defaults(preset: .studioGlass, accentColor: .amber), enabledModuleIDs: ["media", "stocks", "screenTime", "launcher", "customize"])
+        WorkspaceProfile(id: "coding", name: "Coding", defaultExpansionMode: .dashboard, appearance: .defaults(preset: .terminal, accentColor: .green), enabledModuleIDs: ["code", "timers", "shelf", "customize", "commandPalette"]),
+        WorkspaceProfile(id: "focus", name: "Focus", defaultExpansionMode: .compact, appearance: .defaults(preset: .minimalGraphite), enabledModuleIDs: ["timers", "pomodoro", "reminders", "calendar", "customize", "commandPalette"]),
+        WorkspaceProfile(id: "music", name: "Music", defaultExpansionMode: .wideBar, appearance: .defaults(preset: .aurora, accentColor: .purple), enabledModuleIDs: ["media", "quickToggles", "shelf", "customize", "commandPalette"]),
+        WorkspaceProfile(id: "meetings", name: "Meetings", defaultExpansionMode: .dashboard, appearance: .defaults, enabledModuleIDs: ["calendar", "reminders", "timers", "quickToggles", "customize", "commandPalette"]),
+        WorkspaceProfile(id: "personal", name: "Personal", defaultExpansionMode: .dashboard, appearance: .defaults(preset: .studioGlass, accentColor: .amber), enabledModuleIDs: ["media", "stocks", "screenTime", "launcher", "customize", "commandPalette"])
     ]
 
     public func apply(to settings: inout AppSettings) {
