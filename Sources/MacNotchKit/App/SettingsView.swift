@@ -87,6 +87,7 @@ struct SettingsView: View {
                 )) {
                     Text("Dashboard").tag(ExpansionMode.dashboard)
                     Text("Wide Bar").tag(ExpansionMode.wideBar)
+                    Text("Compact").tag(ExpansionMode.compact)
                 }
                 Text("Hovering always shows the compact preview.")
                     .font(.caption)

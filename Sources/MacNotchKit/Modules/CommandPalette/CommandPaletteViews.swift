@@ -21,12 +21,18 @@ struct CommandPaletteTile: View {
                     .accessibilityLabel("No matching commands")
             } else {
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    let rowSpacing: CGFloat = 4
+                    VStack(alignment: .leading, spacing: rowSpacing) {
                         ForEach(results, id: \.id) { command in
                             Button(command.title) { command.action() }
                                 .buttonStyle(.plain)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(.white.opacity(0.86))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                // Self-limiting inset: widens the tap target without
+                                // reaching past the midpoint of the row spacing, so
+                                // adjacent rows' hit areas never overlap.
+                                .contentShape(Rectangle().inset(by: -rowSpacing / 2))
                                 .accessibilityLabel(command.title)
                         }
                     }

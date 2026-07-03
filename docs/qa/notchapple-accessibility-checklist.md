@@ -23,7 +23,7 @@
 - [ ] Dashboard page navigation works with visible focus.
 - [ ] Command Palette opens with its configured shortcut after Task 14.
 - [ ] Escape closes the expanded notch panel when it is key (after a click opened it). (`NotchWindow.swift` `cancelOperation`)
-- [ ] Escape while a text field is focused (Stocks ticker input, Reminders input): verify whether the
+- [ ] Escape while a text field is focused (Stocks ticker input, Reminders input, Command Palette search field): verify whether the
       field editor consumes it or the whole panel collapses — behavior is currently unpinned; record
       the observed behavior and whether it feels correct.
 - [ ] Onboarding primary button activates with Return. (`OnboardingView.swift` `.keyboardShortcut(.defaultAction)`)
