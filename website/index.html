@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Topsoil. Your notch is now the best part of your screen.</title>
+<meta name="description" content="Topsoil turns the MacBook camera cutout into a live dashboard for coding agents, music, timers, and files. Native SwiftUI, local by default."/>
+<meta name="theme-color" content="#f6f7f9"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Topsoil"/>
+<meta property="og:title" content="Topsoil"/>
+<meta property="og:description" content="Your notch is now the best part of your screen. A live Mac dashboard for coding agents, music, timers, and files."/>
+<meta property="og:image" content="assets/demo_poster.jpg"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Topsoil"/>
+<meta name="twitter:description" content="Your notch is now the best part of your screen."/>
+<meta name="twitter:image" content="assets/demo_poster.jpg"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Topsoil",
+  "operatingSystem": "macOS 14.0 or later",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "Turns the MacBook camera cutout into a live dashboard for coding agents, music, timers, and files. Native Swift 6 and SwiftUI, no Electron, local by default.",
+  "image": "assets/demo_poster.jpg",
+  "downloadUrl": "https://github.com/Davey2Waveyy/MacNotch/releases/latest",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Does Topsoil work over fullscreen apps?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Yes. An auxiliary panel shows the surface above a fullscreen Space, so the notch stays useful while you present or watch."}},
+    {"@type": "Question", "name": "Is anything uploaded anywhere?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Your content never leaves your Mac: shelf files stay on disk, settings stay local, and there is no account or telemetry. Optional modules fetch public data only, such as stock quotes, GitHub trends, and lyrics."}},
+    {"@type": "Question", "name": "Can it block the camera or the privacy light?",
+     "acceptedAnswer": {"@type": "Answer", "text": "No. The panel reads the exact safe area insets and paints around the hardware, never over it."}},
+    {"@type": "Question", "name": "What if my Mac has no notch?",
+     "acceptedAnswer": {"@type": "Answer", "text": "The panel docks to the top center of any display, external monitors included. The notch is a home, not a requirement."}},
+    {"@type": "Question", "name": "What does the Code page need?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Any of the Claude, Codex, or Cursor command line tools on your PATH. Panes show a ready state until you run one."}}
+  ]
+}
+</script>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="assets/touch-icon.png"/>
+<link rel="stylesheet" href="assets/tw.css"/>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+  /* ------------------------------------------------------------------
+     Topsoil, light cinematic system.
+     One theme (light, locked per approved direction), one accent.
+     Motion: IntersectionObserver reveals + CSS transforms as the base;
+     a GSAP scrub layer (hero drift, frame parallax, chip stagger) sits on
+     top when the CDN arrives, and the page is complete without it.
+     ------------------------------------------------------------------ */
+  :root{
+    --ink: #18181b;
+    --body: #52525b;
+    --mute: #8e8e96;
+    --hair: rgba(24,24,27,.08);
+    --accent: #15803d;
+    --surface: #f6f7f9;
+    --surface-2: #eef0f3;
+  }
+  html{ scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior: auto; } }
+
+  body{
+    background: var(--surface);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .mono{ font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; }
+
+  /* Frosted cinematic canvas: monochrome light washes, no color orbs. */
+  .canvas-sheen{
+    background:
+      radial-gradient(1100px 520px at 50% -8%, rgba(255,255,255,.9), transparent 62%),
+      linear-gradient(178deg, #fafbfc 0%, #f2f3f6 44%, #eceef2 100%);
+  }
+  .section-tint{ background: linear-gradient(180deg, #f2f4f7 0%, #f6f7f9 100%); }
+  /* Soft leaf wash behind the garden section only. */
+  .eco-tint{ background: linear-gradient(180deg, rgba(21,128,61,.055), rgba(21,128,61,0) 72%); }
+
+  .hairline{ border-color: var(--hair); }
+  .ink{ color: var(--ink); } .body-c{ color: var(--body); } .mute-c{ color: var(--mute); }
+  .accent-c{ color: var(--accent); }
+
+  /* Buttons: one radius system (pill for interactive, 16-20px for frames). */
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+    height:2.9rem; padding:0 1.4rem; border-radius:9999px;
+    font-size:.925rem; font-weight:600; white-space:nowrap;
+    transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, background-color .18s ease;
+  }
+  .btn:active{ transform: scale(.98); }
+  .btn-primary{ background: var(--ink); color:#fff; box-shadow: 0 1px 2px rgba(24,24,27,.18), 0 6px 18px rgba(24,24,27,.14); }
+  .btn-ghost{ background: rgba(255,255,255,.6); color: var(--ink); border:1px solid var(--hair); backdrop-filter: blur(8px); }
+  /* Hover-only lift, gated so a tap on touch doesn't leave the button stuck raised. */
+  @media (hover: hover) and (pointer: fine){
+    .btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 2px 4px rgba(24,24,27,.18), 0 10px 26px rgba(24,24,27,.18); }
+    .btn-ghost:hover{ background: rgba(255,255,255,.9); transform: translateY(-1px); }
+  }
+
+  /* Glass navigation (web frosted-glass approximation, not Apple Liquid Glass). */
+  #nav{
+    background: rgba(250,251,252,.72);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s ease, box-shadow .3s ease;
+  }
+  #nav.scrolled{ border-bottom-color: var(--hair); box-shadow: 0 6px 24px rgba(24,24,27,.05); }
+  @media (prefers-reduced-transparency: reduce){
+    #nav{ background:#fafbfc; -webkit-backdrop-filter:none; backdrop-filter:none; }
+  }
+
+  /* Floating frames around real captures. */
+  .frame{
+    border-radius: 18px;
+    border: 1px solid rgba(24,24,27,.10);
+    box-shadow:
+      0 1px 2px rgba(24,24,27,.06),
+      0 12px 32px rgba(24,24,27,.10),
+      0 32px 80px rgba(24,24,27,.10);
+    overflow: hidden;
+    background: #101014;
+  }
+
+  /* MacBook display top: dark bezel, screen inside, melts into the fold. */
+  .bezel{
+    border-radius: 26px 26px 0 0;
+    border: 1px solid #2a2a30;
+    border-bottom: none;
+    background: linear-gradient(180deg, #3a3a40, #17171b 22%);
+    padding: 10px 10px 0 10px;
+    box-shadow: 0 24px 80px rgba(24,24,27,.22), 0 4px 16px rgba(24,24,27,.12);
+  }
+  .bezel img{
+    display:block; width:100%;
+    border-radius: 17px 17px 0 0;
+    -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 78%, transparent 100%);
+  }
+
+  /* Reveal system: IntersectionObserver adds .in; children stagger via --d. */
+  .rv{ opacity:1; transform:none; filter:none; }
+  @media (prefers-reduced-motion: no-preference){
+    .rv{
+      opacity:0; transform: translateY(30px) scale(.988); filter: blur(8px);
+      transition: opacity .85s cubic-bezier(.16,1,.3,1), transform .85s cubic-bezier(.16,1,.3,1), filter .85s cubic-bezier(.16,1,.3,1);
+      transition-delay: var(--d, 0ms);
+      will-change: transform, opacity, filter;
+    }
+    .rv.in{ opacity:1; transform:none; filter: blur(0); }
+
+    .floaty{ animation: floaty 8s ease-in-out infinite; }
+    @keyframes floaty{
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-9px); }
+    }
+    .tiltable{ transition: transform .5s cubic-bezier(.16,1,.3,1), box-shadow .5s ease; }
+    @media (hover: hover) and (pointer: fine){
+      .tiltable:hover{ transform: translateY(-6px) scale(1.008); }
+    }
+  }
+
+  /* Interactive deck: notch pill toggles the drawer, tabs crossfade captures. */
+  .deck-drawer{ display:grid; grid-template-rows:1fr; transition: grid-template-rows .5s cubic-bezier(.32,.72,0,1); }
+  .deck-inner{ min-height:0; overflow:hidden; transform-origin: top center;
+    transition: transform .5s cubic-bezier(.32,.72,0,1), opacity .4s cubic-bezier(.32,.72,0,1), filter .5s cubic-bezier(.32,.72,0,1); }
+  [data-open="false"] .deck-drawer{ grid-template-rows:0fr; }
+  [data-open="false"] .deck-inner{ transform: scale(.965); opacity:0; filter: blur(6px); }
+  .deck-stage{ position:relative; aspect-ratio: 2680/528; border-radius:12px; overflow:hidden; background:#101014; }
+  .deck-img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transform: scale(1.012); filter: blur(8px);
+    transition: opacity .45s cubic-bezier(.16,1,.3,1), transform .45s cubic-bezier(.16,1,.3,1), filter .45s cubic-bezier(.16,1,.3,1);
+    pointer-events:none;
+  }
+  .deck-img.is-active{ opacity:1; transform:none; filter:none; }
+  .tab{
+    padding:.45rem 1.05rem; border-radius:9999px; font-size:.875rem; font-weight:600; color:var(--body);
+    transition: background-color .25s ease, color .25s ease, box-shadow .25s ease;
+  }
+  .tab[aria-selected="true"]{ background:#fff; color:var(--ink); box-shadow: 0 1px 2px rgba(24,24,27,.08), 0 4px 14px rgba(24,24,27,.08); }
+  .notch-pill{
+    display:block; width:148px; height:26px; background:#0a0a0c; border-radius:0 0 12px 12px;
+    margin:0 auto; cursor:pointer; position:relative; border:none;
+    transition: transform .25s cubic-bezier(.16,1,.3,1);
+  }
+  @media (hover: hover) and (pointer: fine){
+    .notch-pill:hover{ transform: scaleX(1.05); }
+  }
+  .notch-pill:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* FAQ: height-to-auto where supported, graceful elsewhere. */
+  details{ interpolate-size: allow-keywords; }
+  details .faq-body{ opacity:.0; transform: translateY(-4px); }
+  details[open] .faq-body{ opacity:1; transform:none; transition: opacity .35s ease .05s, transform .35s ease .05s; }
+  details summary{ list-style:none; cursor:pointer; }
+  details summary::-webkit-details-marker{ display:none; }
+  .faq-x{ transition: transform .3s cubic-bezier(.16,1,.3,1); }
+  details[open] .faq-x{ transform: rotate(45deg); }
+  @media (prefers-reduced-motion: reduce){
+    details .faq-body, details[open] .faq-body{ transition:none; opacity:1; transform:none; }
+  }
+
+  /* Hero headline words cascade in as the reveal lands. */
+  @media (prefers-reduced-motion: no-preference){
+    .ws{ display:inline-block; opacity:0; transform: translateY(.5em); filter: blur(6px);
+         transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1), filter .7s cubic-bezier(.16,1,.3,1);
+         transition-delay: var(--wd, 0ms); }
+    .rv.in .ws{ opacity:1; transform:none; filter: blur(0); }
+  }
+
+  /* Sliding indicator behind the active page tab. */
+  .tabbar{ position:relative; }
+  .tab-ind{ position:absolute; top:4px; bottom:4px; left:0; width:0;
+    background:#fff; border-radius:9999px;
+    box-shadow: 0 1px 2px rgba(24,24,27,.08), 0 4px 14px rgba(24,24,27,.08);
+    transition: transform .35s cubic-bezier(.32,.72,0,1), width .35s cubic-bezier(.32,.72,0,1); }
+  .tab{ position:relative; z-index:1; }
+  .tab[aria-selected="true"]{ background:transparent; box-shadow:none; color:var(--ink); }
+  @media (prefers-reduced-motion: reduce){ .tab-ind{ transition:none; } }
+
+  /* Pointer tilt on the hero bezel (hover devices only). */
+  .tilt-wrap{ perspective: 1200px; }
+  .tilt{ will-change: transform; transition: transform .5s cubic-bezier(.16,1,.3,1); }
+</style>
+</head>
+
+<body class="canvas-sheen min-h-[100dvh]">
+<div id="nav-sentinel" aria-hidden="true"></div>
+
+<!-- ============================ NAV ============================ -->
+<header id="nav" class="fixed top-0 inset-x-0 z-50">
+  <nav class="max-w-6xl mx-auto h-16 px-5 flex items-center justify-between" aria-label="Main">
+    <a href="#top" class="flex items-center gap-2.5 font-semibold tracking-tight text-[1.02rem] ink">
+      <svg viewBox="0 0 32 32" width="21" height="21" aria-hidden="true"><path fill="#18181b" fill-rule="evenodd" d="M10 2 H22 A8 8 0 0 1 30 10 V22 A8 8 0 0 1 22 30 H10 A8 8 0 0 1 2 22 V10 A8 8 0 0 1 10 2 Z M10 2 L10 4.5 Q10 7 12.5 7 L19.5 7 Q22 7 22 4.5 L22 2 Z"/><rect x="9" y="10.5" width="14" height="3.2" rx="1.6" fill="#15803d"/></svg>
+      Topsoil
+    </a>
+    <div class="hidden md:flex items-center gap-7 text-[.925rem] font-medium body-c">
+      <a href="#pages" class="hover:text-zinc-950 transition-colors">Pages</a>
+      <a href="#why" class="hover:text-zinc-950 transition-colors">Why</a>
+      <a href="#specs" class="hover:text-zinc-950 transition-colors">Specs</a>
+      <a href="#faq" class="hover:text-zinc-950 transition-colors">FAQ</a>
+    </div>
+    <a href="#get" class="btn btn-primary !h-10 !px-5 text-sm">Download for Mac</a>
+  </nav>
+</header>
+
+<!-- ============================ HERO ============================ -->
+<main id="top">
+<section class="relative pt-24 md:pt-28 overflow-hidden">
+  <div class="max-w-4xl mx-auto px-5 text-center">
+    <p class="rv inline-flex items-center rounded-full border hairline bg-white/70 px-4 py-1.5 mono text-[.72rem] font-semibold tracking-[.14em] text-zinc-500 uppercase">
+      For Mac · macOS 14 and later
+    </p>
+    <h1 id="hero-h1" class="rv mt-6 text-[2.6rem] leading-[1.04] md:text-6xl font-semibold tracking-tighter text-balance" style="--d:70ms">
+      Your notch is now the best part of your screen.
+    </h1>
+    <p class="rv mt-5 text-lg md:text-xl body-c leading-relaxed max-w-2xl mx-auto" style="--d:140ms">
+      Topsoil turns the camera cutout into a live dashboard for coding agents, music, timers, and files.
+    </p>
+    <div class="rv mt-8 flex items-center justify-center gap-3" style="--d:210ms">
+      <a href="#get" class="btn btn-primary">Download for Mac</a>
+      <a href="#demo" class="btn btn-ghost">Watch the demo</a>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-5 mt-14 md:mt-16 tilt-wrap">
+    <div class="rv floaty" style="--d:280ms">
+      <div class="bezel tilt" id="hero-bezel">
+        <img src="assets/hero_screen.webp" width="2740" height="656" fetchpriority="high"
+             alt="Top of a MacBook display with the Topsoil dashboard expanded below the notch, showing Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf"/>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ DEMO ============================ -->
+<section id="demo" class="pt-24 md:pt-36 pb-8">
+  <div class="max-w-5xl mx-auto px-5">
+    <div class="max-w-2xl">
+      <h2 class="rv text-3xl md:text-5xl font-semibold tracking-tighter">Here's the whole thing in eleven seconds.</h2>
+      <p class="rv mt-4 text-lg body-c leading-relaxed" style="--d:80ms">
+        One click on the notch. The panel springs open, pages slide, and it folds back into the hardware.
+      </p>
+    </div>
+    <figure class="rv frame tiltable mt-10" style="--d:160ms">
+      <video autoplay muted loop playsinline preload="metadata" poster="assets/demo_poster.jpg" class="w-full block"
+             aria-label="Screen recording of the Topsoil panel expanding from the notch, flipping through its pages, and collapsing">
+        <source src="assets/demo.mp4" type="video/mp4"/>
+      </video>
+      <figcaption class="sr-only">Real capture of the panel opening, paging, and collapsing.</figcaption>
+    </figure>
+    <p class="rv mt-4 mono text-[.78rem] mute-c" style="--d:220ms">Real footage. No mockups.</p>
+  </div>
+</section>
+
+<!-- ============================ PAGES / DECK ============================ -->
+<section id="pages" class="pt-24 md:pt-32">
+  <div class="max-w-5xl mx-auto px-5 text-center">
+    <h2 class="rv text-3xl md:text-5xl font-semibold tracking-tighter">Everything, one glance away.</h2>
+    <p class="rv mt-4 text-lg body-c max-w-xl mx-auto" style="--d:80ms">
+      Three pages ship by default. Click the notch below to fold the panel away and back.
+    </p>
+
+    <div class="rv tabbar mt-9 inline-flex items-center gap-1 rounded-full border hairline bg-zinc-200/50 p-1" role="tablist" aria-label="Default pages" style="--d:140ms">
+      <span class="tab-ind" id="tab-ind" aria-hidden="true"></span>
+      <button class="tab" role="tab" id="t-quick"  aria-selected="true"  data-tab="quick">Quick</button>
+      <button class="tab" role="tab" id="t-code"   aria-selected="false" data-tab="code">Code</button>
+      <button class="tab" role="tab" id="t-stocks" aria-selected="false" data-tab="stocks">Stocks</button>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-5 mt-8">
+    <div class="rv rounded-[22px] border hairline bg-white/60 p-3 md:p-5 shadow-[0_18px_60px_rgba(24,24,27,.08)]" data-deck data-open="true" style="--d:200ms">
+      <button class="notch-pill" id="deck-notch" aria-expanded="true" aria-controls="deck-panel" title="Click to fold the panel"
+              aria-label="Toggle the notch panel"></button>
+      <div class="deck-drawer mt-3">
+        <div class="deck-inner">
+          <div class="deck-stage" id="deck-panel" role="tabpanel">
+            <img class="deck-img is-active" data-tab="quick" src="assets/panel_quick.webp"
+                 alt="Topsoil Quick page with Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf" loading="lazy" decoding="async"/>
+            <img class="deck-img" data-tab="code" src="assets/panel_code.webp"
+                 alt="Topsoil Code page with Claude, Codex, and Cursor command line panes" loading="lazy" decoding="async"/>
+            <img class="deck-img" data-tab="stocks" src="assets/panel_stocks.webp"
+                 alt="Topsoil Stocks page listing tickers with sparklines, trending repositories, and installed skills" loading="lazy" decoding="async"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="text-center mt-5 body-c text-[.95rem]" id="deck-caption">
+      Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf for local files.
+    </p>
+  </div>
+</section>
+
+<!-- ============================ WHY / FEATURES ============================ -->
+<section id="why" class="pt-24 md:pt-32">
+  <div class="max-w-6xl mx-auto px-5 grid md:grid-cols-12 gap-10 md:gap-12 items-center">
+    <div class="md:col-span-5">
+      <h2 class="rv text-3xl md:text-4xl font-semibold tracking-tighter">Three agents, one bar.</h2>
+      <p class="rv mt-4 text-lg body-c leading-relaxed" style="--d:80ms">
+        Claude, Codex, and Cursor run in live terminal panes docked inside the notch. Start a run and glance up for status.
+      </p>
+    </div>
+    <div class="md:col-span-7">
+      <div class="rv frame tiltable" style="--d:140ms">
+        <img src="assets/panel_code.webp" alt="Code page with three command line panes, each showing a ready state and a run button" loading="lazy" decoding="async" class="w-full block"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-5 mt-20 md:mt-28 grid md:grid-cols-12 gap-10 md:gap-12 items-center">
+    <div class="md:col-span-6 md:order-2 md:pl-6">
+      <h2 class="rv text-3xl md:text-4xl font-semibold tracking-tighter">It opens when you reach for it.</h2>
+      <p class="rv mt-4 text-lg body-c leading-relaxed" style="--d:80ms">
+        Hover the notch and a compact panel drops with music, files, and your next timer. Move away and it folds back into the bezel.
+      </p>
+    </div>
+    <div class="md:col-span-6 md:order-1">
+      <div class="rv floaty frame tiltable max-w-[19rem] mx-auto" style="--d:140ms">
+        <img src="assets/compact.webp" width="596" height="1024" alt="Compact hover panel below the notch with a media row, file shelf, code card, and a dashboard button" loading="lazy" decoding="async" class="w-full block"/>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Notch Garden -->
+<section class="pt-24 md:pt-32 eco-tint">
+  <div class="max-w-2xl mx-auto px-5 text-center">
+    <div class="rv frame tiltable max-w-md mx-auto">
+      <img src="assets/garden.webp" width="580" height="304"
+           alt="Notch Garden card with a pixel art blooming flower, water level and growth progress bars, and Water and Fertilize buttons"
+           loading="lazy" decoding="async" class="w-full block"/>
+    </div>
+    <h2 class="rv mt-10 text-3xl md:text-4xl font-semibold tracking-tighter" style="--d:80ms">Topsoil grows a garden in your notch.</h2>
+    <p class="rv mt-4 text-lg body-c leading-relaxed" style="--d:140ms">
+      A pixel plant lives beside your terminal panes. It grows while you code, three times faster while your agents run, and it wilts if you disappear. Water it. Ship things.
+    </p>
+  </div>
+</section>
+
+<!-- Wide bar: full-width strip -->
+<section class="pt-24 md:pt-32">
+  <div class="max-w-3xl mx-auto px-5 text-center">
+    <h2 class="rv text-3xl md:text-4xl font-semibold tracking-tighter">Or stretch it across the top.</h2>
+    <p class="rv mt-4 text-lg body-c" style="--d:80ms">
+      Wide bar mode turns the panel into a full width status strip: now playing, shelf count, and your repo at a glance.
+    </p>
+  </div>
+  <div class="rv mt-10" style="--d:160ms">
+    <img src="assets/widebar.webp" alt="Full width wide bar strip across the top of the screen showing file count, current project, and command palette entry"
+         loading="lazy" decoding="async" class="w-full block" style="-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);"/>
+  </div>
+</section>
+
+<!-- ============================ MODULES ============================ -->
+<section class="section-tint mt-24 md:mt-32 py-20 md:py-28 border-y hairline">
+  <div class="max-w-6xl mx-auto px-5 grid md:grid-cols-12 gap-12">
+    <div class="md:col-span-5">
+      <h2 class="rv text-3xl md:text-4xl font-semibold tracking-tighter text-balance">Three pages by default. More when you want them.</h2>
+      <div class="rv mt-8 space-y-6" style="--d:100ms">
+        <div class="flex gap-4 items-baseline">
+          <span class="mono text-[.8rem] font-semibold accent-c w-14 shrink-0">Quick</span>
+          <p class="body-c">Now Playing, Quick Toggles, Timers, Actions, Drop Shelf.</p>
+        </div>
+        <div class="flex gap-4 items-baseline border-t hairline pt-6">
+          <span class="mono text-[.8rem] font-semibold accent-c w-14 shrink-0">Code</span>
+          <p class="body-c">Claude, Codex, and Cursor terminal panes with a pinned project.</p>
+        </div>
+        <div class="flex gap-4 items-baseline border-t hairline pt-6">
+          <span class="mono text-[.8rem] font-semibold accent-c w-14 shrink-0">Stocks</span>
+          <p class="body-c">Tickers with sparklines, trending repositories, installed skills.</p>
+        </div>
+      </div>
+    </div>
+    <div class="md:col-span-7 md:pl-8">
+      <p class="rv body-c" style="--d:140ms">Optional modules turn on from Settings and slot into the same pages:</p>
+      <div class="rv mt-6 flex flex-wrap gap-2.5" id="moduleChips" style="--d:200ms">
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Screen Time</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Pomodoro</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Reminders</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Calendar</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Clipboard</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Battery and System</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Launcher</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Command Palette</span>
+        <span class="rounded-full border hairline bg-white/80 px-4 py-2 text-sm font-medium">Customize</span>
+      </div>
+      <p class="rv mt-8 body-c max-w-md" style="--d:260ms">
+        The panel reads the screen safe area, hugs the hardware exactly, and never covers the camera or the privacy light.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SPECS ============================ -->
+<section id="specs" class="pt-24 md:pt-32">
+  <div class="max-w-4xl mx-auto px-5">
+    <h2 class="rv text-3xl md:text-5xl font-semibold tracking-tighter">Honest specs.</h2>
+    <div class="mt-12 grid md:grid-cols-3 gap-10 md:gap-8">
+      <div class="rv" style="--d:60ms">
+        <h3 class="font-semibold text-lg tracking-tight">Requirements</h3>
+        <dl class="mt-4 space-y-3 text-[.95rem]">
+          <div class="flex justify-between gap-4"><dt class="body-c">macOS</dt><dd class="mono ink">14 Sonoma or later</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Build</dt><dd class="mono ink">Apple silicon</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Notch</dt><dd class="mono ink">Optional</dd></div>
+        </dl>
+      </div>
+      <div class="rv" style="--d:120ms">
+        <h3 class="font-semibold text-lg tracking-tight">Footprint</h3>
+        <dl class="mt-4 space-y-3 text-[.95rem]">
+          <div class="flex justify-between gap-4"><dt class="body-c">Stack</dt><dd class="mono ink">Swift 6, SwiftUI</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Runtime</dt><dd class="mono ink">No Electron</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Dock icon</dt><dd class="mono ink">None, menu bar app</dd></div>
+        </dl>
+      </div>
+      <div class="rv" style="--d:180ms">
+        <h3 class="font-semibold text-lg tracking-tight">Privacy</h3>
+        <dl class="mt-4 space-y-3 text-[.95rem]">
+          <div class="flex justify-between gap-4"><dt class="body-c">Your files</dt><dd class="mono ink">Stay local</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Accounts</dt><dd class="mono ink">None</dd></div>
+          <div class="flex justify-between gap-4"><dt class="body-c">Permissions</dt><dd class="mono ink">Asked on first use</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FAQ ============================ -->
+<section id="faq" class="pt-24 md:pt-32">
+  <div class="max-w-3xl mx-auto px-5">
+    <h2 class="rv text-3xl md:text-5xl font-semibold tracking-tighter">Common questions</h2>
+    <div class="mt-10 space-y-3">
+      <details class="rv rounded-2xl border hairline bg-white/70 px-6 py-5" style="--d:60ms">
+        <summary class="flex items-center justify-between gap-4 font-semibold text-[1.02rem]">
+          Does it work over fullscreen apps?
+          <span class="faq-x text-xl mute-c" aria-hidden="true">+</span>
+        </summary>
+        <p class="faq-body mt-3 body-c leading-relaxed">Yes. An auxiliary panel shows the surface above a fullscreen Space, so the notch stays useful while you present or watch.</p>
+      </details>
+      <details class="rv rounded-2xl border hairline bg-white/70 px-6 py-5" style="--d:110ms">
+        <summary class="flex items-center justify-between gap-4 font-semibold text-[1.02rem]">
+          Is anything uploaded anywhere?
+          <span class="faq-x text-xl mute-c" aria-hidden="true">+</span>
+        </summary>
+        <p class="faq-body mt-3 body-c leading-relaxed">Your content never leaves your Mac: shelf files stay on disk, settings stay local, and there is no account or telemetry. Optional modules fetch public data only, such as stock quotes, GitHub trends, and lyrics. Details on the <a href="privacy.html" class="accent-c">privacy page</a>.</p>
+      </details>
+      <details class="rv rounded-2xl border hairline bg-white/70 px-6 py-5" style="--d:160ms">
+        <summary class="flex items-center justify-between gap-4 font-semibold text-[1.02rem]">
+          Can it block the camera or the privacy light?
+          <span class="faq-x text-xl mute-c" aria-hidden="true">+</span>
+        </summary>
+        <p class="faq-body mt-3 body-c leading-relaxed">No. The panel reads the exact safe area insets and paints around the hardware, never over it.</p>
+      </details>
+      <details class="rv rounded-2xl border hairline bg-white/70 px-6 py-5" style="--d:210ms">
+        <summary class="flex items-center justify-between gap-4 font-semibold text-[1.02rem]">
+          What if my Mac has no notch?
+          <span class="faq-x text-xl mute-c" aria-hidden="true">+</span>
+        </summary>
+        <p class="faq-body mt-3 body-c leading-relaxed">The panel docks to the top center of any display, external monitors included. The notch is a home, not a requirement.</p>
+      </details>
+      <details class="rv rounded-2xl border hairline bg-white/70 px-6 py-5" style="--d:260ms">
+        <summary class="flex items-center justify-between gap-4 font-semibold text-[1.02rem]">
+          What does the Code page need?
+          <span class="faq-x text-xl mute-c" aria-hidden="true">+</span>
+        </summary>
+        <p class="faq-body mt-3 body-c leading-relaxed">Any of the Claude, Codex, or Cursor command line tools on your PATH. Panes show a ready state until you run one.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ GET ============================ -->
+<section id="get" class="pt-28 md:pt-36 pb-24 md:pb-28">
+  <div class="max-w-3xl mx-auto px-5 text-center">
+    <h2 class="rv text-4xl md:text-6xl font-semibold tracking-tighter">Put the notch to work.</h2>
+    <div class="rv mt-9" style="--d:100ms">
+      <a href="https://github.com/Davey2Waveyy/MacNotch/releases/latest" target="_blank" rel="noopener" class="btn btn-primary !h-12 !px-8 text-base">Download for Mac</a>
+    </div>
+    <p class="rv mt-5 mono text-[.78rem] mute-c" style="--d:160ms">For macOS 14 Sonoma or later</p>
+  </div>
+</section>
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="border-t hairline py-12">
+  <div class="max-w-6xl mx-auto px-5 flex flex-col md:flex-row items-center justify-between gap-6">
+    <a href="#top" class="flex items-center gap-2.5 font-semibold tracking-tight ink">
+      <svg viewBox="0 0 32 32" width="19" height="19" aria-hidden="true"><path fill="#18181b" fill-rule="evenodd" d="M10 2 H22 A8 8 0 0 1 30 10 V22 A8 8 0 0 1 22 30 H10 A8 8 0 0 1 2 22 V10 A8 8 0 0 1 10 2 Z M10 2 L10 4.5 Q10 7 12.5 7 L19.5 7 Q22 7 22 4.5 L22 2 Z"/><rect x="9" y="10.5" width="14" height="3.2" rx="1.6" fill="#15803d"/></svg>
+      Topsoil
+    </a>
+    <div class="flex items-center gap-7 text-sm body-c">
+      <a href="#pages" class="hover:text-zinc-950 transition-colors">Pages</a>
+      <a href="#specs" class="hover:text-zinc-950 transition-colors">Specs</a>
+      <a href="#faq" class="hover:text-zinc-950 transition-colors">FAQ</a>
+      <a href="privacy.html" class="hover:text-zinc-950 transition-colors">Privacy</a>
+    </div>
+    <a href="https://www.linkedin.com/in/david-cilliers" target="_blank" rel="noopener" class="btn btn-ghost !h-9 !px-4 text-sm inline-flex items-center gap-2">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.44-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.59 0 4.25 2.37 4.25 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+      LinkedIn
+    </a>
+    <p class="text-sm mute-c">&copy; 2026 Topsoil</p>
+  </div>
+  <p class="max-w-3xl mx-auto px-5 mt-8 text-[.76rem] mute-c leading-relaxed text-center">
+    Independent of Apple Inc. Mac and macOS are trademarks of Apple Inc.
+    Other marks belong to their owners and appear only in real screenshots.
+  </p>
+</footer>
+
+<script>
+(function(){
+  document.documentElement.classList.add("js");
+
+  // Reveal on enter (IntersectionObserver, no scroll listeners).
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Hero headline: split into words so the reveal cascades word by word.
+  if (!reduce) {
+    var h1 = document.getElementById("hero-h1");
+    var words = h1.textContent.trim().split(/\s+/);
+    h1.textContent = "";
+    words.forEach(function(w, i){
+      var s = document.createElement("span");
+      s.className = "ws";
+      s.style.setProperty("--wd", (90 + i * 55) + "ms");
+      s.textContent = w;
+      h1.appendChild(s);
+      if (i < words.length - 1) h1.appendChild(document.createTextNode(" "));
+    });
+  }
+  var rv = [].slice.call(document.querySelectorAll(".rv"));
+  if (reduce || !("IntersectionObserver" in window)) {
+    rv.forEach(function(el){ el.classList.add("in"); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.18, rootMargin: "0px 0px -6% 0px" });
+    rv.forEach(function(el){ io.observe(el); });
+  }
+
+  // Nav border once the page moves (sentinel, not a scroll listener).
+  var nav = document.getElementById("nav");
+  var sentinel = document.getElementById("nav-sentinel");
+  new IntersectionObserver(function(entries){
+    nav.classList.toggle("scrolled", !entries[0].isIntersecting);
+  }).observe(sentinel);
+
+  // Deck tabs: crossfade real captures + caption swap.
+  var captions = {
+    quick:  "Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf for local files.",
+    code:   "Claude, Codex, and Cursor in live terminal panes, with your project pinned below.",
+    stocks: "Tickers, trending repositories, and installed coding skills at a glance."
+  };
+  var tabs = [].slice.call(document.querySelectorAll(".tab"));
+  var imgs = [].slice.call(document.querySelectorAll(".deck-img"));
+  var caption = document.getElementById("deck-caption");
+  var deck = document.querySelector("[data-deck]");
+  tabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      var key = tab.getAttribute("data-tab");
+      tabs.forEach(function(t){ t.setAttribute("aria-selected", String(t === tab)); });
+      imgs.forEach(function(img){ img.classList.toggle("is-active", img.getAttribute("data-tab") === key); });
+      caption.textContent = captions[key];
+      if (deck.getAttribute("data-open") === "false") setOpen(true);
+    });
+  });
+
+  // Notch pill folds the drawer, like clicking the real notch.
+  var pill = document.getElementById("deck-notch");
+  function setOpen(open){
+    deck.setAttribute("data-open", String(open));
+    pill.setAttribute("aria-expanded", String(open));
+  }
+  pill.addEventListener("click", function(){
+    setOpen(deck.getAttribute("data-open") === "false");
+  });
+
+  // Sliding indicator tracks the active tab (state transition made visible).
+  var ind = document.getElementById("tab-ind");
+  function placeInd(){
+    var active = document.querySelector('.tab[aria-selected="true"]');
+    ind.style.width = active.offsetWidth + "px";
+    ind.style.transform = "translateX(" + active.offsetLeft + "px)";
+  }
+  placeInd();
+  tabs.forEach(function(t){ t.addEventListener("click", placeInd); });
+  if ("ResizeObserver" in window) new ResizeObserver(placeInd).observe(document.querySelector(".tabbar"));
+
+  // Gentle pointer tilt on the hero bezel: depth cue on hover devices only.
+  if (window.matchMedia("(hover: hover) and (prefers-reduced-motion: no-preference)").matches) {
+    var wrap = document.querySelector(".tilt-wrap");
+    var bezel = document.getElementById("hero-bezel");
+    wrap.addEventListener("pointermove", function(e){
+      var r = wrap.getBoundingClientRect();
+      var x = (e.clientX - r.left) / r.width - 0.5;
+      var y = (e.clientY - r.top) / r.height - 0.5;
+      bezel.style.transform = "rotateX(" + (-y * 2.4) + "deg) rotateY(" + (x * 2.0) + "deg)";
+    });
+    wrap.addEventListener("pointerleave", function(){
+      bezel.style.transform = "";
+    });
+  }
+
+  // Cinematic scrub layer. GSAP arrives deferred, so this runs on load; the
+  // page is complete without it (base reveals above are pure CSS + IO).
+  // Targets are chosen to never share a transform with .rv, .floaty, .tiltable
+  // or the pointer tilt, so the two systems can't fight over one element.
+  function initScrub(){
+    if (reduce || !window.gsap || !window.ScrollTrigger) return;
+    gsap.registerPlugin(ScrollTrigger);
+    var hero = document.querySelector("main > section");
+
+    // hero bezel drifts up and eases back as the page takes over
+    gsap.to(".tilt-wrap", { y: -28, scale: .968, ease: "none",
+      scrollTrigger: { trigger: hero, start: "center center", end: "bottom top", scrub: true } });
+
+    // captures breathe inside their frames (overscaled a touch to cover drift)
+    [["#demo .frame video", 1], ["#why .frame img", -1]].forEach(function(pair){
+      var el = document.querySelector(pair[0]); if (!el) return;
+      gsap.fromTo(el, { y: 14 * pair[1], scale: 1.05 }, { y: -14 * pair[1], scale: 1.05, ease: "none",
+        scrollTrigger: { trigger: el.closest(".frame"), start: "top bottom", end: "bottom top", scrub: true } });
+    });
+
+    // the wide bar slides across the top as you pass it
+    var wb = document.querySelector('img[src="assets/widebar.webp"]');
+    if (wb) gsap.fromTo(wb, { x: "-4%" }, { x: "4%", ease: "none",
+      scrollTrigger: { trigger: wb, start: "top bottom", end: "bottom top", scrub: true } });
+
+    // the garden capture floats through the leaf wash
+    var garden = document.querySelector('img[src="assets/garden.webp"]');
+    if (garden) gsap.fromTo(garden, { y: 12, scale: 1.04 }, { y: -12, scale: 1.04, ease: "none",
+      scrollTrigger: { trigger: garden.closest(".frame"), start: "top bottom", end: "bottom top", scrub: true } });
+
+    // module chips pop in one after another (GSAP takes this reveal over
+    // from the IO system; without GSAP the .rv fallback still shows them)
+    var chipWrap = document.getElementById("moduleChips");
+    if (chipWrap) {
+      chipWrap.classList.remove("rv", "in");
+      var chips = [].slice.call(chipWrap.children);
+      gsap.set(chips, { opacity: 0, y: 16, scale: .92 });
+      ScrollTrigger.batch(chips, { start: "top 92%", once: true,
+        onEnter: function(els){ gsap.to(els, { opacity: 1, y: 0, scale: 1, duration: .55,
+          ease: "back.out(1.6)", stagger: .05, overwrite: true }); } });
+    }
+  }
+  if (document.readyState === "complete") initScrub();
+  else window.addEventListener("load", initScrub, { once: true });
+})();
+</script>
+</body>
+</html>

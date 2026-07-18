@@ -1,0 +1,29 @@
+# Topsoil
+
+> Topsoil is a native macOS menu bar app that turns the MacBook camera
+> cutout (the notch) into a live dashboard: coding agent terminals (Claude,
+> Codex, Cursor), now playing with lyrics, quick toggles, timers, a drop shelf
+> for local files, stocks, and GitHub trends. Built with Swift 6 and SwiftUI,
+> no Electron, no accounts, no telemetry. Requires macOS 14 Sonoma or later on
+> Apple silicon. Works on Macs without a notch by docking to the top of any
+> display.
+
+## Facts
+
+- Three default pages: Quick (media, toggles, timers, actions, drop shelf),
+  Code (Claude, Codex, Cursor terminal panes), Stocks (tickers, trending
+  repositories, installed coding skills).
+- Optional modules: Screen Time, Pomodoro, Reminders, Calendar, Clipboard,
+  Battery and System, Launcher, Command Palette, Notch Garden, Customize.
+- The panel never covers the camera or privacy light; it reads the screen
+  safe area insets and paints around the hardware.
+- User files never leave the Mac. Optional modules fetch public data only
+  (market quotes, GitHub trending, lyrics).
+- Download: https://github.com/Davey2Waveyy/MacNotch/releases/latest
+
+## Pages
+
+- [Home](index.html): product overview, live demo video, page gallery, specs, FAQ.
+- [Privacy](privacy.html): what the app and site do and do not collect.
+
+Topsoil is an independent project, not affiliated with Apple Inc.

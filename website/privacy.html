@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Privacy. Topsoil</title>
+<meta name="description" content="What Topsoil does and does not do with your data."/>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml"/>
+<style>
+  :root{ --ink:#18181b; --body:#52525b; --mute:#8e8e96; --hair:rgba(24,24,27,.08); --surface:#f6f7f9; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--surface); color:var(--ink);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+  }
+  main{ max-width:44rem; margin:0 auto; padding:4.5rem 1.25rem 5rem; }
+  h1{ font-size:2rem; letter-spacing:-.03em; margin:0 0 .4rem; }
+  h2{ font-size:1.05rem; letter-spacing:-.01em; margin:2.2rem 0 .4rem; }
+  p, li{ color:var(--body); font-size:.98rem; margin:.4rem 0; }
+  ul{ padding-left:1.2rem; }
+  a{ color:#2e6bf6; text-decoration:none; }
+  a:hover{ text-decoration:underline; }
+  .back{ display:inline-block; margin-bottom:2.2rem; font-weight:600; font-size:.9rem; }
+  .stamp{ color:var(--mute); font-size:.85rem; }
+  footer{ border-top:1px solid var(--hair); margin-top:3rem; padding-top:1.2rem; color:var(--mute); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">&larr; Topsoil</a>
+  <h1>Privacy</h1>
+  <p class="stamp">Last updated July 9, 2026</p>
+
+  <h2>The app</h2>
+  <ul>
+    <li>No account, no sign-in, no analytics, no telemetry. There is no server side.</li>
+    <li>Files you drop on the shelf are stored as local security-scoped bookmarks. They never leave your Mac.</li>
+    <li>Settings live in your local Application Support folder.</li>
+    <li>System permissions (Calendar, media control via Automation) are requested on first use and can be revoked in System Settings at any time.</li>
+    <li>Some modules fetch public data over the network when you enable them: the Stocks page requests market quotes and GitHub trending lists, and Now Playing can request lyrics for the current track. These requests carry no personal identifiers beyond what any HTTP request includes.</li>
+    <li>The Code page runs command line tools you already installed (Claude, Codex, Cursor). Their network behavior is governed by their own vendors' policies.</li>
+  </ul>
+
+  <h2>This website</h2>
+  <ul>
+    <li>Static files, served as is. No cookies, no analytics, no tracking pixels, no embedded third-party scripts.</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on the <a href="https://github.com/Davey2Waveyy/MacNotch" target="_blank" rel="noopener">GitHub repository</a>.</p>
+
+  <footer>
+    Topsoil is an independent project and is not affiliated with, endorsed by, or sponsored by Apple Inc.
+    Mac and macOS are trademarks of Apple Inc.
+  </footer>
+</main>
+</body>
+</html>

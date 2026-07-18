@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Topsoil. The notch, put to work.</title>
+<meta name="description" content="Topsoil turns the MacBook notch into a native macOS panel for media, quick controls, code agents, stocks, and local file handoff."/>
+<script>document.documentElement.className='js';</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    color-scheme: light;
+    --paper: #FAFAF7;
+    --paper-2: #F2F2EC;
+    --card: #FFFFFF;
+    --ink: #1A1A18;
+    --graphite: #6B6B64;
+    --stone: #9C9C93;
+    --line: rgba(20,20,18,.08);
+    --line-2: rgba(20,20,18,.14);
+    --accent: #2E6BF6;
+    --accent-soft: rgba(46,107,246,.12);
+    --r-pill: 999px;
+    --r-frame: 24px;
+    --r-chip: 14px;
+    --nav: 60px;
+    --ease: cubic-bezier(.22,.61,.36,1);
+    --drawer: cubic-bezier(.32,.72,0,1);
+    --float: 0 1px 2px rgba(44,42,34,.05), 0 8px 18px rgba(44,42,34,.06), 0 26px 50px rgba(44,42,34,.08);
+    --float-lg: 0 2px 4px rgba(44,42,34,.05), 0 14px 30px rgba(44,42,34,.08), 0 40px 80px rgba(44,42,34,.11);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html{
+    background: var(--paper);
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body{
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: -.005em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  img, video{ display: block; max-width: 100%; }
+  a{ color: inherit; text-decoration: none; }
+  button{ font: inherit; color: inherit; }
+  h1,h2,h3{ margin: 0; font-weight: 600; letter-spacing: -.03em; line-height: 1.05; }
+  p{ margin: 0; }
+
+  ::selection{ background: var(--accent-soft); }
+
+  :focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  .wrap{ width: min(100% - 44px, 1160px); margin-inline: auto; }
+  .visually-hidden{
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    padding: 0; border: 0; clip: rect(0 0 0 0); overflow: hidden; white-space: nowrap;
+  }
+
+  section[id]{ scroll-margin-top: calc(var(--nav) + 28px); }
+
+  /* ---------- eyebrow ---------- */
+  .eyebrow{
+    display: inline-flex; align-items: center; gap: 9px;
+    margin: 0 0 22px;
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; font-weight: 500; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--stone);
+  }
+  .eyebrow::before{
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 46px; padding: 0 22px;
+    border: 1px solid transparent; border-radius: var(--r-pill);
+    background: var(--ink); color: var(--paper);
+    font-size: 15px; font-weight: 500; letter-spacing: -.01em;
+    cursor: pointer;
+    transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease);
+    box-shadow: 0 1px 2px rgba(26,26,24,.16), 0 10px 22px rgba(26,26,24,.14);
+  }
+  .btn:hover{ transform: translateY(-1px); box-shadow: 0 2px 4px rgba(26,26,24,.18), 0 14px 30px rgba(26,26,24,.18); }
+  .btn:active{ transform: translateY(0); }
+  .btn.ghost{
+    background: transparent; color: var(--ink);
+    border-color: var(--line-2);
+    box-shadow: none;
+  }
+  .btn.ghost:hover{ background: rgba(20,20,18,.04); box-shadow: none; transform: translateY(-1px); }
+  .btn.light{
+    background: var(--paper); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 14px 30px rgba(0,0,0,.28);
+  }
+
+  /* ---------- nav ---------- */
+  .nav{
+    position: sticky; top: 0; z-index: 50;
+    height: var(--nav);
+    background: rgba(250,250,247,.72);
+    -webkit-backdrop-filter: saturate(1.5) blur(18px);
+    backdrop-filter: saturate(1.5) blur(18px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-in{
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    height: 100%;
+  }
+  .brand{
+    justify-self: start;
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 17px; font-weight: 600; letter-spacing: -.03em;
+  }
+  .brand-mark{
+    position: relative; width: 20px; height: 20px; border-radius: 6px;
+    background: var(--ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+  }
+  .brand-mark::after{
+    content: ""; position: absolute; left: 50%; top: -1px; transform: translateX(-50%);
+    width: 9px; height: 5px; border-radius: 0 0 4px 4px; background: var(--paper);
+  }
+  .nav-links{
+    justify-self: center;
+    display: flex; align-items: center; gap: 30px;
+    font-size: 14px; color: var(--graphite);
+  }
+  .nav-links a{ transition: color .18s var(--ease); }
+  .nav-links a:hover{ color: var(--ink); }
+  .nav-cta{
+    justify-self: end;
+    min-height: 38px; padding: 0 16px; font-size: 14px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position: relative;
+    padding-top: clamp(48px, 8vh, 84px);
+    padding-bottom: clamp(40px, 7vh, 72px);
+    text-align: center;
+  }
+  .hero-copy{ width: min(100%, 760px); margin-inline: auto; }
+  .hero .eyebrow{ margin-bottom: 20px; }
+  .hero h1{
+    font-size: clamp(2.7rem, 6.4vw, 4.6rem);
+    line-height: 1.0;
+    letter-spacing: -.04em;
+    font-weight: 600;
+  }
+  .hero-sub{
+    margin: 24px auto 0; max-width: 540px;
+    color: var(--graphite); font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    line-height: 1.55;
+  }
+  .hero-actions{
+    display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+    margin-top: 34px;
+  }
+  .hero-media{
+    position: relative;
+    container-type: inline-size;
+    width: min(100%, 1040px);
+    margin: clamp(44px, 6vw, 72px) auto 0;
+    border-radius: var(--r-frame);
+    overflow: hidden;
+    background: #0d0e10;
+    box-shadow: var(--float-lg), 0 0 0 1px var(--line);
+  }
+  .hero-media video{ width: 100%; height: auto; }
+  /* frosted menubar chip that occludes the baked top-left wordmark */
+  .brand-chip{
+    position: absolute; left: 1.1cqw; top: 6.5%;
+    display: inline-flex; align-items: center; gap: .5em;
+    padding: .34em .6em;
+    min-width: 8.5cqw;
+    border-radius: .55em;
+    background: rgba(14,15,13,.74);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+    color: #fff;
+    font-size: clamp(10px, 2.15cqw, 21px);
+    line-height: 1;
+    z-index: 3;
+  }
+  .brand-chip strong{ font-weight: 600; letter-spacing: -.02em; }
+  .brand-chip span{
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: .72em; letter-spacing: .06em;
+    padding: .28em .5em; border-radius: .5em;
+    background: rgba(255,255,255,.16); color: rgba(255,255,255,.92);
+  }
+
+  /* ---------- generic section heads ---------- */
+  .section{ padding-block: clamp(72px, 11vh, 132px); }
+  .head{ max-width: 620px; }
+  .head.center{ margin-inline: auto; text-align: center; }
+  .head h2{
+    font-size: clamp(2rem, 4.4vw, 3.2rem);
+    letter-spacing: -.035em;
+  }
+  .head p{
+    margin-top: 18px; color: var(--graphite);
+    font-size: clamp(1.02rem, 1.4vw, 1.15rem); line-height: 1.55;
+  }
+
+  /* ---------- pages / deck ---------- */
+  .pages{ text-align: center; }
+  .deck{
+    width: min(100%, 1120px);
+    margin: clamp(40px, 6vw, 64px) auto 0;
+    display: grid; justify-items: center; gap: 20px;
+  }
+  .deck-tabs{
+    display: inline-flex; gap: 3px; padding: 4px;
+    border-radius: var(--r-pill);
+    background: rgba(20,20,18,.05);
+    border: 1px solid var(--line);
+  }
+  .deck-tab{
+    border: 0; background: transparent; cursor: pointer;
+    padding: .5em 1.15em; border-radius: var(--r-pill);
+    font-size: 14px; font-weight: 500; color: var(--graphite);
+    letter-spacing: -.01em;
+    transition: color .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);
+  }
+  .deck-tab:hover{ color: var(--ink); }
+  .deck-tab[aria-selected="true"]{
+    background: var(--card); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(44,42,34,.1), 0 4px 10px rgba(44,42,34,.08);
+  }
+
+  .deck-device{
+    position: relative;
+    width: 100%;
+    border-radius: var(--r-frame);
+    background: linear-gradient(180deg, #1c1e22, #131417);
+    box-shadow: var(--float-lg), inset 0 0 0 1px rgba(255,255,255,.06);
+    overflow: hidden;
+  }
+  .deck-bar{
+    position: relative; z-index: 2;
+    display: flex; align-items: center; justify-content: flex-end;
+    height: clamp(26px, 3.4vw, 34px);
+    padding: 0 clamp(12px, 2.2vw, 22px);
+    background: rgba(255,255,255,.04);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .deck-notch{
+    position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+    width: clamp(120px, 20%, 220px); height: 100%;
+    border: 0; padding: 0; cursor: pointer;
+    background: #060607;
+    border-radius: 0 0 13px 13px;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35);
+    transition: transform .3s var(--ease);
+  }
+  .deck-notch::after{
+    content: ""; position: absolute; left: 50%; bottom: 5px; transform: translateX(-50%) rotate(45deg);
+    width: 6px; height: 6px; border-right: 1.5px solid rgba(255,255,255,.34); border-bottom: 1.5px solid rgba(255,255,255,.34);
+    opacity: 0; transition: opacity .25s var(--ease), transform .3s var(--ease);
+  }
+  [data-deck][data-open="false"] .deck-notch::after{ opacity: .5; }
+  .deck-status{
+    display: inline-flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,.55);
+  }
+  .deck-batt{
+    position: relative; width: 1.55em; height: .78em;
+    border: 1px solid currentColor; border-radius: 2px; opacity: .8;
+  }
+  .deck-batt::before{
+    content: ""; position: absolute; inset: 1.5px; width: 62%;
+    background: currentColor; border-radius: 1px;
+  }
+  .deck-batt::after{
+    content: ""; position: absolute; right: -3px; top: 50%; transform: translateY(-50%);
+    width: 2px; height: .38em; background: currentColor; border-radius: 0 1px 1px 0;
+  }
+  .deck-dot{ width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .7; }
+
+  .deck-drawer{
+    display: grid; grid-template-rows: 1fr;
+    transition: grid-template-rows .44s var(--drawer);
+  }
+  .deck-drawer-inner{
+    min-height: 0; overflow: hidden;
+    transform-origin: top center;
+    transition: transform .44s var(--drawer), opacity .38s var(--drawer), filter .44s var(--drawer);
+  }
+  .js [data-deck][data-open="false"] .deck-drawer{ grid-template-rows: 0fr; }
+  .js [data-deck][data-open="false"] .deck-drawer-inner{
+    transform: scale(.96); opacity: 0; filter: blur(4px);
+  }
+  .deck-desktop{ padding: clamp(10px, 2.4%, 26px); }
+  .deck-stage{
+    position: relative;
+    aspect-ratio: 2680 / 528;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .deck-img{
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    opacity: 0; transform: scale(1.015); filter: blur(6px);
+    transition: opacity .4s var(--ease), transform .4s var(--ease), filter .4s var(--ease);
+    pointer-events: none;
+  }
+  .deck-img.is-active{ opacity: 1; transform: none; filter: none; }
+
+  .deck-caption{
+    max-width: 560px; color: var(--graphite);
+    font-size: 15px; line-height: 1.5;
+  }
+
+  /* ---------- why / bento ---------- */
+  .why-head{ margin-bottom: clamp(34px, 5vw, 54px); }
+  .bento{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .cell{
+    position: relative; overflow: hidden;
+    border-radius: var(--r-frame);
+    background: var(--card);
+    border: 1px solid var(--line);
+    box-shadow: var(--float);
+    padding: clamp(22px, 2.4vw, 30px);
+    display: flex; flex-direction: column;
+    min-height: 200px;
+  }
+  .cell h3{
+    font-size: clamp(1.24rem, 1.7vw, 1.5rem);
+    letter-spacing: -.03em; font-weight: 600;
+  }
+  .cell p{ margin-top: 10px; color: var(--graphite); font-size: 15.5px; line-height: 1.5; max-width: 42ch; }
+  .cell-a{ grid-column: span 2; grid-row: span 2; }
+  .cell-e{ grid-column: span 2; }
+  .cell-f{ grid-column: span 3; background: var(--paper-2); }
+  .cell.media{ padding-bottom: 0; }
+  .cell.media .cell-copy{ padding-bottom: 4px; }
+  .cell-shot{
+    margin-top: auto; align-self: center;
+    width: 108%; max-width: none;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -1px 0 rgba(255,255,255,.6), 0 18px 30px rgba(44,42,34,.14);
+    transform: translateY(14%);
+  }
+  .cell-a .cell-shot{ transform: translateY(16%); }
+  .cell-e{ flex-direction: row; align-items: center; gap: clamp(18px, 3vw, 40px); padding-bottom: clamp(22px, 2.4vw, 30px); }
+  .cell-e .cell-copy{ flex: 1 1 44%; }
+  .cell-e .cell-shot{ flex: 1 1 56%; margin: 0; width: 100%; transform: none; border-radius: 12px; box-shadow: var(--float); }
+  .modules{
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px;
+  }
+  .modules span{
+    padding: 7px 13px; border-radius: var(--r-chip);
+    background: var(--card); border: 1px solid var(--line);
+    font-size: 13.5px; color: var(--ink);
+    font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: -.01em;
+  }
+
+  /* ---------- specs ---------- */
+  .specs-grid{
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 16px; margin-top: clamp(34px, 5vw, 52px);
+  }
+  .spec-card{
+    border-radius: var(--r-frame);
+    background: var(--card); border: 1px solid var(--line);
+    box-shadow: var(--float);
+    padding: clamp(22px, 2.4vw, 30px);
+  }
+  .spec-card h3{
+    font-size: 14px; font-weight: 500; letter-spacing: -.01em;
+    color: var(--ink);
+    padding-bottom: 16px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .spec-card h3::before{
+    content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--accent);
+  }
+  .spec-card dl{ margin: 0; display: grid; gap: 14px; }
+  .spec-card .row{
+    display: flex; justify-content: space-between; align-items: baseline; gap: 20px;
+    padding-top: 14px; border-top: 1px solid var(--line);
+  }
+  .spec-card .row:first-child{ border-top: 0; padding-top: 0; }
+  .spec-card dt{ color: var(--graphite); font-size: 15px; }
+  .spec-card dd{
+    margin: 0; text-align: right; color: var(--ink); font-weight: 500;
+    font-family: 'Geist Mono', ui-monospace, monospace; font-size: 14px; letter-spacing: -.01em;
+  }
+
+  /* ---------- faq ---------- */
+  .faq{ width: min(100%, 780px); margin-top: clamp(40px, 6vw, 64px); display: grid; gap: 10px; }
+  details{
+    border-radius: 18px; border: 1px solid var(--line);
+    background: var(--card); box-shadow: var(--float);
+    overflow: hidden;
+  }
+  summary{
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 20px 22px; cursor: pointer; list-style: none;
+    font-size: 16.5px; font-weight: 500; letter-spacing: -.01em; color: var(--ink);
+  }
+  summary::-webkit-details-marker{ display: none; }
+  .q-sign{
+    position: relative; flex: none; width: 22px; height: 22px;
+    transition: transform .3s var(--ease);
+  }
+  .q-sign::before, .q-sign::after{
+    content: ""; position: absolute; left: 50%; top: 50%; background: var(--stone);
+    transition: background .2s var(--ease);
+  }
+  .q-sign::before{ width: 13px; height: 1.5px; transform: translate(-50%,-50%); }
+  .q-sign::after{ width: 1.5px; height: 13px; transform: translate(-50%,-50%); }
+  details[open] .q-sign{ transform: rotate(135deg); }
+  details[open] .q-sign::before, details[open] .q-sign::after{ background: var(--accent); }
+  .answer{ display: grid; grid-template-rows: 0fr; transition: grid-template-rows .32s var(--drawer); }
+  details[open] .answer{ grid-template-rows: 1fr; }
+  .answer > div{ min-height: 0; overflow: hidden; }
+  .answer p{ padding: 0 22px 22px; color: var(--graphite); line-height: 1.6; font-size: 15.5px; max-width: 62ch; }
+
+  /* ---------- finale ---------- */
+  .finale{ padding-block: clamp(20px, 4vw, 44px) clamp(56px, 8vh, 96px); }
+  .finale-card{
+    position: relative; overflow: hidden;
+    width: min(100%, 1000px); margin-inline: auto;
+    border-radius: 32px;
+    background: radial-gradient(120% 140% at 50% -10%, #26282d 0%, #16171a 46%, #101113 100%);
+    color: #fff; text-align: center;
+    padding: clamp(72px, 11vw, 120px) 24px clamp(56px, 8vw, 88px);
+    box-shadow: var(--float-lg);
+  }
+  .finale-card::before{
+    content: ""; position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+    width: clamp(120px, 22%, 200px); height: clamp(24px, 4vw, 34px);
+    background: #060607; border-radius: 0 0 13px 13px;
+  }
+  .finale-card h2{
+    font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -.04em; font-weight: 600;
+    max-width: 640px; margin-inline: auto;
+  }
+  .finale-card p{ margin: 20px auto 0; max-width: 440px; color: rgba(255,255,255,.62); font-size: 1.1rem; }
+  .finale-card .btn{ margin-top: 32px; }
+  .finale-price{
+    margin-top: 20px !important;
+    font-family: 'Geist Mono', ui-monospace, monospace; font-size: 13px;
+    letter-spacing: .02em; color: rgba(255,255,255,.5) !important;
+  }
+
+  /* ---------- footer ---------- */
+  footer{ border-top: 1px solid var(--line); padding-block: 32px; }
+  .foot-in{ display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .foot-links{ display: flex; gap: 24px; font-size: 14px; color: var(--graphite); }
+  .foot-links a:hover{ color: var(--ink); }
+  .foot-note{ color: var(--stone); font-size: 13px; }
+
+  /* ---------- reveal ---------- */
+  .js .reveal{
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .7s var(--ease), transform .7s var(--ease);
+  }
+  .js .reveal.in{ opacity: 1; transform: none; }
+  .js .reveal.d1{ transition-delay: .07s; }
+  .js .reveal.d2{ transition-delay: .14s; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px){
+    .bento{ grid-template-columns: repeat(2, 1fr); }
+    .cell-a{ grid-column: span 2; grid-row: auto; }
+    .cell-e{ grid-column: span 2; }
+    .cell-f{ grid-column: span 2; }
+  }
+  @media (max-width: 760px){
+    .nav-links{ display: none; }
+    .nav-in{ grid-template-columns: 1fr auto; }
+  }
+  @media (max-width: 640px){
+    body{ font-size: 16px; }
+    .bento{ grid-template-columns: 1fr; }
+    .cell-a, .cell-e, .cell-f{ grid-column: auto; }
+    .cell-e{ flex-direction: column; align-items: stretch; gap: 18px; }
+    .cell-e .cell-shot{ width: 100%; }
+    .specs-grid{ grid-template-columns: 1fr; }
+    .hero-actions .btn{ flex: 1 1 auto; }
+    .foot-in{ justify-content: center; text-align: center; }
+  }
+
+  @media (hover: hover){
+    .cell{ transition: transform .28s var(--ease), box-shadow .28s var(--ease); }
+    .cell:hover{ transform: translateY(-3px); box-shadow: var(--float-lg); }
+    .deck-notch:hover{ transform: translateX(-50%) translateY(1px); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      transition-duration: .001ms !important;
+      animation-duration: .001ms !important;
+      scroll-behavior: auto !important;
+    }
+    .js .reveal{ opacity: 1 !important; transform: none !important; }
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+    .nav{ background: rgba(250,250,247,.96); }
+    .brand-chip{ background: rgba(14,15,13,.95); }
+  }
+</style>
+</head>
+<body id="top">
+
+<header class="nav">
+  <div class="nav-in wrap">
+    <a class="brand" href="#top" aria-label="Topsoil home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      Topsoil
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#pages">Pages</a>
+      <a href="#native">Why</a>
+      <a href="#specs">Compatibility</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn nav-cta" href="#download">Download</a>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow reveal">For macOS 14 and later</p>
+      <h1 id="hero-title" class="reveal d1">Your notch, put to work.</h1>
+      <p class="hero-sub reveal d2">Topsoil turns the camera cutout into a native panel for media, quick controls, code agents, and local file handoff.</p>
+      <div class="hero-actions reveal d2">
+        <a class="btn" href="#download">Download for Mac</a>
+        <a class="btn ghost" href="#pages">Watch it work</a>
+      </div>
+    </div>
+
+    <div class="hero-media reveal d2">
+      <video autoplay muted loop playsinline poster="assets/demo_poster.jpg" aria-label="Topsoil panel expanding from the notch across the top of a Mac display">
+        <source src="assets/demo.mp4" type="video/mp4"/>
+      </video>
+      <span class="brand-chip" aria-hidden="true"><strong>Topsoil</strong><span>Quick</span></span>
+    </div>
+  </section>
+
+  <!-- PAGES / DECK -->
+  <section id="pages" class="section pages wrap" aria-labelledby="pages-title">
+    <div class="head center">
+      <p class="eyebrow reveal">The pages</p>
+      <h2 id="pages-title" class="reveal d1">Everything, one glance away.</h2>
+      <p class="reveal d1">Three pages ship by default. Open the notch and move between them.</p>
+    </div>
+
+    <div class="deck reveal d1" data-deck data-open="false">
+      <div class="deck-tabs" role="tablist" aria-label="Notch pages">
+        <button class="deck-tab" type="button" role="tab" id="t-quick" data-tab="quick" aria-selected="true" aria-controls="deck-panel">Quick</button>
+        <button class="deck-tab" type="button" role="tab" id="t-code" data-tab="code" aria-selected="false" tabindex="-1" aria-controls="deck-panel">Code</button>
+        <button class="deck-tab" type="button" role="tab" id="t-stocks" data-tab="stocks" aria-selected="false" tabindex="-1" aria-controls="deck-panel">Stocks</button>
+      </div>
+
+      <div class="deck-device">
+        <div class="deck-bar">
+          <button class="deck-notch" type="button" aria-expanded="false" aria-controls="deck-drawer">
+            <span class="visually-hidden">Toggle the notch panel</span>
+          </button>
+          <span class="deck-status" aria-hidden="true">
+            <span class="deck-batt"></span>
+          </span>
+        </div>
+        <div class="deck-drawer" id="deck-drawer">
+          <div class="deck-drawer-inner">
+            <div class="deck-desktop">
+              <div class="deck-stage" id="deck-panel" role="tabpanel" aria-labelledby="t-quick">
+                <img class="deck-img is-active" data-tab="quick" src="assets/panel_quick.webp" alt="Topsoil Quick page with Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf" loading="lazy" decoding="async"/>
+                <img class="deck-img" data-tab="code" src="assets/panel_code.webp" alt="Topsoil Code page with claude, codex, and cursor command line panes" loading="lazy" decoding="async"/>
+                <img class="deck-img" data-tab="stocks" src="assets/panel_stocks.webp" alt="Topsoil Stocks page listing tickers with price and daily change" loading="lazy" decoding="async"/>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="deck-caption" data-caption>Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf for local files.</p>
+    </div>
+  </section>
+
+  <!-- WHY / BENTO -->
+  <section id="native" class="section wrap" aria-labelledby="native-title">
+    <div class="head why-head">
+      <h2 id="native-title" class="reveal">Built like a Mac app, not a tab.</h2>
+      <p class="reveal d1">A native Swift panel that hugs the hardware, respects the camera, and stays out of the way until you reach for it.</p>
+    </div>
+
+    <div class="bento">
+      <article class="cell cell-a media reveal">
+        <div class="cell-copy">
+          <h3>Painted around the notch.</h3>
+          <p>The panel hugs the hardware and never covers the camera, the sensor housing, or the privacy light.</p>
+        </div>
+        <img class="cell-shot" src="assets/panel_quick.webp" alt="Topsoil Quick panel showing media, toggles, timers, actions, and a Drop Shelf" loading="lazy" decoding="async"/>
+      </article>
+
+      <article class="cell reveal d1">
+        <h3>Over fullscreen.</h3>
+        <p>An auxiliary panel shows the surface above a fullscreen Space, without being a separate window.</p>
+      </article>
+
+      <article class="cell reveal d2">
+        <h3>Universal and native.</h3>
+        <p>Swift 6 and SwiftUI. One universal build for Apple silicon and Intel.</p>
+      </article>
+
+      <article class="cell cell-e media reveal">
+        <div class="cell-copy">
+          <h3>Local by default.</h3>
+          <p>Drop Shelf keeps references to your files. Nothing is uploaded, and nothing leaves your Mac.</p>
+        </div>
+        <img class="cell-shot" src="assets/panel_code.webp" alt="Topsoil Code panel with three command line tool panes" loading="lazy" decoding="async"/>
+      </article>
+
+      <article class="cell reveal d1">
+        <h3>Hugs the hardware.</h3>
+        <p>The panel reads the screen safe area insets to sit exactly against the notch.</p>
+      </article>
+
+      <article class="cell cell-f reveal">
+        <h3>More pages when you want them.</h3>
+        <p>Beyond the three defaults, extra modules turn on from Settings.</p>
+        <div class="modules" aria-label="Optional modules">
+          <span>Screen Time</span><span>Pomodoro</span><span>Reminders</span><span>Calendar</span>
+          <span>Clipboard</span><span>Battery and System</span><span>Launcher</span><span>Customize</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- SPECS -->
+  <section id="specs" class="section wrap" aria-labelledby="specs-title">
+    <div class="head">
+      <h2 id="specs-title" class="reveal">Honest specs.</h2>
+      <p class="reveal d1">What the app actually is, with nothing invented.</p>
+    </div>
+
+    <div class="specs-grid">
+      <div class="spec-card reveal">
+        <h3>System</h3>
+        <dl>
+          <div class="row"><dt>Minimum</dt><dd>macOS 14</dd></div>
+          <div class="row"><dt>Architecture</dt><dd>arm64 + x86_64</dd></div>
+          <div class="row"><dt>Built with</dt><dd>Swift 6, SwiftUI</dd></div>
+        </dl>
+      </div>
+      <div class="spec-card reveal d1">
+        <h3>Behavior</h3>
+        <dl>
+          <div class="row"><dt>Placement</dt><dd>Safe area insets</dd></div>
+          <div class="row"><dt>Fullscreen</dt><dd>Auxiliary panel</dd></div>
+          <div class="row"><dt>Idle footprint</dt><dd>Light</dd></div>
+        </dl>
+      </div>
+      <div class="spec-card reveal">
+        <h3>Privacy</h3>
+        <dl>
+          <div class="row"><dt>Drop Shelf</dt><dd>Local references</dd></div>
+          <div class="row"><dt>Uploads</dt><dd>None</dd></div>
+          <div class="row"><dt>Camera area</dt><dd>Never covered</dd></div>
+        </dl>
+      </div>
+      <div class="spec-card reveal d1">
+        <h3>Pricing</h3>
+        <dl>
+          <div class="row"><dt>License</dt><dd>One time</dd></div>
+          <div class="row"><dt>Price</dt><dd>$22.99</dd></div>
+          <div class="row"><dt>Trial</dt><dd>14 days</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div id="faq" class="faq" style="scroll-margin-top: calc(var(--nav) + 28px);">
+      <details class="reveal">
+        <summary>Does it work with fullscreen apps?<span class="q-sign" aria-hidden="true"></span></summary>
+        <div class="answer"><div><p>Yes. The panel uses auxiliary panel behavior, so it appears over a fullscreen Space without becoming a separate app window.</p></div></div>
+      </details>
+      <details class="reveal">
+        <summary>Does it cover the camera?<span class="q-sign" aria-hidden="true"></span></summary>
+        <div class="answer"><div><p>No. The interface is shaped around the hardware notch. It never covers the camera, the sensor housing, or the privacy light.</p></div></div>
+      </details>
+      <details class="reveal">
+        <summary>What do the Code panes need?<span class="q-sign" aria-hidden="true"></span></summary>
+        <div class="answer"><div><p>Install the matching command line tools. Topsoil resolves Claude, Codex, and Cursor (including Cursor's cursor-agent) from your shell paths.</p></div></div>
+      </details>
+      <details class="reveal">
+        <summary>What about a Mac without a notch?<span class="q-sign" aria-hidden="true"></span></summary>
+        <div class="answer"><div><p>It still runs. When no physical notch is detected, the panel anchors to the top center of the main display.</p></div></div>
+      </details>
+      <details class="reveal">
+        <summary>Are dropped files uploaded?<span class="q-sign" aria-hidden="true"></span></summary>
+        <div class="answer"><div><p>No. Drop Shelf keeps local references only. Your files stay where they are unless you move them.</p></div></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- FINALE -->
+  <section id="download" class="finale wrap" aria-labelledby="download-title">
+    <div class="finale-card reveal">
+      <h2 id="download-title">Make the notch useful.</h2>
+      <p>A native Mac utility for the strip your eyes already pass over.</p>
+      <a class="btn light" href="https://github.com/Davey2Waveyy/MacNotch/releases/latest" target="_blank" rel="noopener">Download for Mac</a>
+      <p class="finale-price">$22.99, one time. 14 day free trial.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="foot-in">
+    <a class="brand" href="#top" aria-label="Topsoil home">
+      <span class="brand-mark" aria-hidden="true"></span>
+      Topsoil
+    </a>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#pages">Pages</a>
+      <a href="#native">Why</a>
+      <a href="#faq">FAQ</a>
+      <a href="#download">Download</a>
+    </nav>
+    <p class="foot-note">2026. Made for notched Macs.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* reveal on scroll */
+  var reveals = [].slice.call(document.querySelectorAll('.reveal'));
+  if (reduce || !('IntersectionObserver' in window)){
+    reveals.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var ro = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('in'); ro.unobserve(e.target); }
+      });
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+    reveals.forEach(function(el){ ro.observe(el); });
+  }
+
+  /* notch deck */
+  var deck = document.querySelector('[data-deck]');
+  if (!deck) return;
+  var tabs = [].slice.call(deck.querySelectorAll('.deck-tab'));
+  var imgs = [].slice.call(deck.querySelectorAll('.deck-img'));
+  var notch = deck.querySelector('.deck-notch');
+  var stage = deck.querySelector('.deck-stage');
+  var caption = deck.querySelector('[data-caption]');
+  var copy = {
+    quick: 'Now Playing, Quick Toggles, Timers, Actions, and a Drop Shelf for local files.',
+    code: 'Claude, Codex, and Cursor command line tools, each in its own pane.',
+    stocks: 'Tickers, repositories, and installed coding skills at a glance.'
+  };
+
+  function setOpen(open){
+    deck.dataset.open = open ? 'true' : 'false';
+    notch.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function select(name, focus){
+    tabs.forEach(function(t){
+      var on = t.dataset.tab === name;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      if (on){
+        stage.setAttribute('aria-labelledby', t.id);
+        if (focus) t.focus();
+      }
+    });
+    imgs.forEach(function(im){ im.classList.toggle('is-active', im.dataset.tab === name); });
+    if (caption && copy[name]) caption.textContent = copy[name];
+    setOpen(true);
+  }
+
+  tabs.forEach(function(t, i){
+    t.addEventListener('click', function(){ select(t.dataset.tab, false); });
+    t.addEventListener('keydown', function(e){
+      var n = tabs.length, k = e.key;
+      if (k === 'ArrowRight' || k === 'ArrowDown'){ e.preventDefault(); select(tabs[(i+1)%n].dataset.tab, true); }
+      else if (k === 'ArrowLeft' || k === 'ArrowUp'){ e.preventDefault(); select(tabs[(i-1+n)%n].dataset.tab, true); }
+      else if (k === 'Home'){ e.preventDefault(); select(tabs[0].dataset.tab, true); }
+      else if (k === 'End'){ e.preventDefault(); select(tabs[n-1].dataset.tab, true); }
+    });
+  });
+
+  notch.addEventListener('click', function(){ setOpen(deck.dataset.open !== 'true'); });
+
+  /* first-time reveal: start collapsed, expand once on scroll-in */
+  if (reduce){
+    setOpen(true);
+  } else if ('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting){ setOpen(true); io.disconnect(); } });
+    }, { threshold: 0.35 });
+    io.observe(deck);
+  } else {
+    setOpen(true);
+  }
+})();
+</script>
+</body>
+</html>

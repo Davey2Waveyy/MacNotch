@@ -1,0 +1,13 @@
+.vercel
+.env*
+
+# raw capture working files stay local (site ships the webp/mp4/jpg exports)
+assets/rec*.mov
+assets/paper_reference.jpg
+assets/full_quick.webp
+assets/full_code.webp
+assets/full_stocks.webp
+
+# the repo root ignores *.png globally (design screenshots); the site's own
+# runtime png is re-included here
+!assets/touch-icon.png
