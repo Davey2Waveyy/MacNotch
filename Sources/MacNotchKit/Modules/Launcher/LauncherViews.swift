@@ -22,10 +22,7 @@ struct LauncherDashboardTile: View {
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .contentShape(Rectangle())
-        .dropDestination(for: URL.self) { urls, _ in
-            onDrop(urls)
-            return true
-        }
+        .urlDropTarget(onDrop)
     }
 
     private var emptyState: some View {

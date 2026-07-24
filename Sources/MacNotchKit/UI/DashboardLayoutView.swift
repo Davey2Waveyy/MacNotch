@@ -27,7 +27,20 @@ private final class ScrollWheelNSView: NSView {
     }
 }
 
-private struct ScrollWheelReader: NSViewRepresentable {
+private struct ScrollWheelReader: View {
+    let onSwipe: (Int) -> Void
+    @Environment(\.notchSnapshotMode) private var snapshotMode
+
+    var body: some View {
+        if snapshotMode {
+            Color.clear
+        } else {
+            ScrollWheelRepresentable(onSwipe: onSwipe)
+        }
+    }
+}
+
+private struct ScrollWheelRepresentable: NSViewRepresentable {
     let onSwipe: (Int) -> Void
 
     func makeNSView(context: Context) -> ScrollWheelNSView {
@@ -48,6 +61,7 @@ private struct ScrollWheelReader: NSViewRepresentable {
 /// Shows 4 tiles per page with < > arrow navigation and two-finger swipe.
 struct DashboardLayoutView: View {
     @Environment(\.notchTokens) private var tokens
+    @EnvironmentObject private var model: NotchWindowModel
     let modules: [any NotchModule]
     let size: CGSize
     let activeMode: ExpansionMode
@@ -57,8 +71,11 @@ struct DashboardLayoutView: View {
     var onTogglePin: () -> Void = {}
     var onExternalDrop: ([URL]) -> Void = { _ in }
 
-    @State private var page = 0
     @State private var slideDirection: Int = 1   // +1 = forward (trailing→), -1 = back (←leading)
+
+    /// Page state lives on the window model so external drivers (debug hook)
+    /// can flip pages; this view still owns clamping and slide direction.
+    private var page: Int { model.dashboardPage }
 
     private let tilesPerPage = 5
     private let headerHeight: CGFloat = 18
@@ -98,26 +115,27 @@ struct DashboardLayoutView: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             header.frame(height: headerHeight)
             tilesArea.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(.horizontal, outerPadding)
         .padding(.top, topInset + 4)
-        .padding(.bottom, 4)
+        .padding(.bottom, 6)
         .frame(width: size.width, height: size.height, alignment: .top)
         .background(ScrollWheelReader { dir in navigate(dir) })
-        .dropDestination(for: URL.self) { urls, _ in
-            onExternalDrop(urls)
-            return true
-        }
+        .urlDropTarget(onExternalDrop)
         // Clamp to a valid page if the module list shrinks (e.g. after a toggle).
         .onChange(of: pageCount) { _, newCount in
             if page >= newCount {
                 withAnimation(tokens.panelAnimation) {
-                    page = max(0, newCount - 1)
+                    model.dashboardPage = max(0, newCount - 1)
                 }
             }
+        }
+        // External page changes (debug hook) still get a directional slide.
+        .onChange(of: model.dashboardPage) { old, new in
+            if new != old { slideDirection = new > old ? 1 : -1 }
         }
     }
 
@@ -127,60 +145,44 @@ struct DashboardLayoutView: View {
         let target = page + dir
         guard target >= 0, target < pageCount else { return }
         slideDirection = dir
-        withAnimation(tokens.panelAnimation) { page = target }
+        withAnimation(tokens.panelAnimation) { model.dashboardPage = target }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Text(NotchBrand.productName)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Text(modeLabel)
-                .font(.system(size: 8.5, weight: .semibold))
-                .tracking(0.5)
-                .foregroundStyle(tokens.accent)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(
-                    Capsule()
-                        .fill(tokens.accent.opacity(0.15))
-                        .overlay(Capsule().strokeBorder(tokens.accent.opacity(0.30), lineWidth: 0.5))
-                )
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(tokens.textPrimary)
             Spacer()
             if pageCount > 1 { pageDots }
             Text(Self.dateLabel())
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(.white.opacity(0.40))
-                .padding(.leading, 6)
+                .font(tokens.captionFont)
+                .foregroundStyle(tokens.textQuaternary)
+                .padding(.leading, 4)
+            NotchIconButton(
+                systemName: "menubar.rectangle",
+                accessibilityLabel: "Switch to wide bar",
+                size: 22, iconSize: 10
+            ) { onSwitchMode(.wideBar) }
             // Dedicated NSView drag handle so moving the panel is explicit.
             WindowDragHandleView()
                 .frame(width: 22, height: 22)
                 .overlay(
                     Image(systemName: "grip.horizontal")
                         .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.40))
+                        .foregroundStyle(tokens.textQuaternary)
                         .allowsHitTesting(false)
                 )
-                .padding(.leading, 2)
                 .help("Drag panel")
-            Button(action: onTogglePin) {
-                Image(systemName: isPinned ? "lock.fill" : "lock.open")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(isPinned ? Color.white.opacity(0.85) : Color.white.opacity(0.30))
-                    .frame(width: 22, height: 22)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(isPinned ? Color.white.opacity(0.12) : Color.clear)
-                    )
-                    // Pad the tap target to 30pt without changing the visual size.
-                    .contentShape(Rectangle().inset(by: -4))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPinned ? "Unpin notch panel" : "Pin notch panel")
-            .help(isPinned ? "Unpin notch panel" : "Pin notch panel")
-            .padding(.leading, 4)
+            NotchIconButton(
+                systemName: isPinned ? "pin.fill" : "pin",
+                accessibilityLabel: isPinned ? "Unpin notch panel" : "Pin notch panel",
+                size: 22, iconSize: 10,
+                isActive: isPinned,
+                action: onTogglePin
+            )
         }
     }
 
@@ -188,24 +190,14 @@ struct DashboardLayoutView: View {
         HStack(spacing: 4) {
             ForEach(0..<pageCount, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? tokens.accent : Color.white.opacity(0.20))
-                    .frame(width: i == page ? 16 : 5, height: 4)
-                    .shadow(color: i == page ? tokens.accent.opacity(0.5) : .clear,
-                            radius: 4, x: 0, y: 0)
+                    .fill(i == page ? tokens.accent.opacity(0.95) : Color.white.opacity(0.18))
+                    .frame(width: i == page ? 14 : 4, height: 3.5)
                     .animation(tokens.panelAnimation, value: page)
             }
         }
         // Decorative dots read as one element announcing the current page.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Dashboard page \(page + 1) of \(pageCount)")
-    }
-
-    private var modeLabel: String {
-        switch activeMode {
-        case .compact:   return "QUICK"
-        case .dashboard: return "QUICK"
-        case .wideBar:   return "WIDE"
-        }
     }
 
     private static func dateLabel() -> String {
@@ -249,12 +241,6 @@ struct DashboardLayoutView: View {
                     .dashboardTileSurface()
                     .transition(tileTransition)
             }
-            // Ghost spacers only on full pages to keep consistent tile widths.
-            // Partial pages let tiles expand to fill the available space naturally.
-            if pageTiles.count == tilesPerPage {
-                // All slots filled — no ghost spacers needed.
-                EmptyView()
-            }
         }
         .animation(tokens.panelAnimation, value: pageTiles.map { $0.id })
     }
@@ -271,11 +257,15 @@ struct DashboardLayoutView: View {
     private var pageTransition: AnyTransition {
         // Reduce Motion: cross-fade instead of sliding pages across the panel.
         guard tokens.motionStyle != .reduced else { return .opacity }
-        let insertEdge: Edge = slideDirection > 0 ? .trailing : .leading
-        let removeEdge: Edge = slideDirection > 0 ? .leading  : .trailing
+        // A short parallax nudge reads calmer than sliding the full panel width.
+        let shift: CGFloat = 28
         return .asymmetric(
-            insertion: .move(edge: insertEdge).combined(with: .opacity),
-            removal:   .move(edge: removeEdge).combined(with: .opacity)
+            insertion: .offset(x: slideDirection > 0 ? shift : -shift)
+                .combined(with: .opacity)
+                .combined(with: .scale(scale: 0.985, anchor: .center)),
+            removal: .offset(x: slideDirection > 0 ? -shift : shift)
+                .combined(with: .opacity)
+                .combined(with: .scale(scale: 0.985, anchor: .center))
         )
     }
 
@@ -286,11 +276,10 @@ struct DashboardLayoutView: View {
         return NotchIconButton(
             systemName: systemName,
             accessibilityLabel: enabled ? base : "\(base) unavailable",
-            size: 20,
+            size: 22,
             iconSize: 10,
             action: action
         )
-        .foregroundStyle(.white.opacity(0.55))
         .opacity(enabled ? 1 : 0)
         .disabled(!enabled)
         .animation(.easeOut(duration: 0.15), value: enabled)

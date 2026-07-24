@@ -20,28 +20,21 @@ struct WideBarLayoutView: View {
 
             Spacer(minLength: 12)
 
-            Button {
-                onSwitchMode(.dashboard)
-            } label: {
-                Image(systemName: "rectangle.compress.vertical")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 28, height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(.white.opacity(0.08))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Back to dashboard")
-            .help("Back to dashboard")
+            NotchIconButton(
+                systemName: "square.grid.2x2",
+                accessibilityLabel: "Back to dashboard",
+                size: 24, iconSize: 11
+            ) { onSwitchMode(.dashboard) }
         }
         .padding(.horizontal, 18)
         .frame(width: size.width, height: size.height, alignment: .leading)
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.white.opacity(tokens.strokeOpacity))
-                .frame(height: 1)
+            // Hairline that brightens toward the centre, echoing the notch above.
+            LinearGradient(
+                colors: [.clear, .white.opacity(tokens.strokeOpacity + 0.04), .clear],
+                startPoint: .leading, endPoint: .trailing
+            )
+            .frame(height: 1)
         }
     }
 

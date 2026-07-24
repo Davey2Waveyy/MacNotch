@@ -1,42 +1,30 @@
-# Task 7 Report
+# Task 7 Report (Design Settings Tab)
 
 ## Status
 
-Complete.
+Implementer agent lost connection AFTER committing b7c6d3e but before writing this report.
+The controller verified the result directly; treat the verification below as controller-run,
+not implementer-claimed.
 
-## Changes
+## Commit
 
-- Added [ScreenInfo.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchKit/Window/ScreenInfo.swift) with `frame`, `safeAreaTop`, `notchWidth`, `isMain`, and derived `hasNotch`.
-- Added [ScreenLocator.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchKit/Window/ScreenLocator.swift) with:
-  - `choose(from:)` preferring notched, then main, then first screen
-  - `notchRect(for:defaultWidth:)` using real notch width when present and `max(safeAreaTop, 32)` for height
-  - `current()` mapping live `NSScreen` geometry into `ScreenInfo`
-- Added [ScreenLocatorTests.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchTests/ScreenLocatorTests.swift) using the custom harness.
-- Registered `screenLocatorTests()` in [main.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchTests/main.swift).
+b7c6d3e "feat: add NotchApple design settings" — 6 files, +237/-13:
+- Sources/MacNotchKit/App/DesignSettingsView.swift (new, 108 lines)
+- Sources/MacNotchKit/App/SettingsSections.swift (new, 12 lines)
+- Sources/MacNotchKit/App/SettingsLogic.swift (+24: appearance mutation helpers)
+- Sources/MacNotchKit/App/SettingsView.swift (+88/-13: tabbed layout)
+- Sources/MacNotchKit/App/SettingsWindowController.swift (window size)
+- Sources/MacNotchTests/SettingsLogicTests.swift (+16: helper coverage)
 
-## Verification
+## Controller verification (run at HEAD b7c6d3e)
 
-- `swift run MacNotchTests` — passed, `45 checks, 0 failure(s)`
-- `swift build` — passed
+- `swift build`: Build complete, no warnings surfaced in tail.
+- `swift run MacNotchTests`: 369 checks, 0 failure(s) (up from 363 pre-task).
 
-## Concerns
+## Known unknowns for the reviewer
 
-- `current()` derives `notchWidth` from `NSScreen.auxiliaryTopLeftArea` per the plan/spec. That path compiles and matches the requested behavior, but it is only covered indirectly here because the harness does not exercise live `NSScreen` state.
-
-## Task 7 Review Fixes
-
-- Updated [ScreenLocator.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchKit/Window/ScreenLocator.swift) so `current()` now delegates notch-width inference to a package-scoped helper that returns `nil` unless:
-  - `safeAreaTop > 0`
-  - `auxiliaryTopLeftArea` is present
-  - the computed width is positive
-  - the computed width is smaller than the full screen width
-- This removes the bad fallback where a missing `auxiliaryTopLeftArea` could manufacture a full-screen-width notch and lets `notchRect(for:defaultWidth:)` fall back to `defaultWidth` instead.
-- Expanded [ScreenLocatorTests.swift](/Users/davey/MyProjects/MacNotch/Sources/MacNotchTests/ScreenLocatorTests.swift) coverage to assert:
-  - `choose(from:)` falls back to the first screen when there is no notch and no main screen
-  - inferred notch width is rejected when `auxiliaryTopLeftArea` is missing or produces a full-screen result
-  - `notchRect(for:defaultWidth:)` uses `max(safeAreaTop, 32)` for height both above the minimum and at the default minimum
-
-## Task 7 Review Verification
-
-- `swift run MacNotchTests` — passed, `51 checks, 0 failure(s)`
-- `swift build` — passed
+- No implementer self-review or deviation notes exist (connection lost). Review the diff
+  with no benefit of the doubt: verify the brief's Steps 1-5 and the controller-approved
+  extensions (Accent / Glass intensity / Corner style pickers + setAccentColor /
+  setGlassIntensity / setCornerStyle SettingsLogic helpers with tests) directly.
+- Manual GUI settings check (brief Step 6) outstanding, as with all tasks this session.

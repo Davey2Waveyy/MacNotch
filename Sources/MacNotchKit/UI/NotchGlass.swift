@@ -73,14 +73,93 @@ final class MaskedVisualEffectView: NSVisualEffectView {
     }
 }
 
+// MARK: - Snapshot mode
+
+/// True when rendering offscreen via `ImageRenderer` (which can't render
+/// AppKit-backed views — they'd draw as yellow placeholder blocks). Platform
+/// views check this and swap in a SwiftUI approximation or render nothing.
+private struct NotchSnapshotModeKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var notchSnapshotMode: Bool {
+        get { self[NotchSnapshotModeKey.self] }
+        set { self[NotchSnapshotModeKey.self] = newValue }
+    }
+}
+
+/// `.dropDestination` that detaches in snapshot mode — ImageRenderer draws
+/// platform drop targets as full-frame yellow placeholder blocks.
+private struct URLDropTarget: ViewModifier {
+    @Environment(\.notchSnapshotMode) private var snapshotMode
+    let onDrop: ([URL]) -> Void
+
+    func body(content: Content) -> some View {
+        if snapshotMode {
+            content
+        } else {
+            content.dropDestination(for: URL.self) { urls, _ in
+                onDrop(urls)
+                return true
+            }
+        }
+    }
+}
+
+/// `.onDrag` source that detaches in snapshot mode for the same reason.
+private struct URLDragSource: ViewModifier {
+    @Environment(\.notchSnapshotMode) private var snapshotMode
+    let url: URL
+
+    func body(content: Content) -> some View {
+        if snapshotMode {
+            content
+        } else {
+            content.onDrag { NSItemProvider(object: url as NSURL) }
+        }
+    }
+}
+
+extension View {
+    func urlDropTarget(_ onDrop: @escaping ([URL]) -> Void) -> some View {
+        modifier(URLDropTarget(onDrop: onDrop))
+    }
+
+    func urlDragSource(_ url: URL) -> some View {
+        modifier(URLDragSource(url: url))
+    }
+}
+
 // MARK: - SwiftUI wrapper
 
 /// Real macOS glass: an `NSVisualEffectView` that blurs whatever sits behind the
 /// panel. Tinted dark on top so it stays legible over bright desktops.
-struct VisualEffectBackground: NSViewRepresentable {
+/// In snapshot mode the blur is approximated with a flat dark fill.
+struct VisualEffectBackground: View {
     var material: NSVisualEffectView.Material = .hudWindow
     var blendingMode: NSVisualEffectView.BlendingMode = .behindWindow
     var cornerRadius: CGFloat = 0
+    @Environment(\.notchSnapshotMode) private var snapshotMode
+
+    var body: some View {
+        if snapshotMode {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color(red: 0.10, green: 0.10, blue: 0.13).opacity(0.90))
+        } else {
+            VisualEffectRepresentable(
+                material: material,
+                blendingMode: blendingMode,
+                cornerRadius: cornerRadius
+            )
+        }
+    }
+}
+
+private struct VisualEffectRepresentable: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode
+    var cornerRadius: CGFloat
 
     func makeNSView(context: Context) -> MaskedVisualEffectView {
         let view = MaskedVisualEffectView()

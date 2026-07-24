@@ -50,6 +50,7 @@ public final class NotchTerminal: ObservableObject {
         displayName: String,
         environment: [String: String] = CodeCLIResolver.terminalEnvironment()
     ) {
+        GardenState.shared.onTerminalCommandRun()
         stop()
         activeCLI = displayName
         isRunning = true
@@ -96,6 +97,7 @@ public final class NotchTerminal: ObservableObject {
     }
 
     fileprivate func processDidTerminate() {
+        GardenState.shared.onSessionCodeSplitClose()
         isRunning = false
     }
 

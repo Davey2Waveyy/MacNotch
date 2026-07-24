@@ -18,23 +18,26 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var appearance: NotchAppearance
     public var activeWorkspaceProfileID: String?
     public var onboarding: OnboardingState
+    public var isAquariumBatterySaverEnabled: Bool
 
     public init(modules: [ModuleSetting],
                 launchAtLogin: Bool,
                 defaultExpansionMode: ExpansionMode = .dashboard,
                 appearance: NotchAppearance = .defaults,
                 activeWorkspaceProfileID: String? = nil,
-                onboarding: OnboardingState = .defaults) {
+                onboarding: OnboardingState = .defaults,
+                isAquariumBatterySaverEnabled: Bool = false) {
         self.modules = modules
         self.launchAtLogin = launchAtLogin
         self.defaultExpansionMode = defaultExpansionMode
         self.appearance = appearance
         self.activeWorkspaceProfileID = activeWorkspaceProfileID
         self.onboarding = onboarding
+        self.isAquariumBatterySaverEnabled = isAquariumBatterySaverEnabled
     }
 
     private enum CodingKeys: String, CodingKey {
-        case modules, launchAtLogin, defaultExpansionMode, appearance, activeWorkspaceProfileID, onboarding
+        case modules, launchAtLogin, defaultExpansionMode, appearance, activeWorkspaceProfileID, onboarding, isAquariumBatterySaverEnabled
     }
 
     // Custom decoding so settings files written before `defaultExpansionMode`
@@ -49,6 +52,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         appearance = try container.decodeIfPresent(NotchAppearance.self, forKey: .appearance) ?? .defaults
         activeWorkspaceProfileID = try container.decodeIfPresent(String.self, forKey: .activeWorkspaceProfileID)
         onboarding = try container.decodeIfPresent(OnboardingState.self, forKey: .onboarding) ?? .defaults
+        isAquariumBatterySaverEnabled = try container.decodeIfPresent(Bool.self, forKey: .isAquariumBatterySaverEnabled) ?? false
     }
 
     public static let defaults = AppSettings(
@@ -64,6 +68,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
             ModuleSetting(id: "commandPalette", isEnabled: true),
             // Page 3 — Stocks (solo tile, fills full width).
             ModuleSetting(id: "stocks",       isEnabled: true),
+            // Page 4 — Garden
+            ModuleSetting(id: "garden",       isEnabled: false),
             // Available via Settings but hidden by default.
             ModuleSetting(id: "screenTime",   isEnabled: false),
             ModuleSetting(id: "pomodoro",     isEnabled: false),
@@ -96,6 +102,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
                            defaultExpansionMode: persisted.defaultExpansionMode,
                            appearance: persisted.appearance,
                            activeWorkspaceProfileID: persisted.activeWorkspaceProfileID,
-                           onboarding: persisted.onboarding)
+                           onboarding: persisted.onboarding,
+                           isAquariumBatterySaverEnabled: persisted.isAquariumBatterySaverEnabled)
     }
 }

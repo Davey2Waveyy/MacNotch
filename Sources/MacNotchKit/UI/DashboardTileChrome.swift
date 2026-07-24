@@ -9,15 +9,21 @@ struct DashboardTileSurface: ViewModifier {
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
         content
             .background(
-                RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
-                    .fill(tokens.tileFillColor(hovered: isHovered))
+                ZStack {
+                    shape.fill(tokens.tileFillColor(hovered: isHovered))
+                    // Faint top light so tiles read as machined surfaces, not flat fills.
+                    shape.fill(
+                        LinearGradient(
+                            colors: [.white.opacity(isHovered ? 0.05 : 0.03), .clear],
+                            startPoint: .top, endPoint: .center
+                        )
+                    )
+                }
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
-                    .strokeBorder(tokens.tileStrokeColor(hovered: isHovered), lineWidth: 0.75)
-            )
+            .overlay(shape.strokeBorder(tokens.tileStrokeColor(hovered: isHovered), lineWidth: 0.75))
             .animation(tokens.hoverAnimation, value: isHovered)
             .onHover { isHovered = $0 }
     }
@@ -29,26 +35,70 @@ extension View {
     }
 }
 
+// MARK: - Tile scaffold
+
+/// Standard tile interior: header row, fixed 10pt gap, content filling the
+/// rest. Every module tile uses this so baselines align across the dashboard.
+struct NotchTile<Content: View, Trailing: View>: View {
+    let title: String
+    let systemImage: String
+    @ViewBuilder var content: () -> Content
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(_ title: String, systemImage: String,
+         @ViewBuilder content: @escaping () -> Content,
+         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }) {
+        self.title = title
+        self.systemImage = systemImage
+        self.content = content
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TileHeader(title: title, systemImage: systemImage, trailing: trailing)
+            content()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
 // MARK: - Tile header
 
 /// Small header shown at the top of every dashboard tile.
-/// The icon uses the accent colour so each tile reads as a distinct labelled widget.
-struct TileHeader: View {
+/// The icon uses the accent colour so each tile reads as a distinct labelled
+/// widget; the trailing slot carries a glanceable summary ("2 on", "3 files")
+/// so status never dangles at the bottom of a tile.
+struct TileHeader<Trailing: View>: View {
     @Environment(\.notchTokens) private var tokens
     let title: String
     let systemImage: String
+    @ViewBuilder var trailing: () -> Trailing
+
+    init(title: String, systemImage: String,
+         @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }) {
+        self.title = title
+        self.systemImage = systemImage
+        self.trailing = trailing
+    }
 
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(tokens.accent)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(tokens.accent.opacity(0.9))
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .semibold, design: tokens.fontDesign))
-                .tracking(0.8)
-                .foregroundStyle(.white.opacity(0.55))
+                .font(tokens.caption2Font)
+                .tracking(0.9)
+                .foregroundStyle(tokens.textTertiary)
             Spacer(minLength: 0)
+            trailing()
+                .font(tokens.caption2Font)
+                .foregroundStyle(tokens.textQuaternary)
         }
+        .frame(height: 14)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -73,11 +123,11 @@ struct WideBarItem<Trailing: View>: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .font(.system(size: 11, weight: .medium, design: tokens.fontDesign))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(tokens.textTertiary)
                 .frame(width: 14)
             Text(text)
-                .font(.system(size: 11, weight: .medium, design: tokens.fontDesign))
-                .foregroundStyle(.white.opacity(0.92))
+                .font(tokens.labelFont)
+                .foregroundStyle(tokens.textPrimary)
                 .lineLimit(1)
             trailing()
         }

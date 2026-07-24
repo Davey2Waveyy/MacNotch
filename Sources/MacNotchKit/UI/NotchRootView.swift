@@ -19,8 +19,13 @@ public final class NotchWindowModel: ObservableObject {
     @Published public var compactContentHeight: CGFloat = 320
     /// When true the compact preview stays pinned open even after the cursor leaves.
     @Published public var isPinned = false
+    /// Current dashboard page. Lives on the model (not view @State) so the
+    /// debug/capture hook and future shortcuts can drive page changes.
+    @Published public var dashboardPage = 0
     /// User's appearance settings, synced from `SettingsStore` on load/reload.
     @Published public var appearance = NotchAppearance.defaults
+    /// Application-wide settings for quick access by modules.
+    @Published public var settings = AppSettings.defaults
 
     public init() {}
 }
@@ -65,6 +70,7 @@ public struct NotchRootView: View {
     public var body: some View {
         panelBody
             .environment(\.notchTokens, themeTokens)
+            .environmentObject(model)
             .animation(themeTokens.panelAnimation, value: model.isExpanded)
             .animation(themeTokens.panelAnimation, value: model.mode)
             .animation(themeTokens.panelAnimation, value: model.compactContentHeight)
@@ -113,10 +119,17 @@ public struct NotchRootView: View {
             // shadow is never rectangular even when NSViews are composited above.
             NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius)
                 .fill(Color.black.opacity(0.001))
+                // Two-layer shadow: a tight contact shadow grounds the panel,
+                // a wide ambient one lifts it off the desktop.
                 .shadow(
-                    color: .black.opacity(model.isExpanded ? 0.55 : 0),
-                    radius: model.isExpanded ? 28 : 0,
-                    x: 0, y: model.isExpanded ? 14 : 0
+                    color: .black.opacity(model.isExpanded ? 0.38 : 0),
+                    radius: model.isExpanded ? 10 : 0,
+                    x: 0, y: model.isExpanded ? 5 : 0
+                )
+                .shadow(
+                    color: .black.opacity(model.isExpanded ? 0.42 : 0),
+                    radius: model.isExpanded ? 38 : 0,
+                    x: 0, y: model.isExpanded ? 20 : 0
                 )
                 .animation(themeTokens.panelAnimation, value: model.isExpanded)
                 .allowsHitTesting(false)
@@ -131,6 +144,9 @@ public struct NotchRootView: View {
                 .fill(themeTokens.backgroundTint)
                 .allowsHitTesting(false)
 
+            // Content choreography: the collapsed strip blurs and recedes as the
+            // expanded content settles in slightly after the panel frame — the
+            // panel reads as revealing its contents rather than swapping them.
             ZStack(alignment: .top) {
                 HStack(spacing: 6) {
                     ForEach(currentModules, id: \.id) { module in
@@ -141,15 +157,20 @@ public struct NotchRootView: View {
                 }
                 .frame(width: collapsedSize.width, height: collapsedSize.height)
                 .opacity(model.isExpanded ? 0 : 1)
-                .scaleEffect(model.isExpanded ? 0.92 : 1, anchor: .top)
+                .scaleEffect(model.isExpanded ? 0.90 : 1, anchor: .top)
+                .blur(radius: contentBlurEnabled && model.isExpanded ? 6 : 0)
                 .allowsHitTesting(false)
 
                 expandedContent(modules: currentModules, size: size)
                     .opacity(model.isExpanded ? 1 : 0)
                     .scaleEffect(model.isExpanded ? 1 : 0.96, anchor: .top)
+                    .blur(radius: contentBlurEnabled && !model.isExpanded ? 8 : 0)
                     .allowsHitTesting(model.isExpanded)
             }
+            .animation(themeTokens.contentAnimation, value: model.isExpanded)
             .clipShape(NotchPanelShape(bottomRadius: cornerRadius, topRadius: topRadius))
+
+
 
             if model.isExpanded, model.mode != .wideBar, notchInset > 0 {
                 VStack(spacing: 0) {
@@ -210,35 +231,23 @@ public struct NotchRootView: View {
                 }
             }
 
-            // Footer: lock on the left, explicit drag handle beside it, dashboard on the right.
-            HStack {
-                Button(action: onTogglePin) {
-                    Image(systemName: model.isPinned ? "lock.fill" : "lock.open")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(model.isPinned ? Color.white.opacity(0.9) : Color.white.opacity(0.35))
-                        .frame(width: 28, height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: 7)
-                                .fill(model.isPinned ? Color.white.opacity(0.14) : Color.clear)
-                        )
-                        // Pad the tap target to 30pt without changing the visual size.
-                        .contentShape(Rectangle().inset(by: -1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(model.isPinned ? "Unpin notch panel" : "Pin notch panel")
-                .help(model.isPinned ? "Unpin notch panel" : "Pin notch panel")
+            // Footer: pin on the left, explicit drag handle beside it, dashboard on the right.
+            HStack(spacing: 2) {
+                NotchIconButton(
+                    systemName: model.isPinned ? "pin.fill" : "pin",
+                    accessibilityLabel: model.isPinned ? "Unpin notch panel" : "Pin notch panel",
+                    iconSize: 10,
+                    isActive: model.isPinned,
+                    action: onTogglePin
+                )
 
                 WindowDragHandleView()
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
                     .overlay(
                         Image(systemName: "grip.horizontal")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.38))
+                            .foregroundStyle(themeTokens.textQuaternary)
                             .allowsHitTesting(false)
-                    )
-                    .background(
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color.white.opacity(0.055))
                     )
                     .help("Drag panel")
 
@@ -247,23 +256,15 @@ public struct NotchRootView: View {
                 Button(action: onOpenDashboard) {
                     HStack(spacing: 4) {
                         Text("Dashboard")
-                            .font(.system(size: 11, weight: .medium))
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 9, weight: .semibold))
                     }
-                    .foregroundStyle(Color.white.opacity(0.35))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7)
-                            .fill(Color.white.opacity(0.06))
-                    )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.notchGhost)
                 .accessibilityLabel("Open dashboard")
                 .help("Open dashboard")
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 2)
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
@@ -272,10 +273,7 @@ public struct NotchRootView: View {
         .frame(width: size.width, alignment: .top)
         .fixedSize(horizontal: false, vertical: true)
         // Full-coverage drop zone so files dropped anywhere on the compact panel land in the shelf.
-        .dropDestination(for: URL.self) { urls, _ in
-            onExternalDrop(urls)
-            return true
-        }
+        .urlDropTarget(onExternalDrop)
         .background(
             GeometryReader { proxy in
                 Color.clear.preference(key: CompactContentHeightKey.self, value: proxy.size.height)
@@ -288,6 +286,10 @@ public struct NotchRootView: View {
     /// Physical notch bar height — used to push content below the hardware notch.
     /// Uses safeAreaInsets.top (≈37pt on notched Macs, 0 on non-notched).
     private var notchInset: CGFloat { NSScreen.main?.safeAreaInsets.top ?? 37 }
+
+    /// Cross-blur between collapsed and expanded content, skipped under
+    /// Reduce Motion (the blur is decorative, not informational).
+    private var contentBlurEnabled: Bool { themeTokens.motionStyle != .reduced }
 
     /// Resolved theme tokens for the current appearance settings, re-derived
     /// whenever appearance changes or the system reduced-motion setting flips.
@@ -322,24 +324,25 @@ struct NotchChrome: View {
                 cornerRadius: cornerRadius
             )
 
-            // Deep near-black tint — slightly lighter than before so more of
-            // the real blur shows through, reinforcing the glass-slab read.
+            // Deep near-black tint. Expanded: light enough that the real blur
+            // shows through (glass-slab read). Collapsed: near-opaque black so
+            // the resting panel blends into the hardware notch instead of
+            // reading as a gray tab over bright desktops.
             LinearGradient(
                 colors: [
-                    Color.black.opacity(isExpanded ? 0.54 : 0.48),
-                    Color.black.opacity(isExpanded ? 0.72 : 0.60)
+                    Color.black.opacity(isExpanded ? 0.54 : 0.93),
+                    Color.black.opacity(isExpanded ? 0.72 : 0.97)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Ambient notch glow — cool-blue radial bloom from the notch at
-            // top-centre. Gives the panel an illuminated, floating quality as
-            // if the display hardware is slightly backlit from behind the notch.
+            // Ambient notch glow — radial bloom from the notch at top-centre in
+            // the user's accent, as if the display hardware is slightly backlit
+            // from behind the notch. Follows the appearance preset.
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: Color(red: 0.35, green: 0.55, blue: 0.90)
-                            .opacity(isExpanded ? 0.14 : 0), location: 0),
+                    .init(color: tokens.accent.opacity(isExpanded ? 0.11 : 0), location: 0),
                     .init(color: Color.clear, location: 1)
                 ]),
                 center: .init(x: 0.5, y: -0.15),
@@ -348,13 +351,14 @@ struct NotchChrome: View {
             )
             .blendMode(.plusLighter)
 
-            // Specular sheen — bright band raked across the top like light
-            // catching the curved surface of a glass object.
+            // Specular sheen — soft band raked across the top like light
+            // catching the curved surface of a glass object. Nearly off when
+            // collapsed so the resting notch stays hardware-black.
             LinearGradient(
                 stops: [
-                    .init(color: .white.opacity(isExpanded ? 0.30 : 0.12), location: 0.0),
-                    .init(color: .white.opacity(isExpanded ? 0.10 : 0.04), location: 0.10),
-                    .init(color: .white.opacity(0.02), location: 0.25),
+                    .init(color: .white.opacity(isExpanded ? 0.22 : 0.04), location: 0.0),
+                    .init(color: .white.opacity(isExpanded ? 0.08 : 0.015), location: 0.10),
+                    .init(color: .white.opacity(isExpanded ? 0.02 : 0), location: 0.25),
                     .init(color: .clear, location: 0.45)
                 ],
                 startPoint: .top,
@@ -369,13 +373,14 @@ struct NotchChrome: View {
                 endPoint: .bottom
             )
 
-            // Crisp rim: bright top edge fading down the sides.
+            // Crisp rim: bright top edge fading down the sides. Subdued when
+            // collapsed — the resting notch shouldn't catch the eye.
             shape
                 .stroke(
                     LinearGradient(
                         colors: [
-                            .white.opacity(isExpanded ? 0.36 : 0.18),
-                            .white.opacity(isExpanded ? 0.08 : 0.02)
+                            .white.opacity(isExpanded ? 0.36 : 0.10),
+                            .white.opacity(isExpanded ? 0.08 : 0.01)
                         ],
                         startPoint: .top,
                         endPoint: .bottom

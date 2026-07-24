@@ -29,7 +29,19 @@ final class WindowDragHandleNSView: NSView {
     override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
 }
 
-struct WindowDragHandleView: NSViewRepresentable {
+struct WindowDragHandleView: View {
+    @Environment(\.notchSnapshotMode) private var snapshotMode
+
+    var body: some View {
+        if snapshotMode {
+            Color.clear
+        } else {
+            WindowDragHandleRepresentable()
+        }
+    }
+}
+
+private struct WindowDragHandleRepresentable: NSViewRepresentable {
     func makeNSView(context: Context) -> WindowDragHandleNSView { WindowDragHandleNSView() }
     func updateNSView(_ v: WindowDragHandleNSView, context: Context) {}
 }

@@ -8,60 +8,62 @@ struct CommandPaletteTile: View {
 
     var body: some View {
         let results = model.filteredCommands(query: query)
-        VStack(alignment: .leading, spacing: 8) {
-            TileHeader(title: "Command Palette", systemImage: "command")
-
-            // Search field (mirrors the Reminders input treatment)
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(searchFocused ? tokens.accent : .white.opacity(0.45))
-                TextField("Search commands", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white)
-                    .focused($searchFocused)
-                if !query.isEmpty {
-                    Button { query = "" } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.35))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Clear search")
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(searchFocused ? Color.white.opacity(0.08) : Color.white.opacity(0.04))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(searchFocused ? tokens.accent.opacity(0.5) : Color.white.opacity(0.07), lineWidth: 0.75)
+        NotchTile("Command Palette", systemImage: "command") {
+            VStack(alignment: .leading, spacing: 8) {
+                searchField
+                if results.isEmpty && !query.isEmpty {
+                    ModuleEmptyStateView(
+                        title: "No Matching Commands",
+                        message: "Try a different search term.",
+                        systemImage: "magnifyingglass"
                     )
-            )
-            .animation(.easeOut(duration: 0.12), value: searchFocused)
-            .accessibilityLabel("Search commands")
-
-            if results.isEmpty && !query.isEmpty {
-                ModuleEmptyStateView(
-                    title: "No Matching Commands",
-                    message: "Try a different search term.",
-                    systemImage: "magnifyingglass"
-                )
-            } else {
-                ScrollView(showsIndicators: false) {
-                    let rowSpacing: CGFloat = 4
-                    VStack(alignment: .leading, spacing: rowSpacing) {
-                        ForEach(results, id: \.id) { command in
-                            CommandPaletteRow(command: command, rowSpacing: rowSpacing)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        let rowSpacing: CGFloat = 4
+                        VStack(alignment: .leading, spacing: rowSpacing) {
+                            ForEach(results, id: \.id) { command in
+                                CommandPaletteRow(command: command, rowSpacing: rowSpacing)
+                            }
                         }
                     }
                 }
             }
         }
-        .padding(12)
+    }
+
+    // Search field (mirrors the Reminders input treatment)
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(searchFocused ? tokens.accent : tokens.textTertiary)
+            TextField("Search commands", text: $query)
+                .textFieldStyle(.plain)
+                .font(tokens.labelFont)
+                .foregroundStyle(tokens.textPrimary)
+                .focused($searchFocused)
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(tokens.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: tokens.controlCornerRadius, style: .continuous)
+                .fill(Color.white.opacity(searchFocused ? 0.08 : 0.04))
+                .overlay(
+                    RoundedRectangle(cornerRadius: tokens.controlCornerRadius, style: .continuous)
+                        .strokeBorder(searchFocused ? tokens.accent.opacity(0.5) : Color.white.opacity(0.07), lineWidth: 0.75)
+                )
+        )
+        .animation(tokens.hoverAnimation, value: searchFocused)
+        .accessibilityLabel("Search commands")
     }
 }
 

@@ -25,5 +25,10 @@ let package = Package(
             dependencies: ["MacNotchKit"],
             path: "Sources/MacNotchTests"
         ),
+        .executableTarget(
+            name: "MacNotchSnapshots",
+            dependencies: ["MacNotchKit"],
+            path: "Sources/MacNotchSnapshots"
+        ),
     ]
 )

@@ -16,7 +16,7 @@ public struct NotchThemeTokens: Equatable, Sendable {
     public var motionStyle: MotionStyle
 
     /// nil when motion is reduced — feed straight into .animation(_:value:)
-    public var hoverAnimation: Animation? { motionStyle == .reduced ? nil : .easeOut(duration: 0.12) }
+    public var hoverAnimation: Animation? { motionStyle == .reduced ? nil : .easeOut(duration: 0.14) }
 
     /// Panel/root state transitions (expand, collapse, page changes).
     /// Falls back to a quick fade-style ease when motion is reduced, matching
@@ -24,8 +24,54 @@ public struct NotchThemeTokens: Equatable, Sendable {
     public var panelAnimation: Animation {
         motionStyle == .reduced
             ? .easeOut(duration: 0.12)
-            : .spring(response: 0.34, dampingFraction: 0.82)
+            : .spring(response: 0.36, dampingFraction: 0.80)
     }
+
+    /// Content inside the panel (tiles, module rows) — settles slightly after
+    /// the panel frame so expansion reads as the panel revealing its contents.
+    public var contentAnimation: Animation {
+        motionStyle == .reduced
+            ? .easeOut(duration: 0.12)
+            : .spring(response: 0.40, dampingFraction: 0.86).delay(0.04)
+    }
+
+    /// Button/press feedback — snappy with a hint of overshoot.
+    public var pressAnimation: Animation {
+        motionStyle == .reduced
+            ? .easeOut(duration: 0.10)
+            : .spring(response: 0.26, dampingFraction: 0.70)
+    }
+
+    // MARK: Type scale
+    // One scale for the whole panel. `fontDesign` (monospaced for the terminal
+    // preset) flows through automatically, so modules never call
+    // `.font(.system(size:))` with ad-hoc numbers.
+
+    /// Large numerals / hero stats (timer clocks, temperatures).
+    public var displayFont: Font { .system(size: 17, weight: .semibold, design: fontDesign).monospacedDigit() }
+    /// Tile-level titles and primary lines (track title, event name).
+    public var titleFont: Font { .system(size: 12, weight: .semibold, design: fontDesign) }
+    /// Interactive labels: buttons, chips, segmented options.
+    public var labelFont: Font { .system(size: 11, weight: .medium, design: fontDesign) }
+    /// Supporting copy (artist line, empty-state message).
+    public var bodyFont: Font { .system(size: 11, weight: .regular, design: fontDesign) }
+    /// Secondary metadata rows.
+    public var captionFont: Font { .system(size: 10, weight: .medium, design: fontDesign) }
+    /// Uppercased micro-labels (tile headers). Pair with `.tracking(0.8)`.
+    public var caption2Font: Font { .system(size: 9, weight: .semibold, design: fontDesign) }
+
+    // MARK: Text hierarchy
+
+    public var textPrimary: Color { .white.opacity(0.95) }
+    public var textSecondary: Color { .white.opacity(0.62) }
+    public var textTertiary: Color { .white.opacity(0.40) }
+    public var textQuaternary: Color { .white.opacity(0.25) }
+
+    // MARK: Controls
+
+    /// Inner controls sit 2pt tighter than the tile radius so nesting reads
+    /// as one system (concentric corners).
+    public var controlCornerRadius: CGFloat { max(5, tileCornerRadius - 2) }
 
     /// Terminal reads as wireframe-on-black: stroke uses the accent, boosted.
     /// Every other preset uses a plain white hairline at `strokeOpacity`.

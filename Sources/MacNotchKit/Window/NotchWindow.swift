@@ -191,6 +191,7 @@ public final class NotchWindow: NSObject {
         }
         sync()
         model.appearance = settings.settings.appearance
+        model.settings = settings.settings
     }
 
     /// Pops the notch open to the dashboard so a fired timer's alarm is visible.
@@ -243,6 +244,7 @@ public final class NotchWindow: NSObject {
     public func reload() {
         machine.defaultExpandMode = settings.settings.defaultExpansionMode
         model.appearance = settings.settings.appearance
+        model.settings = settings.settings
         deactivateModulesIfNeeded()
         activateModulesIfNeeded()
         model.objectWillChange.send()
@@ -263,6 +265,43 @@ public final class NotchWindow: NSObject {
             transitionCoordinator.requestImmediateCollapse()
         }
         sync()
+    }
+
+    /// Scriptable control for captures/debugging, driven by the
+    /// `com.notchapple.debug` distributed notification (see AppDelegate).
+    /// Commands reuse the exact state-machine paths real input takes, so
+    /// recordings show genuine transitions.
+    public func debugPerform(_ command: String) {
+        let parts = command.split(separator: " ")
+        switch parts.first.map(String.init) {
+        case "hover":
+            if machine.hoverChanged(true) { sync() }
+        case "expand":
+            if machine.state == .collapsed || machine.state == .collapsing {
+                _ = machine.clicked()
+            } else {
+                _ = machine.switchMode(to: .dashboard)
+            }
+            sync()
+        case "widebar":
+            if machine.switchMode(to: .wideBar) { sync() }
+        case "collapse":
+            if machine.forceCollapse() {
+                transitionCoordinator.requestImmediateCollapse()
+                sync()
+            }
+        case "pin":
+            model.isPinned = true
+        case "unpin":
+            model.isPinned = false
+        case "page":
+            guard parts.count > 1, let target = Int(parts[1]) else { return }
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.80)) {
+                model.dashboardPage = max(0, target)
+            }
+        default:
+            break
+        }
     }
 
     /// Handles a click directly on the notch panel. Unlike `toggle()`, a click on

@@ -36,99 +36,71 @@ struct TimersDashboardTile: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            TileHeader(title: "Timers", systemImage: "timer")
-            Spacer(minLength: 8)
-
+        NotchTile("Timers", systemImage: "timer") {
             if let fired = firing.first {
                 firingBanner(fired)
-                Spacer(minLength: 0)
             } else {
-                presetRow
-                Spacer(minLength: 6)
-                customRow
-                Spacer(minLength: 6)
-                runningList
-                Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 8) {
+                    presetRow
+                    customRow
+                    runningList
+                        .frame(maxHeight: .infinity)
+                }
+            }
+        } trailing: {
+            if !active.isEmpty {
+                Text("\(active.count) RUNNING")
             }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func firingBanner(_ timer: CountdownTimer) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(systemName: "bell.fill")
                 .font(.system(size: 18))
                 .foregroundStyle(tokens.accent)
                 .modifier(PulseEffect())
             Text("\(timer.label) done")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-            Button { onDismiss(timer.id) } label: {
-                Text("Stop")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(tokens.accent))
-            }
-            .buttonStyle(.plain)
+                .font(tokens.titleFont)
+                .foregroundStyle(tokens.textPrimary)
+            Button("Stop") { onDismiss(timer.id) }
+                .buttonStyle(.notchPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var presetRow: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             ForEach(presets, id: \.label) { preset in
                 Button { onStart(preset.minutes, preset.label) } label: {
-                    Text(preset.label)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 5)
-                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(.white.opacity(0.07)))
+                    Text(preset.label).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.notchSoft)
             }
         }
     }
 
     private var customRow: some View {
         HStack(spacing: 6) {
-            stepButton("minus", label: "Decrease minutes") { customMinutes = max(1, customMinutes - 1) }
-            Text("\(customMinutes)m")
-                .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white)
-                .frame(minWidth: 28)
-            stepButton("plus", label: "Increase minutes") { customMinutes = min(180, customMinutes + 1) }
-            Button { onStart(Double(customMinutes), "\(customMinutes)m") } label: {
-                Text("Start")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 5)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(tokens.accent.opacity(0.85)))
+            NotchIconButton(systemName: "minus", accessibilityLabel: "Decrease minutes",
+                            size: 24, iconSize: 9) {
+                customMinutes = max(1, customMinutes - 1)
             }
-            .buttonStyle(.plain)
+            Text("\(customMinutes)m")
+                .font(tokens.labelFont.weight(.semibold).monospacedDigit())
+                .foregroundStyle(tokens.textPrimary)
+                .contentTransition(.numericText(value: Double(customMinutes)))
+                .animation(tokens.pressAnimation, value: customMinutes)
+                .frame(minWidth: 30)
+            NotchIconButton(systemName: "plus", accessibilityLabel: "Increase minutes",
+                            size: 24, iconSize: 9) {
+                customMinutes = min(180, customMinutes + 1)
+            }
+            Button { onStart(Double(customMinutes), "\(customMinutes)m") } label: {
+                Text("Start").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.notchPrimary)
         }
-    }
-
-    private func stepButton(_ icon: String, label: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 20, height: 20)
-                .background(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(.white.opacity(0.08)))
-                // Pad the tap target to 30pt without changing the visual size.
-                .contentShape(Rectangle().inset(by: -5))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 
     @ViewBuilder
@@ -136,7 +108,7 @@ struct TimersDashboardTile: View {
         if active.isEmpty {
             ModuleEmptyStateView(
                 title: "No Timers",
-                message: "Create a timer to keep it visible in the notch.",
+                message: "Start one and it stays visible in the notch.",
                 systemImage: "timer"
             )
         } else {
@@ -145,27 +117,30 @@ struct TimersDashboardTile: View {
                     runningRow(timer)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 
     private func runningRow(_ timer: CountdownTimer) -> some View {
-        HStack(spacing: 8) {
-            Text(TimerFormat.clock(timer.remaining(at: now)))
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
+        let remaining = timer.remaining(at: now)
+        return HStack(spacing: 8) {
+            Text(TimerFormat.clock(remaining))
+                .font(tokens.displayFont)
                 .foregroundStyle(tokens.accent)
+                .contentTransition(.numericText(countsDown: true))
+                .animation(.linear(duration: 0.3), value: remaining)
             Text(timer.label)
-                .font(.system(size: 9.5))
-                .foregroundStyle(.white.opacity(0.65))
+                .font(tokens.captionFont)
+                .foregroundStyle(tokens.textTertiary)
             Spacer(minLength: 0)
-            Button(action: { onCancel(timer.id) }) {
-                Text("Stop")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.white.opacity(0.15)))
-            }
-            .buttonStyle(.plain)
+            Button("Stop") { onCancel(timer.id) }
+                .buttonStyle(.notchGhost)
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: tokens.controlCornerRadius, style: .continuous)
+                .fill(.white.opacity(0.04))
+        )
     }
 }

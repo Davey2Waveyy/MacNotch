@@ -7,18 +7,30 @@ struct ModuleEmptyStateView: View {
     let systemImage: String
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 7) {
             Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(tokens.accent.opacity(0.85))
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.90))
-            Text(message)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.55))
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
+                .frame(width: 30, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: tokens.controlCornerRadius + 2, style: .continuous)
+                        .fill(.white.opacity(0.05))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: tokens.controlCornerRadius + 2, style: .continuous)
+                        .strokeBorder(.white.opacity(0.08), lineWidth: 0.75)
+                )
+            VStack(spacing: 2) {
+                Text(title)
+                    .font(tokens.labelFont.weight(.semibold))
+                    .foregroundStyle(tokens.textSecondary)
+                Text(message)
+                    .font(tokens.captionFont)
+                    .foregroundStyle(tokens.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .frame(maxWidth: 200)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
@@ -26,20 +38,24 @@ struct ModuleEmptyStateView: View {
 }
 
 struct ModuleLoadingStateView: View {
+    @Environment(\.notchTokens) private var tokens
     let message: String
 
     var body: some View {
-        ProgressView(message)
-            .progressViewStyle(.circular)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.white.opacity(0.75))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .accessibilityLabel(message)
+        VStack(spacing: 8) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .controlSize(.small)
+            Text(message)
+                .font(tokens.captionFont)
+                .foregroundStyle(tokens.textTertiary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityLabel(message)
     }
 }
 
 struct ModulePermissionStateView: View {
-    @Environment(\.notchTokens) private var tokens
     let title: String
     let message: String
     let actionTitle: String
@@ -49,11 +65,7 @@ struct ModulePermissionStateView: View {
         VStack(spacing: 8) {
             ModuleEmptyStateView(title: title, message: message, systemImage: "lock.shield")
             Button(actionTitle, action: action)
-                .buttonStyle(.plain)
-                .font(.system(size: 10, weight: .semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: 7).fill(tokens.accent.opacity(0.18)))
+                .buttonStyle(.notchSoft)
         }
     }
 }
@@ -68,8 +80,7 @@ struct ModuleErrorStateView: View {
             ModuleEmptyStateView(title: title, message: message, systemImage: "exclamationmark.triangle")
             if let retry {
                 Button("Retry", action: retry)
-                    .buttonStyle(.plain)
-                    .font(.system(size: 10, weight: .semibold))
+                    .buttonStyle(.notchGhost)
             }
         }
     }

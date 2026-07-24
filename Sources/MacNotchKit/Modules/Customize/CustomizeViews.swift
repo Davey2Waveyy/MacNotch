@@ -137,6 +137,15 @@ struct CustomizeDashboardTile: View {
                     .foregroundStyle(.white.opacity(0.70))
             }
             .toggleStyle(CompactCheckToggleStyle())
+            .padding(.bottom, 4)
+
+            // Aquarium Battery Saver
+            Toggle(isOn: aquariumBatteryBinding) {
+                Text("Aquarium Battery Saver")
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.70))
+            }
+            .toggleStyle(CompactCheckToggleStyle())
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -178,6 +187,15 @@ struct CustomizeDashboardTile: View {
             get: { proxy.settings.launchAtLogin },
             set: { isOn in
                 proxy.update { $0.launchAtLogin = isOn }
+            }
+        )
+    }
+
+    private var aquariumBatteryBinding: Binding<Bool> {
+        Binding(
+            get: { proxy.settings.isAquariumBatterySaverEnabled },
+            set: { isOn in
+                proxy.update { $0.isAquariumBatterySaverEnabled = isOn }
             }
         )
     }

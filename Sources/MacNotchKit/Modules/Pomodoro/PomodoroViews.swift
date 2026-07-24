@@ -201,20 +201,13 @@ public struct PomodoroExpandedView: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: primary ? 12 : 10, weight: primary ? .semibold : .medium))
+                    .font(.system(size: primary ? 11 : 9, weight: .semibold))
+                    .contentTransition(.symbolEffect(.replace))
                 Text(label)
-                    .font(.system(size: primary ? 12 : 10, weight: primary ? .semibold : .medium))
             }
-            .foregroundStyle(primary ? .white : .white.opacity(0.55))
-            .padding(.horizontal, primary ? 12 : 9)
-            .padding(.vertical, primary ? 7 : 5)
             .fixedSize()
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(primary ? Color.white.opacity(0.15) : Color.white.opacity(0.07))
-            )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(primary ? .notchPrimary : .notchSoft)
     }
 }
 
@@ -226,104 +219,98 @@ public struct PomodoroDashboardTile: View {
     @State private var distractionText = ""
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Top: ring + stats side by side
-            HStack(spacing: 14) {
-                PomodoroRing(
-                    progress: store.progress,
-                    phase: store.phase,
-                    remaining: store.remaining,
-                    isRunning: store.isRunning,
-                    ringSize: 86,
-                    strokeWidth: 7
-                )
+        NotchTile("Pomodoro", systemImage: "target") {
+            VStack(alignment: .leading, spacing: 10) {
+                // Top: ring + stats side by side
+                HStack(spacing: 14) {
+                    PomodoroRing(
+                        progress: store.progress,
+                        phase: store.phase,
+                        remaining: store.remaining,
+                        isRunning: store.isRunning,
+                        ringSize: 78,
+                        strokeWidth: 6
+                    )
 
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(spacing: 5) {
+                    VStack(alignment: .leading, spacing: 7) {
                         SessionDots(
                             completed: store.sessionInCycle - 1,
                             total: store.sessionsBeforeLongBreak
                         )
-                        Text("Session \(store.sessionInCycle)/\(store.sessionsBeforeLongBreak)")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.40))
+                        StatLine(icon: "repeat",
+                                 text: "Session \(store.sessionInCycle)/\(store.sessionsBeforeLongBreak)")
+                        StatLine(icon: "checkmark.circle.fill",
+                                 text: "\(store.completedSessions) done today")
                     }
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.45))
-                        Text("\(store.completedSessions) done today")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.50))
+                    Spacer(minLength: 0)
+                }
+
+                // Bottom: full-width controls + distraction
+                HStack(spacing: 6) {
+                    Button(action: store.toggle) {
+                        HStack(spacing: 6) {
+                            Image(systemName: store.isRunning ? "pause.fill" : "play.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .contentTransition(.symbolEffect(.replace))
+                            Text(store.isRunning ? "Pause" : "Start")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.notchPrimary)
+
+                    NotchIconButton(systemName: "arrow.counterclockwise", accessibilityLabel: "Reset",
+                                    size: 24, iconSize: 11, action: store.reset)
+                    NotchIconButton(systemName: "forward.fill", accessibilityLabel: "Skip phase",
+                                    size: 24, iconSize: 11, action: store.skip)
+
+                    if showDistractionInput {
+                        HStack(spacing: 5) {
+                            TextField("Distraction…", text: $distractionText)
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white)
+                                .onSubmit {
+                                    store.logDistraction(distractionText)
+                                    distractionText = ""
+                                    showDistractionInput = false
+                                }
+                            Button { showDistractionInput = false; distractionText = "" } label: {
+                                Image(systemName: "xmark").font(.system(size: 9)).foregroundStyle(.white.opacity(0.4))
+                            }.buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                        .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(.white.opacity(0.07)))
+                    } else {
+                        NotchIconButton(systemName: "exclamationmark.bubble", accessibilityLabel: "Log distraction",
+                                        size: 24, iconSize: 11) {
+                            if store.isRunning { showDistractionInput = true }
+                        }
+                        .disabled(!store.isRunning)
                     }
                 }
-                Spacer(minLength: 0)
             }
-
-            // Bottom: full-width controls + distraction
-            HStack(spacing: 8) {
-                // Play/Pause — stretches to fill available space
-                Button(action: store.toggle) {
-                    HStack(spacing: 6) {
-                        Image(systemName: store.isRunning ? "pause.fill" : "play.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text(store.isRunning ? "Pause" : "Start")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.14)))
-                }
-                .buttonStyle(.plain)
-
-                iconBtn("arrow.counterclockwise", action: store.reset)
-                iconBtn("forward.fill", action: store.skip)
-
-                if showDistractionInput {
-                    HStack(spacing: 5) {
-                        TextField("Distraction…", text: $distractionText)
-                            .textFieldStyle(.plain)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white)
-                            .onSubmit {
-                                store.logDistraction(distractionText)
-                                distractionText = ""
-                                showDistractionInput = false
-                            }
-                        Button { showDistractionInput = false; distractionText = "" } label: {
-                            Image(systemName: "xmark").font(.system(size: 9)).foregroundStyle(.white.opacity(0.4))
-                        }.buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.07)))
-                } else {
-                    Button {
-                        if store.isRunning { showDistractionInput = true }
-                    } label: {
-                        Image(systemName: "exclamationmark.bubble")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(store.isRunning ? 0.45 : 0.20))
-                            .padding(7)
-                            .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.07)))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!store.isRunning)
-                }
+        } trailing: {
+            if store.completedSessions > 0 {
+                Text("\(store.completedSessions) DONE")
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
+}
 
-    @ViewBuilder
-    private func iconBtn(_ icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+/// Small icon + caption stat row used beside the ring.
+private struct StatLine: View {
+    @Environment(\.notchTokens) private var tokens
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.50))
-                .padding(7)
-                .background(RoundedRectangle(cornerRadius: 7).fill(.white.opacity(0.07)))
+                .font(.system(size: 9))
+                .foregroundStyle(tokens.textTertiary)
+            Text(text)
+                .font(tokens.captionFont)
+                .foregroundStyle(tokens.textSecondary)
         }
-        .buttonStyle(.plain)
     }
 }

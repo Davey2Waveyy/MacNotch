@@ -28,10 +28,13 @@ struct CodeExpandedView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
             Text("CODE")
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.5)
-                .foregroundStyle(.white.opacity(0.4))
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.9)
+                .foregroundStyle(.white.opacity(0.40))
                 .frame(maxWidth: .infinity, alignment: .leading)
+
+            GardenExpandedView()
+                .padding(.bottom, 4)
 
             if projects.isEmpty {
                 emptyProject
@@ -45,10 +48,7 @@ struct CodeExpandedView: View {
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .contentShape(Rectangle())
-        .dropDestination(for: URL.self) { urls, _ in
-            onDrop(urls)
-            return true
-        }
+        .urlDropTarget(onDrop)
     }
 
     // Always-visible CLI quick-launch row so the tile is never empty.
@@ -145,14 +145,8 @@ struct CodeExpandedView: View {
     }
 
     private func actionButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 18, height: 18)
-        }
-        .buttonStyle(.plain)
-        .help(help)
+        NotchIconButton(systemName: systemName, accessibilityLabel: help,
+                        size: 22, iconSize: 11, action: action)
     }
 }
 
@@ -305,6 +299,7 @@ struct CodeDashboardTile: View {
     let terminals: [CodeCLITool: NotchTerminal]
 
     @State private var focusedTool: CodeCLITool = .claude
+    @AppStorage("notch_garden_minimized") private var isGardenMinimized: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -326,6 +321,34 @@ struct CodeDashboardTile: View {
                         )
                     }
                 }
+
+                if isGardenMinimized {
+                    Button(action: {
+                        withAnimation(.smooth(duration: 0.25)) {
+                            isGardenMinimized = false
+                        }
+                    }) {
+                        VStack {
+                            Spacer()
+                            Image(systemName: "leaf.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Color(red: 0.22, green: 0.84, blue: 0.36))
+                                .frame(width: 32, height: 32)
+                                .background(Color.white.opacity(0.04))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.08), lineWidth: 0.75))
+                            Spacer()
+                        }
+                        .frame(width: 44, height: 110)
+                        .background(Color.white.opacity(0.01))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Expand Garden")
+                } else {
+                    GardenDashboardWidget(isMinimized: $isGardenMinimized)
+                        .frame(width: 260)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.top, 8)
@@ -338,10 +361,7 @@ struct CodeDashboardTile: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .contentShape(Rectangle())
-        .dropDestination(for: URL.self) { urls, _ in
-            onDrop(urls)
-            return true
-        }
+        .urlDropTarget(onDrop)
     }
 
     private var workspaceHeader: some View {

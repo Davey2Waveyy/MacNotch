@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let registry = ModuleRegistry()
     private let settings = SettingsStore(url: SettingsStore.defaultURL())
     private var customizeModule: CustomizeModule?
+    private var debugObserver: NSObjectProtocol?
 
     private let moduleTitles: [String: String] = [
         "screenTime":   "Screen Time",
@@ -37,6 +38,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let notchWindow = NotchWindow(registry: registry, settings: settings)
         notchWindow.show()
         self.notchWindow = notchWindow
+
+        // Scriptable control channel for captures/debugging:
+        //   swift/notchctl posts "com.notchapple.debug" with the command as object.
+        debugObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.notchapple.debug"),
+            object: nil, queue: .main
+        ) { [weak self] note in
+            guard let command = note.object as? String else { return }
+            MainActor.assumeIsolated {
+                self?.notchWindow?.debugPerform(command)
+            }
+        }
 
         let settingsWindowController = SettingsWindowController(
             settings: settings,
@@ -98,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registry.register(CodeModule())
         registry.register(CommandPaletteModule(commands: defaultCommands()))
         registry.register(StocksModule())
+        registry.register(GardenModule())
 
         let customize = CustomizeModule(
             settings: settings.settings,

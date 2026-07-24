@@ -5,7 +5,7 @@
 # Dock icon.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP_NAME="NotchApple"
+APP_NAME="Topsoil"
 APP="$ROOT/build/${APP_NAME}-dev.app"
 BIN="$ROOT/.build/debug/MacNotch"
 
@@ -22,8 +22,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>NotchApple</string>
-  <key>CFBundleDisplayName</key><string>NotchApple</string>
+  <key>CFBundleName</key><string>Topsoil</string>
+  <key>CFBundleDisplayName</key><string>Topsoil</string>
   <key>CFBundleIdentifier</key><string>io.notchapple.NotchApple.dev</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>0.1.0-dev</string>
@@ -32,9 +32,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   
   <key>NSCalendarsUsageDescription</key>
-  <string>NotchApple shows your upcoming events in the notch.</string>
+  <string>Topsoil shows your upcoming events in the notch.</string>
   <key>NSAppleEventsUsageDescription</key>
-  <string>NotchApple controls Music and Spotify playback from the notch.</string>
+  <string>Topsoil controls Music and Spotify playback from the notch.</string>
 </dict>
 </plist>
 PLIST
