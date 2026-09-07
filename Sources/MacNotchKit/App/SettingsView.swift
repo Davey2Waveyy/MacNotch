@@ -86,7 +86,7 @@ struct SettingsView: View {
         Form {
             Section("Workspace") {
                 Picker("Workspace", selection: Binding(
-                    get: { settings.activeWorkspaceProfileID ?? "custom" },
+                    get: { WorkspaceProfile.matching(settings) ?? "custom" },
                     set: { id in
                         if let profile = WorkspaceProfile.defaults.first(where: { $0.id == id }) {
                             profile.apply(to: &settings)

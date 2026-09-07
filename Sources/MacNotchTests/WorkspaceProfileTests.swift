@@ -29,6 +29,27 @@ func workspaceProfileTests() {
         }
     }
 
+    test("matching identifies the active profile and any deviation") {
+        var settings = AppSettings.defaults
+        expect(WorkspaceProfile.matching(settings) == nil, "defaults are Custom")
+
+        WorkspaceProfile.defaults.first { $0.id == "coding" }?.apply(to: &settings)
+        expectEqual(WorkspaceProfile.matching(settings), "coding", "matches applied profile")
+
+        var moduleDeviation = settings
+        let i = moduleDeviation.modules.firstIndex { $0.id == "stocks" }!
+        moduleDeviation.modules[i].isEnabled.toggle()
+        expect(WorkspaceProfile.matching(moduleDeviation) == nil, "module toggle → Custom")
+
+        var themeDeviation = settings
+        themeDeviation.appearance.accentColor = .red
+        expect(WorkspaceProfile.matching(themeDeviation) == nil, "theme change → Custom")
+
+        var modeDeviation = settings
+        modeDeviation.defaultExpansionMode = .wideBar
+        expect(WorkspaceProfile.matching(modeDeviation) == nil, "mode change → Custom")
+    }
+
     test("default profiles map to expected appearance presets") {
         let profiles = WorkspaceProfile.defaults
         expectEqual(profiles[0].appearance.preset, .terminal, "coding preset")

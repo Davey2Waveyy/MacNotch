@@ -19,7 +19,7 @@ struct CustomizeDashboardTile: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 5) {
                     ForEach(WorkspaceProfile.defaults) { profile in
-                        let isSelected = proxy.settings.activeWorkspaceProfileID == profile.id
+                        let isSelected = WorkspaceProfile.matching(proxy.settings) == profile.id
                         Button(profile.name) {
                             proxy.update { profile.apply(to: &$0) }
                         }

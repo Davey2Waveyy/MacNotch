@@ -25,7 +25,6 @@ struct DesignSettingsView: View {
                     get: { settings.appearance.dashboardLayout },
                     set: { layout in
                         settings.appearance.dashboardLayout = layout
-                        settings.activeWorkspaceProfileID = nil
                         onChange(settings)
                     }
                 )) {

@@ -27,6 +27,19 @@ public struct WorkspaceProfile: Codable, Equatable, Identifiable, Sendable {
         WorkspaceProfile(id: "personal", name: "Personal", defaultExpansionMode: .dashboard, appearance: .defaults(preset: .studioGlass, accentColor: .amber), enabledModuleIDs: ["media", "stocks", "screenTime", "launcher", "customize", "commandPalette"])
     ]
 
+    /// The profile whose modules, appearance, and default mode all match the
+    /// current settings, or nil when the user has deviated — the picker shows
+    /// "Custom" for nil. Derived so any deviation flips to Custom, instead of
+    /// trusting a stored id that individual setters have to remember to clear.
+    public static func matching(_ settings: AppSettings) -> String? {
+        let enabled = Set(settings.modules.filter(\.isEnabled).map(\.id))
+        return defaults.first { profile in
+            profile.appearance == settings.appearance
+                && profile.defaultExpansionMode == settings.defaultExpansionMode
+                && Set(profile.enabledModuleIDs) == enabled
+        }?.id
+    }
+
     public func apply(to settings: inout AppSettings) {
         let enabled = Set(enabledModuleIDs)
         settings.activeWorkspaceProfileID = id
