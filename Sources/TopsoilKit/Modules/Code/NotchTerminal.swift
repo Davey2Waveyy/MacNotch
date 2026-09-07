@@ -28,10 +28,23 @@ public final class NotchTerminal: ObservableObject {
     }
 
     private func applyAppearance() {
-        terminalView.font = .monospacedSystemFont(ofSize: 11.5, weight: .regular)
-        terminalView.nativeForegroundColor = NSColor.white.withAlphaComponent(0.92)
+        terminalView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        terminalView.nativeForegroundColor = NSColor(srgbRed: 0.753, green: 0.792, blue: 0.961, alpha: 0.96) // #C0CAF5
         terminalView.nativeBackgroundColor = .clear
-        terminalView.caretColor = NSColor(red: 0.27, green: 0.98, blue: 0.72, alpha: 0.95)
+        terminalView.caretColor = NSColor(srgbRed: 0.49, green: 0.81, blue: 1.0, alpha: 0.95)               // #7DCFFF
+        terminalView.selectedTextBackgroundColor = NSColor(srgbRed: 0.49, green: 0.81, blue: 1.0, alpha: 0.24)
+        terminalView.installColors(Self.ansiPalette)
+    }
+
+    /// Soft, modern 16-colour ANSI palette (Tokyo-Night lineage, cyan-leaning to
+    /// match the app accent) so claude / codex / cursor output reads as designed
+    /// rather than raw-terminal default. Order: 8 normal, then 8 bright.
+    private static let ansiPalette: [SwiftTerm.Color] = [
+        0x2A2E3A, 0xF7768E, 0x9ECE6A, 0xE0AF68, 0x7AA2F7, 0xBB9AF7, 0x7DCFFF, 0xC0CAF5,
+        0x545C7E, 0xFF8DA1, 0xB6E27F, 0xF0C989, 0x9DBDFF, 0xCDB4FF, 0xA4DBFF, 0xE7ECFF,
+    ].map { hex in
+        let r = UInt16((hex >> 16) & 0xFF), g = UInt16((hex >> 8) & 0xFF), b = UInt16(hex & 0xFF)
+        return SwiftTerm.Color(red: r << 8 | r, green: g << 8 | g, blue: b << 8 | b)
     }
 
     // MARK: - Launch
