@@ -2,11 +2,11 @@
 build:
 	swift build
 test:
-	swift run MacNotchTests
+	swift run TopsoilTests
 package:
 	bash Scripts/package-app.sh
 run: package
-	-pkill -x NotchApple; sleep 0.4
+	-pkill -x Topsoil; sleep 0.4
 	open ./build/Topsoil.app
 release:
 	@test -n "$(VERSION)" || (echo "usage: make release VERSION=0.1.0"; exit 1)

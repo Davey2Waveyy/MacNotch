@@ -25,7 +25,7 @@ resizable and remembers its position.
 ## Build & run
 
 ```bash
-make test     # build and run the unit suite (swift run MacNotchTests)
+make test     # build and run the unit suite (swift run TopsoilTests)
 make run      # build, package Topsoil.app, and launch it
 make package  # just build the signed .app into ./build
 ```
@@ -42,10 +42,10 @@ rg -n '"MacNotch"|>MacNotch<|Quit MacNotch|MacNotch Settings|com.macnotch.app' \
   Sources Scripts Makefile README.md website/index.html
 ```
 
-Expected: no public-facing launch copy remains except legacy migration code, internal target names, and historical documentation that explicitly says it is legacy.
+Expected: no public-facing launch copy remains except legacy migration code (the retained `io.notchapple.NotchApple` bundle id and `NotchApple`/`MacNotch` support directories) and historical documentation that explicitly says it is legacy.
 
-> Tests use a self-contained runner (`Sources/MacNotchTests`) instead of XCTest,
-> because XCTest ships only with Xcode. Run them with `swift run MacNotchTests`;
+> Tests use a self-contained runner (`Sources/TopsoilTests`) instead of XCTest,
+> because XCTest ships only with Xcode. Run them with `swift run TopsoilTests`;
 > the process exits non-zero if any check fails.
 
 ## Permissions
@@ -89,7 +89,7 @@ pure logic headlessly):
 
 Design spec: [`docs/superpowers/specs/2026-06-22-macnotch-phase1-design.md`](docs/superpowers/specs/2026-06-22-macnotch-phase1-design.md).
 
-All code lives in the `MacNotchKit` library; the internal `MacNotch` executable
+All code lives in the `TopsoilKit` library; the internal `Topsoil` executable
 target is a thin entry point. Each feature conforms to the `NotchModule` protocol, and the window
 renders whatever modules are enabled, in order — adding a module is drop-in.
 

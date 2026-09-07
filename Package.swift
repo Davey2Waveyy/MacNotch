@@ -2,33 +2,33 @@
 import PackageDescription
 
 let package = Package(
-    name: "MacNotch",
+    name: "Topsoil",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.2.0"),
     ],
     targets: [
         .target(
-            name: "MacNotchKit",
+            name: "TopsoilKit",
             dependencies: [
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
             ],
-            path: "Sources/MacNotchKit"
+            path: "Sources/TopsoilKit"
         ),
         .executableTarget(
-            name: "MacNotch",
-            dependencies: ["MacNotchKit"],
-            path: "Sources/MacNotch"
+            name: "Topsoil",
+            dependencies: ["TopsoilKit"],
+            path: "Sources/Topsoil"
         ),
         .executableTarget(
-            name: "MacNotchTests",
-            dependencies: ["MacNotchKit"],
-            path: "Sources/MacNotchTests"
+            name: "TopsoilTests",
+            dependencies: ["TopsoilKit"],
+            path: "Sources/TopsoilTests"
         ),
         .executableTarget(
-            name: "MacNotchSnapshots",
-            dependencies: ["MacNotchKit"],
-            path: "Sources/MacNotchSnapshots"
+            name: "TopsoilSnapshots",
+            dependencies: ["TopsoilKit"],
+            path: "Sources/TopsoilSnapshots"
         ),
     ]
 )

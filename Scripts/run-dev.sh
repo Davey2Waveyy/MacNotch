@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="Topsoil"
 APP="$ROOT/build/${APP_NAME}-dev.app"
-BIN="$ROOT/.build/debug/MacNotch"
+BIN="$ROOT/.build/debug/Topsoil"
 
 echo "==> swift build"
 swift build --package-path "$ROOT"
@@ -15,7 +15,7 @@ swift build --package-path "$ROOT"
 echo "==> (re)assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN" "$APP/Contents/MacOS/NotchApple"
+cp "$BIN" "$APP/Contents/MacOS/Topsoil"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -27,7 +27,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleIdentifier</key><string>io.notchapple.NotchApple.dev</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>CFBundleShortVersionString</key><string>0.1.0-dev</string>
-  <key>CFBundleExecutable</key><string>NotchApple</string>
+  <key>CFBundleExecutable</key><string>Topsoil</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   
@@ -43,9 +43,9 @@ PLIST
 codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 
 # Restart cleanly.
-pkill -9 -f "NotchApple-dev.app/Contents/MacOS/NotchApple" 2>/dev/null || true
-pkill -9 -f "MacNotch-dev.app/Contents/MacOS/MacNotch" 2>/dev/null || true
-pkill -9 -f ".build/debug/MacNotch" 2>/dev/null || true
+pkill -9 -f "Topsoil-dev.app/Contents/MacOS/Topsoil" 2>/dev/null || true
+pkill -9 -f "Topsoil-dev.app/Contents/MacOS/Topsoil" 2>/dev/null || true
+pkill -9 -f ".build/debug/Topsoil" 2>/dev/null || true
 sleep 0.3
 open "$APP"
 echo "==> launched $APP (no Terminal, no Dock icon)"

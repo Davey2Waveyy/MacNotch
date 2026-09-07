@@ -1,6 +1,6 @@
 # Third-party licenses
 
-NotchApple bundles the following third-party software. These notices must ship
+Topsoil bundles the following third-party software. These notices must ship
 with any distributed build (DMG, GitHub release, or app resources).
 
 ## SwiftTerm
