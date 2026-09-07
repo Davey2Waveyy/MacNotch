@@ -19,7 +19,7 @@
   safe area insets and paints around the hardware.
 - User files never leave the Mac. Optional modules fetch public data only
   (market quotes, GitHub trending, lyrics).
-- Download: https://github.com/Davey2Waveyy/MacNotch/releases/latest
+- Download: https://github.com/Davey2Waveyy/Topsoil/releases/latest
 
 ## Pages
 
