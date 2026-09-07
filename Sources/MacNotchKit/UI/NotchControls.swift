@@ -49,7 +49,7 @@ private struct NotchPillBody: View {
 
     private var foreground: Color {
         switch prominence {
-        case .primary: return .white
+        case .primary: return Color.black.opacity(0.88)
         case .soft: return tokens.textPrimary
         case .ghost: return hovering ? tokens.textPrimary : tokens.textSecondary
         case .destructive: return hovering ? Color(red: 1, green: 0.55, blue: 0.55) : tokens.textSecondary
@@ -71,7 +71,7 @@ private struct NotchPillBody: View {
 
     private var stroke: Color {
         switch prominence {
-        case .primary: return .white.opacity(0.18)
+        case .primary: return Color.black.opacity(0.88).opacity(0.18)
         case .soft: return .white.opacity(hovering ? 0.20 : 0.10)
         case .ghost: return .white.opacity(hovering ? 0.10 : 0)
         case .destructive: return Color(red: 1, green: 0.45, blue: 0.45).opacity(hovering ? 0.45 : 0.25)
@@ -80,7 +80,7 @@ private struct NotchPillBody: View {
 
     private var glow: Color {
         guard prominence == .primary else { return .clear }
-        return tokens.accent.opacity(hovering ? 0.45 : 0.30)
+        return .clear
     }
 }
 

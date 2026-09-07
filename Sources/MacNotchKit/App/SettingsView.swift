@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var model: SettingsWindowModel
     @State private var selectedSection: SettingsSection = .general
+    @State private var moduleQuery = ""
     private let titles: [String: String]
     private let loginItemIsEnabled: () -> Bool
     private let setLoginItemEnabled: (Bool) -> Bool
@@ -29,12 +30,37 @@ struct SettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            List(SettingsSection.allCases, selection: $selectedSection) { section in
-                Text(section.rawValue).tag(section)
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .font(.system(size: 25, weight: .medium))
+                        .foregroundStyle(Color.accentColor)
+                    Text(NotchBrand.productName)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                    Text("A little space.\nA lot within reach.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 18).padding(.top, 22)
+                List(SettingsSection.allCases, selection: $selectedSection) { section in
+                    Label(section.rawValue, systemImage: section.icon).tag(section)
+                        .padding(.vertical, 5)
+                }
+                .listStyle(.sidebar)
+                Text("Made for your Mac")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .padding(18)
             }
-            .frame(width: 150)
+            .frame(width: 190)
+            .background(.quaternary.opacity(0.4))
+            Divider()
 
-            Group {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(selectedSection.rawValue).font(.system(size: 25, weight: .bold))
+                    Text(selectedSection.subtitle).font(.callout).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 8)
+                Group {
                 switch selectedSection {
                 case .general:
                     generalSection
@@ -49,10 +75,11 @@ struct SettingsView: View {
                 case .about:
                     aboutSection
                 }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 720, height: 520)
+        .frame(minWidth: 760, idealWidth: 820, minHeight: 560, idealHeight: 620)
     }
 
     private var generalSection: some View {
@@ -115,28 +142,59 @@ struct SettingsView: View {
     }
 
     private var modulesSection: some View {
-        Form {
-            Section("Modules") {
-                List {
-                    ForEach(settings.modules, id: \.id) { module in
-                        Toggle(titles[module.id] ?? module.id, isOn: enabledBinding(for: module.id))
-                    }
-                    .onMove(perform: moveModules)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Find a module", text: $moduleQuery).textFieldStyle(.plain)
+                    .accessibilityLabel("Search module library")
+                if !moduleQuery.isEmpty {
+                    Button { moduleQuery = "" } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.plain).accessibilityLabel("Clear module search")
                 }
-                .frame(height: 280)
-                Text("Drag to reorder. Changes apply to the notch immediately.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
+            .padding(10).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
+            HStack {
+                Text("\(settings.modules.filter(\.isEnabled).count) enabled")
+                Spacer()
+                Text(moduleQuery.isEmpty ? "Drag to reorder" : "Clear search to reorder")
+            }
+            .font(.caption).foregroundStyle(.secondary)
+            List {
+                ForEach(settings.modules.filter { module in
+                    moduleQuery.isEmpty || "\(titles[module.id] ?? module.id) \(ModulePresentation.description(for: module.id))"
+                        .localizedStandardContains(moduleQuery)
+                }, id: \.id) { module in
+                    HStack(spacing: 12) {
+                        Image(systemName: ModulePresentation.icon(for: module.id))
+                            .font(.system(size: 16)).foregroundStyle(Color.accentColor)
+                            .frame(width: 34, height: 34)
+                            .background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 9))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(titles[module.id] ?? module.id).font(.body.weight(.medium))
+                            Text(ModulePresentation.description(for: module.id))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Toggle(titles[module.id] ?? module.id, isOn: enabledBinding(for: module.id))
+                            .labelsHidden().toggleStyle(.switch).controlSize(.small)
+                    }
+                    .padding(.vertical, 6)
+                    .moveDisabled(!moduleQuery.isEmpty)
+                }
+                .onMove(perform: moveModules)
+            }
+            .listStyle(.inset)
+            Text("Changes apply immediately. Disabled modules keep their saved data.")
+                .font(.caption).foregroundStyle(.secondary)
         }
-        .formStyle(.grouped)
+        .padding(24)
     }
 
     private var privacySection: some View {
         Form {
             Section("Privacy") {
                 Text(NotchBrand.affiliationDisclaimer)
-                Text("NotchApple stores settings locally in Application Support and only asks for permissions when a module needs them.")
+                Text("Topsoil stores settings on this Mac and asks for permissions when a module needs them. Media controls use Automation; your schedule uses Calendar access.")
             }
         }
         .formStyle(.grouped)
@@ -145,9 +203,18 @@ struct SettingsView: View {
     private var shortcutsSection: some View {
         Form {
             Section("Shortcuts") {
-                Text("Keyboard shortcut customization is coming soon.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                LabeledContent("Previous dashboard page", value: "⌘[")
+                LabeledContent("Next dashboard page", value: "⌘]")
+                LabeledContent("Clear tool search", value: "Esc")
+            }
+            Section("Around the notch") {
+                LabeledContent("Preview your tools", value: "Hover over the notch")
+                LabeledContent("Open your workspace", value: "Click the notch")
+                LabeledContent("Keep the panel open", value: "Click the pin")
+                LabeledContent("Move the panel", value: "Drag the grip")
+                LabeledContent("Change pages", value: "Click a tab or swipe sideways")
+                Text("Page shortcuts work while the Topsoil panel has keyboard focus.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -156,8 +223,11 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Form {
             Section("About") {
-                Text(NotchBrand.productName)
-                Text(NotchBrand.affiliationDisclaimer)
+                Label(NotchBrand.productName, systemImage: "square.stack.3d.up.fill")
+                    .font(.title2.bold())
+                Text("Your music, tools, and next small task. Right where you need them.")
+                    .foregroundStyle(.secondary)
+                Text(NotchBrand.affiliationDisclaimer).font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -174,6 +244,7 @@ struct SettingsView: View {
     }
 
     private func moveModules(from offsets: IndexSet, to destination: Int) {
+        guard moduleQuery.isEmpty else { return }
         SettingsLogic.reorder(&settings, fromOffsets: offsets, toOffset: destination)
         onChange(settings)
     }

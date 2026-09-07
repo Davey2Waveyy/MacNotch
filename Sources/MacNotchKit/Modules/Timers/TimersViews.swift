@@ -97,7 +97,7 @@ struct TimersDashboardTile: View {
                 customMinutes = min(180, customMinutes + 1)
             }
             Button { onStart(Double(customMinutes), "\(customMinutes)m") } label: {
-                Text("Start").frame(maxWidth: .infinity)
+                Label("Start", systemImage: "play.fill").frame(width: 60)
             }
             .buttonStyle(.notchPrimary)
         }
@@ -106,11 +106,15 @@ struct TimersDashboardTile: View {
     @ViewBuilder
     private var runningList: some View {
         if active.isEmpty {
-            ModuleEmptyStateView(
-                title: "No Timers",
-                message: "Start one and it stays visible in the notch.",
-                systemImage: "timer"
-            )
+            VStack(spacing: 8) {
+                Text(String(format: "%02d:00", customMinutes))
+                    .font(.system(size: 38, weight: .light, design: .rounded).monospacedDigit())
+                    .foregroundStyle(tokens.textPrimary)
+                    .contentTransition(.numericText())
+                Text("A moment for what matters.")
+                    .font(tokens.bodyFont).foregroundStyle(tokens.textSecondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 4) {
                 ForEach(active.prefix(2)) { timer in

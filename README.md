@@ -6,6 +6,17 @@ expands on hover into a stack of modules — **Now Playing**, **Calendar**,
 
 Built entirely with Swift Package Manager — **no Xcode required**.
 
+## Dashboard and personalization
+
+Click the notch to open your workspace. Named tabs jump directly between pages;
+**Find a tool** searches enabled modules by name and description. Use **⌘[** and
+**⌘]** to change pages while the panel has keyboard focus, or swipe sideways.
+
+In **Settings → Design**, choose paged tiles, priority (a wider first tile), or
+full-page focus. **Settings → Modules** includes search, descriptions, toggles,
+and drag-to-reorder; clear the search before reordering. The settings window is
+resizable and remembers its position.
+
 ## Requirements
 
 - macOS 14+ (developed and run on macOS 26, Apple Silicon)

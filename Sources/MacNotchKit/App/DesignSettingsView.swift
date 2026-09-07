@@ -20,6 +20,23 @@ struct DesignSettingsView: View {
                 }
             }
 
+            Section("Dashboard layout") {
+                Picker("Layout", selection: Binding(
+                    get: { settings.appearance.dashboardLayout },
+                    set: { layout in
+                        settings.appearance.dashboardLayout = layout
+                        settings.activeWorkspaceProfileID = nil
+                        onChange(settings)
+                    }
+                )) {
+                    Text("Paged tiles").tag(DashboardLayoutPreference.pagedTiles)
+                    Text("Priority").tag(DashboardLayoutPreference.priority)
+                    Text("Full-page focus").tag(DashboardLayoutPreference.fullPageFocus)
+                }
+                Text("Paged tiles keeps tools together. Priority gives the first tool more room. Focus shows one tool at a time.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
             Section("Feel") {
                 Picker("Accent Color", selection: Binding(
                     get: { settings.appearance.accentColor },

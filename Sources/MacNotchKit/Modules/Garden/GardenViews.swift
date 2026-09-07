@@ -508,162 +508,63 @@ struct GardenExpandedView: View {
 // MARK: - Dashboard Terrarium Widget
 
 struct GardenDashboardWidget: View {
+    @Environment(\.notchTokens) private var tokens
     @ObservedObject var state = GardenState.shared
     @Binding var isMinimized: Bool
-    let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-    
+    private let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Left: Upscaled pixel art canvas (110x110)
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.black.opacity(0.35))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .strokeBorder(.white.opacity(0.08), lineWidth: 0.75)
-                    )
-                
-                GardenCanvasView(state: state)
-                    .padding(8)
+        VStack(spacing: 6) {
+            HStack {
+                Text(state.getStageName())
+                    .font(tokens.titleFont).foregroundStyle(tokens.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                NotchIconButton(systemName: "minus", accessibilityLabel: "Minimize garden", size: 22, iconSize: 10) {
+                    withAnimation(tokens.panelAnimation) { isMinimized = true }
+                }
             }
-            .frame(width: 110, height: 110)
-            
-            // Right: Plant metrics and controls
-            VStack(alignment: .leading, spacing: 8) {
-                // Header: Title + Coding Boost + Fixed leaf minimize button
-                HStack(spacing: 4) {
-                    Text(state.getStageName())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                    
-                    Spacer()
-                    
-                    if state.isCodingFocused {
-                        Text("</>")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(Color(red: 0.22, green: 1.0, blue: 0.08))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(Color(red: 0.22, green: 1.0, blue: 0.08).opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
-                    }
-                    
-                    // Fixed seedling minimize button: leaf outline (guaranteed to render on macOS 11+)
-                    Button(action: {
-                        withAnimation(.smooth(duration: 0.25)) {
-                            isMinimized = true
-                        }
-                    }) {
-                        Image(systemName: "leaf")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Color(red: 0.22, green: 0.84, blue: 0.36))
-                            .frame(width: 18, height: 18)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Minimize Garden")
+            .frame(height: 22)
+            Spacer(minLength: 0)
+            HStack(spacing: 16) {
+                GardenCanvasView(state: state)
+                    .frame(width: 72, height: 72)
+                    .accessibilityLabel(state.getStageName())
+                VStack(alignment: .leading, spacing: 6) {
+                    metric("Water", value: Int(state.waterLevel), symbol: "drop.fill")
+                    metric("Growth", value: Int(state.growthProgress), symbol: "leaf.fill")
                 }
-                
-                // Compact side-by-side progress pills (takes up very little vertical space)
-                HStack(spacing: 6) {
-                    // Water Level Pill
-                    HStack(spacing: 3) {
-                        Image(systemName: "drop.fill")
-                            .font(.system(size: 7))
-                        Text("\(Int(state.waterLevel))%")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    }
-                    .foregroundStyle(Color(red: 0.0, green: 0.6, blue: 1.0))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color(red: 0.0, green: 0.6, blue: 1.0).opacity(0.12))
-                    .clipShape(Capsule())
-                    
-                    // Growth Progress Pill (shows boost speed next to growth percentage!)
-                    HStack(spacing: 3) {
-                        Image(systemName: "leaf.fill")
-                            .font(.system(size: 7))
-                        Text("\(Int(state.growthProgress))%")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        if state.isCodingFocused {
-                            Text("(3x ⚡️)")
-                                .font(.system(size: 7, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color(red: 0.22, green: 1.0, blue: 0.08))
-                        }
-                    }
-                    .foregroundStyle(Color(red: 0.22, green: 0.84, blue: 0.36))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color(red: 0.22, green: 0.84, blue: 0.36).opacity(0.12))
-                    .clipShape(Capsule())
+            }
+            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                Button { state.waterPlant() } label: {
+                    Label("Water", systemImage: "drop")
+                        .frame(maxWidth: .infinity)
                 }
-                
-                // Live Activity log console (satisfies "Incentivize actual coding")
-                VStack(alignment: .leading, spacing: 1) {
-                    ForEach(state.logs, id: \.self) { log in
-                        Text(log)
-                            .font(.system(size: 7.5, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.38))
-                            .lineLimit(1)
-                    }
+                .buttonStyle(.notchSoft)
+                .disabled(state.waterLevel >= 100 || state.isWateringActive || state.isFertilizingActive)
+                Button { state.fertilizePlant() } label: {
+                    Label("Feed", systemImage: "leaf")
+                        .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(5)
-                .background(Color.black.opacity(0.18))
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                
-                Spacer(minLength: 0)
-                
-                // Actions (disabled during animations or when maxed out to prevent spamming)
-                HStack(spacing: 6) {
-                    Button(action: {
-                        guard !state.isWateringActive && state.waterLevel < 100 else { return }
-                        state.waterPlant()
-                    }) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "drop.fill")
-                            Text(state.waterLevel >= 100 ? "Full" : "Water")
-                        }
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(state.waterLevel >= 100 ? .white.opacity(0.25) : Color(red: 0.0, green: 0.6, blue: 1.0))
-                        .frame(maxWidth: .infinity, minHeight: 20)
-                        .background(Color.white.opacity(0.04))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(state.waterLevel >= 100 || state.isWateringActive || state.isFertilizingActive)
-                    
-                    Button(action: {
-                        guard !state.isFertilizingActive && state.fertilizerTime < 300 else { return }
-                        state.fertilizePlant()
-                    }) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "leaf.fill")
-                            Text(state.fertilizerTime >= 300 ? "Maxed" : "Fertilize")
-                        }
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(state.fertilizerTime >= 300 ? .white.opacity(0.25) : Color(red: 1.0, green: 0.0, blue: 0.5))
-                        .frame(maxWidth: .infinity, minHeight: 20)
-                        .background(Color.white.opacity(0.04))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(state.fertilizerTime >= 300 || state.isFertilizingActive || state.isWateringActive)
-                }
+                .buttonStyle(.notchSoft)
+                .disabled(state.fertilizerTime >= 300 || state.isFertilizingActive || state.isWateringActive)
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.white.opacity(0.02))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(.white.opacity(0.05), lineWidth: 0.75)
-                )
-        )
-        .onReceive(timer) { _ in
-            state.tick()
+        .padding(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(RoundedRectangle(cornerRadius: 12).fill(.white.opacity(0.025)))
+        .onReceive(timer) { _ in state.tick() }
+    }
+
+    private func metric(_ title: String, value: Int, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Label(title, systemImage: symbol).font(tokens.captionFont)
+                .foregroundStyle(tokens.textSecondary)
+            Text("\(value)%")
+                .font(.system(size: 15, weight: .medium, design: .rounded).monospacedDigit())
+                .foregroundStyle(tokens.textPrimary)
         }
     }
 }

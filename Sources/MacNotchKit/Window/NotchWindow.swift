@@ -10,19 +10,21 @@ private final class HoverContainerView: NSView {
     weak var owner: NotchWindow?
     var onDropped: (([URL]) -> Void)?
 
+    private var hoverTrackingArea: NSTrackingArea?
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        for area in trackingAreas { removeTrackingArea(area) }
-        // `.assumeInside` prevents AppKit from synthesizing a mouseEntered when
-        // the tracking area is (re)installed with the cursor already inside it.
-        // Without this, every collapse → tracking-area-rebuild on the shrunken
-        // notch fires a new mouseEntered and the panel spam-toggles.
-        addTrackingArea(NSTrackingArea(
-            rect: bounds,
-            options: [.mouseEnteredAndExited, .activeAlways, .assumeInside],
+        // Keep one tracking area. AppKit follows the visible bounds during resize;
+        // replacing it on every layout creates synthetic enter/exit sequences.
+        guard hoverTrackingArea == nil else { return }
+        let area = NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
             owner: self,
             userInfo: nil
-        ))
+        )
+        hoverTrackingArea = area
+        addTrackingArea(area)
     }
 
     override func mouseEntered(with event: NSEvent) { owner?.mouseEntered(with: event) }
@@ -95,6 +97,7 @@ private final class UnconstrainedPanel: NSPanel {
 
 @MainActor
 public final class NotchWindow: NSObject {
+    private let pointerLocation: () -> CGPoint
     private let panel: UnconstrainedPanel
     private let model = NotchWindowModel()
     private let machine = NotchStateMachine()
@@ -102,7 +105,7 @@ public final class NotchWindow: NSObject {
     private let registry: ModuleRegistry
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
-    private let dashboardSize = CGSize(width: 1340, height: 296)
+    private let dashboardSize = CGSize(width: 1120, height: 350)
     private let wideBarHeight: CGFloat = 56
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 520
@@ -118,9 +121,12 @@ public final class NotchWindow: NSObject {
     private var localClickMonitor: Any?
     private var globalClickMonitor: Any?
     private var globalMouseMoveMonitor: Any?
+    private var localMouseMoveMonitor: Any?
     private var timerFiredObserver: Any?
 
-    public init(registry: ModuleRegistry, settings: SettingsStore) {
+    public init(registry: ModuleRegistry, settings: SettingsStore,
+                pointerLocation: @escaping () -> CGPoint = { NSEvent.mouseLocation }) {
+        self.pointerLocation = pointerLocation
         self.registry = registry
         self.settings = settings
 
@@ -148,6 +154,7 @@ public final class NotchWindow: NSObject {
         panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         panel.ignoresMouseEvents = false
+        panel.acceptsMouseMovedEvents = true
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = false
         // Allow text fields (e.g. the Reminders input) to grab keyboard focus on
@@ -208,6 +215,7 @@ public final class NotchWindow: NSObject {
     public func show() {
         installClickMonitorsIfNeeded()
         isShown = true
+        installMouseMoveMonitorIfNeeded()
         applyCompactHeight(model.compactContentHeight)
         sync()
         activateModulesIfNeeded()
@@ -228,6 +236,7 @@ public final class NotchWindow: NSObject {
     }
 
     public func tearDown() {
+        isShown = false
         scheduledTransitionToken &+= 1
         deactivateModulesIfNeeded()
         removeClickMonitors()
@@ -326,43 +335,52 @@ public final class NotchWindow: NSObject {
     }
 
     @objc public func mouseEntered(with event: NSEvent) {
-        applyHover(true)
+        checkMousePosition()
     }
 
     @objc public func mouseExited(with event: NSEvent) {
-        // Tracking area mouseExited under-fires when the panel grows past the
-        // cursor (the cursor never actually leaves the new bounds). The global
-        // mouse-move monitor handles that case. We still forward this event
-        // because when it *does* fire (collapsed panel, cursor leaves notch)
-        // it's the cheapest, most reliable exit signal.
-        applyHover(false)
+        // An exit can belong to pre-resize bounds or window-level changes.
+        // The current screen-space position is authoritative, not the event type.
+        checkMousePosition()
     }
 
-    /// Install a global mouse-move monitor that collapses the compact hover
-    /// panel when the cursor leaves the panel frame. Removed when not needed.
     private func installMouseMoveMonitorIfNeeded() {
-        guard globalMouseMoveMonitor == nil else { return }
-        globalMouseMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
-            Task { @MainActor [weak self] in self?.checkMousePosition() }
+        if globalMouseMoveMonitor == nil {
+            globalMouseMoveMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, self.isShown else { return }
+                    self.checkMousePosition()
+                }
+            }
+        }
+        if localMouseMoveMonitor == nil {
+            localMouseMoveMonitor = NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+                MainActor.assumeIsolated {
+                    guard let self, self.isShown else { return }
+                    self.checkMousePosition()
+                }
+                return event
+            }
         }
     }
 
     private func removeMouseMoveMonitor() {
-        if let m = globalMouseMoveMonitor { NSEvent.removeMonitor(m); globalMouseMoveMonitor = nil }
+        if let monitor = globalMouseMoveMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalMouseMoveMonitor = nil
+        }
+        if let monitor = localMouseMoveMonitor {
+            NSEvent.removeMonitor(monitor)
+            localMouseMoveMonitor = nil
+        }
     }
 
     private func checkMousePosition() {
-        guard machine.mode == .compact, machine.state == .expanded || machine.state == .expanding else {
-            removeMouseMoveMonitor()
-            return
-        }
-        guard !model.isPinned else { return }
-        let mouse = NSEvent.mouseLocation
-        let panelFrame = panel.frame
-        if !panelFrame.contains(mouse) {
-            removeMouseMoveMonitor()
-            applyHover(false)
-        }
+        guard !model.isPinned, !isDragInProgress else { return }
+        // Click-opened workspaces are explicitly dismissed. Hover only manages
+        // the collapsed notch and the compact preview, including its grace period.
+        guard machine.state == .collapsed || machine.mode == .compact else { return }
+        applyHover(panel.frame.contains(pointerLocation()))
     }
 
     private var notchRect: CGRect {
@@ -452,7 +470,7 @@ public final class NotchWindow: NSObject {
         model.isPinned.toggle()
         if !model.isPinned {
             if machine.mode == .compact, machine.state == .expanded {
-                let cursorInPanel = panel.frame.contains(NSEvent.mouseLocation)
+                let cursorInPanel = panel.frame.contains(pointerLocation())
                 if !cursorInPanel {
                     _ = machine.hoverChanged(false)
                     transitionCoordinator.requestGracefulCollapse()
@@ -542,15 +560,8 @@ public final class NotchWindow: NSObject {
         // While pinned any expanded mode ignores hover-out.
         if !inside, model.isPinned { return }
         guard machine.hoverChanged(inside) else { return }
-        if inside {
-            // Install a global move monitor to detect when the cursor leaves the
-            // expanded panel (tracking area mouseExited is unreliable after the
-            // window grows to accommodate the compact preview).
-            installMouseMoveMonitorIfNeeded()
-        } else {
-            removeMouseMoveMonitor()
-            // Give the user a brief grace window to come back without a
-            // disruptive snap collapse if they overshot the panel edge.
+        if !inside {
+            // Keep both monitors alive through grace so re-entry can cancel it.
             transitionCoordinator.requestGracefulCollapse()
         }
         sync()
@@ -570,10 +581,10 @@ public final class NotchWindow: NSObject {
         model.isExpanded = transitionCoordinator.isVisuallyExpanded
         model.mode = machine.mode
 
-        // Drop to .floating when expanded so SwiftUI .draggable() sessions can
-        // start — macOS blocks drag sources in .statusBar level windows.
-        // Return to .statusBar when collapsed so the notch stays above all apps.
-        panel.level = transitionCoordinator.isVisuallyExpanded ? .floating : .statusBar
+        // Hover must remain above the menu bar across the entire camera island.
+        // Only click-opened workspaces drop to floating for native file dragging.
+        panel.level = transitionCoordinator.isVisuallyExpanded && machine.mode != .compact
+            ? .floating : .popUpMenu
 
         updateFrame(visuallyExpanded: transitionCoordinator.isVisuallyExpanded)
 
@@ -587,7 +598,12 @@ public final class NotchWindow: NSObject {
             switch transitionCoordinator.phase {
             case .collapseGrace:
                 scheduleTransition(after: collapseGraceDelay) { [weak self] in
-                    guard let self, self.transitionCoordinator.advanceCollapseGrace(for: self.machine.state) else { return }
+                    guard let self else { return }
+                    if self.panel.frame.contains(self.pointerLocation()), !self.isDragInProgress {
+                        self.applyHover(true)
+                        return
+                    }
+                    guard self.transitionCoordinator.advanceCollapseGrace(for: self.machine.state) else { return }
                     self.sync()
                 }
             case .collapseAnimation:

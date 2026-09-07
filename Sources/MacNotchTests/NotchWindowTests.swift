@@ -23,12 +23,23 @@ final class ActivatingModule: NotchModule {
 }
 
 @MainActor
+private final class TestPointer {
+    var location = CGPoint.zero
+}
+
+@MainActor
+private var testPointers: [ObjectIdentifier: TestPointer] = [:]
+
+@MainActor
 private func makeTestWindow() -> NotchWindow {
     _ = NSApplication.shared
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString)
         .appendingPathExtension("json")
-    return NotchWindow(registry: ModuleRegistry(), settings: SettingsStore(url: url))
+    let pointer = TestPointer()
+    let window = NotchWindow(registry: ModuleRegistry(), settings: SettingsStore(url: url), pointerLocation: { pointer.location })
+    testPointers[ObjectIdentifier(window)] = pointer
+    return window
 }
 
 @MainActor
@@ -74,6 +85,8 @@ private func waitForMainQueue(_ duration: TimeInterval) {
 
 @MainActor
 private func hoverEnter(_ window: NotchWindow) {
+    let frame = notchWindowPanel(for: window).frame
+    testPointers[ObjectIdentifier(window)]?.location = CGPoint(x: frame.midX, y: frame.maxY - 4)
     if let event = NSEvent.enterExitEvent(
         with: .mouseEntered,
         location: .zero,
@@ -93,6 +106,12 @@ private func hoverEnter(_ window: NotchWindow) {
 
 @MainActor
 private func hoverExit(_ window: NotchWindow) {
+    testPointers[ObjectIdentifier(window)]?.location = CGPoint(x: -10000, y: -10000)
+    sendExitEvent(window)
+}
+
+@MainActor
+private func sendExitEvent(_ window: NotchWindow) {
     if let event = NSEvent.enterExitEvent(
         with: .mouseExited,
         location: .zero,
@@ -111,6 +130,66 @@ private func hoverExit(_ window: NotchWindow) {
 }
 
 func notchWindowTests() {
+    test("hover preview stays above the menu bar at every expansion phase") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            defer { window.tearDown() }
+            let panel = notchWindowPanel(for: window)
+            expect(panel.level.rawValue > NSWindow.Level.mainMenu.rawValue, "collapsed hit target above menu bar")
+            hoverEnter(window)
+            expect(panel.level.rawValue > NSWindow.Level.mainMenu.rawValue, "expanding hit target above menu bar")
+            waitForMainQueue(0.4)
+            expect(panel.level.rawValue > NSWindow.Level.mainMenu.rawValue, "expanded hover target above menu bar")
+        }
+    }
+
+    test("stale tracking exits cannot collapse a preview while the pointer remains inside") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            defer { window.tearDown() }
+            hoverEnter(window)
+            waitForMainQueue(0.4)
+            let frame = notchWindowPanel(for: window).frame
+            for point in [CGPoint(x: frame.minX + 2, y: frame.maxY - 2),
+                          CGPoint(x: frame.midX, y: frame.maxY - 2),
+                          CGPoint(x: frame.maxX - 2, y: frame.minY + 2)] {
+                testPointers[ObjectIdentifier(window)]?.location = point
+                sendExitEvent(window)
+                waitForMainQueue(0.25)
+                expect(notchWindowModel(for: window).isExpanded, "inside pointer survives stale exit at \(point)")
+            }
+        }
+    }
+
+    test("hover grace checks the current pointer even if the re-entry event was missed") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            defer { window.tearDown() }
+            hoverEnter(window)
+            waitForMainQueue(0.4)
+            hoverExit(window)
+            let frame = notchWindowPanel(for: window).frame
+            testPointers[ObjectIdentifier(window)]?.location = CGPoint(x: frame.midX, y: frame.maxY - 4)
+            waitForMainQueue(0.6)
+            expect(notchWindowModel(for: window).isExpanded, "missed re-entry cancels collapse at the grace deadline")
+        }
+    }
+
+    test("hover tracking survives view resize without being replaced or assuming inside") {
+        MainActor.assumeIsolated {
+            let window = makeTestWindow()
+            defer { window.tearDown() }
+            let view = notchWindowPanel(for: window).contentView!
+            view.updateTrackingAreas()
+            let original = view.trackingAreas.first!
+            hoverEnter(window)
+            view.updateTrackingAreas()
+            expect(view.trackingAreas.contains { $0 === original }, "same tracking area after resize")
+            expect(original.options.contains(.inVisibleRect), "tracking follows the visible bounds")
+            expect(!original.options.contains(.assumeInside), "entry is not suppressed by an assumed inside state")
+        }
+    }
+
     test("outside-click policy ignores clicks inside the panel and collapses active outside states") {
         let frame = CGRect(x: 100, y: 100, width: 280, height: 320)
         let inside = CGPoint(x: 140, y: 140)
@@ -333,8 +412,8 @@ func notchWindowTests() {
 
             expect(model.isExpanded, "panel tap expands the dashboard")
             expectEqual(model.mode, .dashboard, "panel tap opens dashboard mode")
-            expectEqual(panel.frame.width, 1340, "dashboard width is applied")
-            expectEqual(panel.frame.height, 296, "dashboard height is applied")
+            expectEqual(panel.frame.width, 1120, "dashboard width is applied")
+            expectEqual(panel.frame.height, 350, "dashboard height is applied")
             expectEqual(panel.frame.midX, notchRect.midX, "dashboard stays centered on notch")
             expectEqual(panel.frame.maxY, notchRect.maxY, "dashboard top stays aligned to notch")
         }

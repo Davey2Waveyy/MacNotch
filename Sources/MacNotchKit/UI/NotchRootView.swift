@@ -44,7 +44,7 @@ public struct NotchRootView: View {
     private let compactWidth: CGFloat = 280
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 520
-    private let dashboardSize = CGSize(width: 1340, height: 296)
+    private let dashboardSize = CGSize(width: 1120, height: 350)
     private let wideBarHeight: CGFloat = 56
 
     public init(
@@ -69,6 +69,7 @@ public struct NotchRootView: View {
 
     public var body: some View {
         panelBody
+            .environment(\.colorScheme, .dark)
             .environment(\.notchTokens, themeTokens)
             .environmentObject(model)
             .animation(themeTokens.panelAnimation, value: model.isExpanded)
@@ -330,8 +331,8 @@ struct NotchChrome: View {
             // reading as a gray tab over bright desktops.
             LinearGradient(
                 colors: [
-                    Color.black.opacity(isExpanded ? 0.54 : 0.93),
-                    Color.black.opacity(isExpanded ? 0.72 : 0.97)
+                    Color(red: 0.055, green: 0.060, blue: 0.070).opacity(isExpanded ? 0.97 : 0.99),
+                    Color(red: 0.035, green: 0.040, blue: 0.048).opacity(0.99)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -356,8 +357,8 @@ struct NotchChrome: View {
             // collapsed so the resting notch stays hardware-black.
             LinearGradient(
                 stops: [
-                    .init(color: .white.opacity(isExpanded ? 0.22 : 0.04), location: 0.0),
-                    .init(color: .white.opacity(isExpanded ? 0.08 : 0.015), location: 0.10),
+                    .init(color: .white.opacity(isExpanded ? 0.025 : 0.04), location: 0.0),
+                    .init(color: .white.opacity(isExpanded ? 0.01 : 0.015), location: 0.10),
                     .init(color: .white.opacity(isExpanded ? 0.02 : 0), location: 0.25),
                     .init(color: .clear, location: 0.45)
                 ],
@@ -379,7 +380,7 @@ struct NotchChrome: View {
                 .stroke(
                     LinearGradient(
                         colors: [
-                            .white.opacity(isExpanded ? 0.36 : 0.10),
+                            .white.opacity(isExpanded ? 0.09 : 0.10),
                             .white.opacity(isExpanded ? 0.08 : 0.01)
                         ],
                         startPoint: .top,

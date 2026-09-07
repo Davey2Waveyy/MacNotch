@@ -42,13 +42,15 @@ final class SettingsWindowController {
     func show() {
         if window == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 720, height: 520),
-                styleMask: [.titled, .closable],
+                contentRect: NSRect(x: 0, y: 0, width: 820, height: 620),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
                 backing: .buffered,
                 defer: false
             )
             window.title = NotchBrand.settingsTitle
             window.isReleasedWhenClosed = false
+            window.minSize = NSSize(width: 760, height: 590)
+            window.setFrameAutosaveName("TopsoilSettings")
             window.center()
 
             let view = SettingsView(model: model, titles: titles, onChange: onChange)

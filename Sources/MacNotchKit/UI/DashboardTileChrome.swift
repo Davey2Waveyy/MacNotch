@@ -9,21 +9,9 @@ struct DashboardTileSurface: ViewModifier {
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: tokens.tileCornerRadius, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         content
-            .background(
-                ZStack {
-                    shape.fill(tokens.tileFillColor(hovered: isHovered))
-                    // Faint top light so tiles read as machined surfaces, not flat fills.
-                    shape.fill(
-                        LinearGradient(
-                            colors: [.white.opacity(isHovered ? 0.05 : 0.03), .clear],
-                            startPoint: .top, endPoint: .center
-                        )
-                    )
-                }
-            )
-            .overlay(shape.strokeBorder(tokens.tileStrokeColor(hovered: isHovered), lineWidth: 0.75))
+            .background(shape.fill(Color.white.opacity(isHovered ? 0.055 : 0.025)))
             .animation(tokens.hoverAnimation, value: isHovered)
             .onHover { isHovered = $0 }
     }
@@ -60,7 +48,7 @@ struct NotchTile<Content: View, Trailing: View>: View {
             content()
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -89,10 +77,9 @@ struct TileHeader<Trailing: View>: View {
             Image(systemName: systemImage)
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(tokens.accent.opacity(0.9))
-            Text(title.uppercased())
-                .font(tokens.caption2Font)
-                .tracking(0.9)
-                .foregroundStyle(tokens.textTertiary)
+            Text(title)
+                .font(tokens.labelFont.weight(.semibold))
+                .foregroundStyle(tokens.textSecondary)
             Spacer(minLength: 0)
             trailing()
                 .font(tokens.caption2Font)

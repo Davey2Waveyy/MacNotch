@@ -30,5 +30,6 @@ onboardingStateTests()
 featureFlagsTests()
 workspaceProfileTests()
 commandPaletteTests()
+dashboardNavigationTests()
 
 exit(Int32(TestRunner.shared.runAll()))

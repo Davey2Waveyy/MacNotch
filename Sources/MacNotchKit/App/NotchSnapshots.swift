@@ -24,6 +24,7 @@ public enum NotchSnapshots {
             model.settings = .defaults
             model.appearance = state.appearance
             model.mode = state.mode
+            model.dashboardPage = state.page
             model.isExpanded = state.isExpanded
             model.compactContentHeight = 400
 
@@ -70,7 +71,7 @@ public enum NotchSnapshots {
         registry.register(ScreenTimeModule())
         registry.register(TimersModule())
         registry.register(PomodoroModule())
-        registry.register(ShelfModule())
+        registry.register(ShelfModule(store: ShelfStore(url: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("shelf.json"))))
         registry.register(ActionsModule())
         registry.register(MediaModule())
         registry.register(RemindersModule())
@@ -96,15 +97,22 @@ private struct SnapshotState {
     let mode: ExpansionMode
     let isExpanded: Bool
     var appearance: NotchAppearance = .defaults
+    var page: Int = 0
 
     @MainActor
     func panelSize(collapsed: CGSize, model: NotchWindowModel) -> CGSize {
         guard isExpanded else { return collapsed }
         switch mode {
         case .compact: return CGSize(width: 280, height: model.compactContentHeight)
-        case .dashboard: return CGSize(width: 1340, height: 296)
+        case .dashboard: return CGSize(width: 1120, height: 350)
         case .wideBar: return CGSize(width: 1340, height: 56)
         }
+    }
+
+    private static func layoutAppearance(_ layout: DashboardLayoutPreference) -> NotchAppearance {
+        var appearance = NotchAppearance.defaults
+        appearance.dashboardLayout = layout
+        return appearance
     }
 
     static let all: [SnapshotState] = [
@@ -112,6 +120,11 @@ private struct SnapshotState {
         SnapshotState(name: "02-compact-hover", mode: .compact, isExpanded: true),
         SnapshotState(name: "03-dashboard", mode: .dashboard, isExpanded: true),
         SnapshotState(name: "04-widebar", mode: .wideBar, isExpanded: true),
+        SnapshotState(name: "05-code", mode: .dashboard, isExpanded: true, page: 1),
+        SnapshotState(name: "06-commands", mode: .dashboard, isExpanded: true, page: 2),
+        SnapshotState(name: "07-stocks", mode: .dashboard, isExpanded: true, page: 3),
+        SnapshotState(name: "08-priority", mode: .dashboard, isExpanded: true, appearance: layoutAppearance(.priority)),
+        SnapshotState(name: "09-focus", mode: .dashboard, isExpanded: true, appearance: layoutAppearance(.fullPageFocus)),
     ]
 }
 

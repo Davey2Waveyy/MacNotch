@@ -11,9 +11,10 @@ final class ShelfModule: NotchModule {
     }
 
     private let state = StateBox()
-    private let store = ShelfStore(url: ShelfStore.defaultURL())
+    private let store: ShelfStore
 
-    init() {
+    init(store: ShelfStore = ShelfStore(url: ShelfStore.defaultURL())) {
+        self.store = store
         state.items = store.items
     }
 

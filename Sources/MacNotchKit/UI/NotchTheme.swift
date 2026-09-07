@@ -48,24 +48,24 @@ public struct NotchThemeTokens: Equatable, Sendable {
     // `.font(.system(size:))` with ad-hoc numbers.
 
     /// Large numerals / hero stats (timer clocks, temperatures).
-    public var displayFont: Font { .system(size: 17, weight: .semibold, design: fontDesign).monospacedDigit() }
+    public var displayFont: Font { .system(size: 17, weight: .semibold, design: .default).monospacedDigit() }
     /// Tile-level titles and primary lines (track title, event name).
-    public var titleFont: Font { .system(size: 12, weight: .semibold, design: fontDesign) }
+    public var titleFont: Font { .system(size: 12, weight: .semibold, design: .default) }
     /// Interactive labels: buttons, chips, segmented options.
-    public var labelFont: Font { .system(size: 11, weight: .medium, design: fontDesign) }
+    public var labelFont: Font { .system(size: 11, weight: .medium, design: .default) }
     /// Supporting copy (artist line, empty-state message).
-    public var bodyFont: Font { .system(size: 11, weight: .regular, design: fontDesign) }
+    public var bodyFont: Font { .system(size: 11, weight: .regular, design: .default) }
     /// Secondary metadata rows.
-    public var captionFont: Font { .system(size: 10, weight: .medium, design: fontDesign) }
+    public var captionFont: Font { .system(size: 10, weight: .medium, design: .default) }
     /// Uppercased micro-labels (tile headers). Pair with `.tracking(0.8)`.
-    public var caption2Font: Font { .system(size: 9, weight: .semibold, design: fontDesign) }
+    public var caption2Font: Font { .system(size: 9, weight: .semibold, design: .default) }
 
     // MARK: Text hierarchy
 
     public var textPrimary: Color { .white.opacity(0.95) }
-    public var textSecondary: Color { .white.opacity(0.62) }
-    public var textTertiary: Color { .white.opacity(0.40) }
-    public var textQuaternary: Color { .white.opacity(0.25) }
+    public var textSecondary: Color { .white.opacity(0.76) }
+    public var textTertiary: Color { .white.opacity(0.60) }
+    public var textQuaternary: Color { .white.opacity(0.46) }
 
     // MARK: Controls
 

@@ -14,7 +14,7 @@ final class MenuBarController {
         )
 
         let menu = NSMenu()
-        menu.addItem(withTitle: "Open NotchApple", action: #selector(toggleNotch), keyEquivalent: "")
+        menu.addItem(withTitle: "Open \(NotchBrand.productName)", action: #selector(toggleNotch), keyEquivalent: "")
             .target = self
         menu.addItem(withTitle: "Open Settings…", action: #selector(openSettings), keyEquivalent: ",")
             .target = self

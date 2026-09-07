@@ -202,11 +202,11 @@ private struct SplitTerminalPane: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color.black.opacity(isFocused ? 0.48 : 0.36))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(accentColor.opacity(isFocused ? 0.48 : 0.14), lineWidth: 0.7)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.white.opacity(isFocused ? 0.12 : 0.035), lineWidth: 0.7)
                 )
         )
         .contentShape(Rectangle())
@@ -305,7 +305,7 @@ struct CodeDashboardTile: View {
         VStack(alignment: .leading, spacing: 0) {
             workspaceHeader
 
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
                 ForEach(CodeTerminalPaneDescriptor.defaultPanes) { descriptor in
                     if let terminal = terminals[descriptor.tool] {
                         SplitTerminalPane(
@@ -347,7 +347,8 @@ struct CodeDashboardTile: View {
                     .help("Expand Garden")
                 } else {
                     GardenDashboardWidget(isMinimized: $isGardenMinimized)
-                        .frame(width: 260)
+                        .frame(width: 240)
+                        .frame(maxHeight: .infinity)
                 }
             }
             .padding(.horizontal, 10)
@@ -370,8 +371,8 @@ struct CodeDashboardTile: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(tokens.accent.opacity(0.86))
                 .frame(width: 14)
-            Text("CODE SPLIT")
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+            Text("Workspace")
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.white.opacity(0.42))
             Spacer(minLength: 8)
             Text(CodeTerminalPaneDescriptor.defaultPanes.map(\.executableName).joined(separator: " / "))
