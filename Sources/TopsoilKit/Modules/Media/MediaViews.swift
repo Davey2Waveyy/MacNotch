@@ -329,6 +329,16 @@ struct MediaWideBar: View {
                     .lineLimit(1)
             }
             .fixedSize(horizontal: true, vertical: false)
+        } else {
+            HStack(spacing: 6) {
+                Image(systemName: "music.note")
+                    .font(.system(size: 11, weight: .medium))
+                Text("Nothing playing")
+                    .font(tokens.labelFont)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(tokens.textSecondary)
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 }

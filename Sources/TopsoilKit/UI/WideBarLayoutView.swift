@@ -12,10 +12,19 @@ struct WideBarLayoutView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ForEach(Array(barEntries.enumerated()), id: \.element.id) { index, entry in
-                if index > 0 {
-                    WideBarDivider()
-                }
+            // Permanent brand mark so the bar is never blank when every enabled
+            // module happens to be idle (e.g. nothing playing, no pinned repo).
+            HStack(spacing: 6) {
+                Image(systemName: "square.stack.3d.up.fill")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(tokens.accent)
+                Text(NotchBrand.productName)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(tokens.textPrimary)
+            }
+
+            ForEach(Array(barEntries.enumerated()), id: \.element.id) { _, entry in
+                WideBarDivider()
                 entry.view
             }
 
