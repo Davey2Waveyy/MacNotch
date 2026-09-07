@@ -29,19 +29,20 @@ public final class NotchTerminal: ObservableObject {
 
     private func applyAppearance() {
         terminalView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
-        terminalView.nativeForegroundColor = NSColor(srgbRed: 0.753, green: 0.792, blue: 0.961, alpha: 0.96) // #C0CAF5
+        terminalView.nativeForegroundColor = NSColor(srgbRed: 0.93, green: 0.94, blue: 0.96, alpha: 0.96)   // #EDEFF5
         terminalView.nativeBackgroundColor = .clear
-        terminalView.caretColor = NSColor(srgbRed: 0.49, green: 0.81, blue: 1.0, alpha: 0.95)               // #7DCFFF
-        terminalView.selectedTextBackgroundColor = NSColor(srgbRed: 0.49, green: 0.81, blue: 1.0, alpha: 0.24)
+        terminalView.caretColor = NSColor(srgbRed: 0.36, green: 0.78, blue: 1.0, alpha: 0.95)               // Topsoil cyan
+        terminalView.selectedTextBackgroundColor = NSColor(srgbRed: 0.36, green: 0.78, blue: 1.0, alpha: 0.22)
         terminalView.installColors(Self.ansiPalette)
     }
 
-    /// Soft, modern 16-colour ANSI palette (Tokyo-Night lineage, cyan-leaning to
-    /// match the app accent) so claude / codex / cursor output reads as designed
-    /// rather than raw-terminal default. Order: 8 normal, then 8 bright.
+    /// ANSI palette built from Topsoil's own colours — black panel + white text
+    /// with the app's exact accent set (cyan hero, plus its blue/green/amber/red/
+    /// purple accent choices) — so agent output reads as part of the app. Order:
+    /// 8 normal (black,red,green,yellow,blue,magenta,cyan,white) then 8 bright.
     private static let ansiPalette: [SwiftTerm.Color] = [
-        0x2A2E3A, 0xF7768E, 0x9ECE6A, 0xE0AF68, 0x7AA2F7, 0xBB9AF7, 0x7DCFFF, 0xC0CAF5,
-        0x545C7E, 0xFF8DA1, 0xB6E27F, 0xF0C989, 0x9DBDFF, 0xCDB4FF, 0xA4DBFF, 0xE7ECFF,
+        0x22252D, 0xFF6666, 0x66D98C, 0xFFB84D, 0x5C99FF, 0xAD73FF, 0x5CC7FF, 0xEDEFF5,
+        0x4A4E5A, 0xFF8080, 0x85E6A5, 0xFFCB73, 0x85B2FF, 0xC79BFF, 0x85D6FF, 0xFFFFFF,
     ].map { hex in
         let r = UInt16((hex >> 16) & 0xFF), g = UInt16((hex >> 8) & 0xFF), b = UInt16(hex & 0xFF)
         return SwiftTerm.Color(red: r << 8 | r, green: g << 8 | g, blue: b << 8 | b)
