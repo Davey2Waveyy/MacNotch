@@ -106,10 +106,7 @@ public final class NotchWindow: NSObject {
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
     private let dashboardSize = CGSize(width: 1120, height: 350)
-    private let wideBarRowHeight: CGFloat = 40
-    /// Matches NotchRootView.wideBarTopInset so the SwiftUI content and the panel
-    /// frame agree on the wide-bar height.
-    private var wideBarTopInset: CGFloat { max(NSScreen.main?.safeAreaInsets.top ?? 0, 24) }
+    private let wideBarHeight: CGFloat = 44
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 520
     private var measuredCompactHeight: CGFloat = 320
@@ -453,7 +450,7 @@ public final class NotchWindow: NSObject {
             let screenWidth = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
                 ?? NSScreen.main?.frame.width
                 ?? 1440
-            return CGSize(width: screenWidth, height: wideBarTopInset + wideBarRowHeight)
+            return CGSize(width: screenWidth, height: wideBarHeight)
         }
     }
 
@@ -461,22 +458,25 @@ public final class NotchWindow: NSObject {
         let rect = notchRect
         let size: CGSize
         let originX: CGFloat
-        if visuallyExpanded {
-            let target = expandedSize(for: machine.mode)
-            size = target
-            originX = machine.mode == .wideBar
-                ? (NSScreen.main?.frame.minX ?? 0)
-                : rect.midX - (target.width / 2)
+        let originY: CGFloat
+        // Wide bar sits as a full-width strip just BELOW the system menu bar
+        // (visibleFrame excludes it), so the menu bar never draws over it. Every
+        // other mode hangs from the very top of the screen, hugging the notch.
+        if visuallyExpanded, machine.mode == .wideBar {
+            let screen = NSScreen.main
+            size = expandedSize(for: .wideBar)
+            originX = screen?.frame.minX ?? 0
+            originY = (screen?.visibleFrame.maxY ?? rect.maxY) - size.height
+        } else if visuallyExpanded {
+            size = expandedSize(for: machine.mode)
+            originX = rect.midX - (size.width / 2)
+            originY = rect.maxY - size.height
         } else {
             size = rect.size
             originX = rect.midX - (size.width / 2)
+            originY = rect.maxY - size.height
         }
-        let frame = CGRect(
-            x: originX,
-            y: rect.maxY - size.height,
-            width: size.width,
-            height: size.height
-        )
+        let frame = CGRect(x: originX, y: originY, width: size.width, height: size.height)
         panel.setFrame(frame, display: true)
     }
 

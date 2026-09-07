@@ -45,10 +45,7 @@ public struct NotchRootView: View {
     private static let minCompactHeight: CGFloat = 132
     private static let maxCompactHeight: CGFloat = 520
     private let dashboardSize = CGSize(width: 1120, height: 350)
-    private let wideBarRowHeight: CGFloat = 40
-    /// Push wide-bar content below the notch / menu-bar band (min 24pt for
-    /// non-notched Macs whose menu bar the bar draws over).
-    private var wideBarTopInset: CGFloat { max(notchInset, 24) }
+    private let wideBarHeight: CGFloat = 44
 
     public init(
         model: NotchWindowModel,
@@ -107,7 +104,7 @@ public struct NotchRootView: View {
             let width = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
                 ?? NSScreen.main?.frame.width
                 ?? 1440
-            return CGSize(width: width, height: wideBarTopInset + wideBarRowHeight)
+            return CGSize(width: width, height: wideBarHeight)
         }
     }
 
@@ -221,7 +218,6 @@ public struct NotchRootView: View {
             WideBarLayoutView(
                 modules: currentModules,
                 size: size,
-                topInset: wideBarTopInset,
                 onSwitchMode: onSwitchMode
             )
         }
