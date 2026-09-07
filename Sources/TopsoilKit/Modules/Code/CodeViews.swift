@@ -26,7 +26,7 @@ struct CodeExpandedView: View {
     var onLaunchCLI: ((CodeCLITool) -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .center, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("CODE")
                 .font(.system(size: 9, weight: .semibold))
                 .tracking(0.9)
@@ -43,7 +43,7 @@ struct CodeExpandedView: View {
                 cliQuickLaunch
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .urlDropTarget(onDrop)
     }
@@ -51,30 +51,28 @@ struct CodeExpandedView: View {
     // Always-visible CLI quick-launch row so the tile is never empty.
     @ViewBuilder
     private var cliQuickLaunch: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             ForEach(CodeTerminalPaneDescriptor.defaultPanes) { pane in
                 cliChip(pane)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    // Light, text-first chip: a tinted tool dot + command, no boxed border.
     private func cliChip(_ pane: CodeTerminalPaneDescriptor) -> some View {
         Button { onLaunchCLI?(pane.tool) } label: {
             HStack(spacing: 5) {
-                CodeToolIcon(tool: pane.tool, size: 13)
+                CodeToolIcon(tool: pane.tool, size: 12)
                 Text(pane.command)
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.white.opacity(0.66))
             }
-            .frame(minWidth: 64)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
             .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.black.opacity(0.26))
-                    .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(accent(for: pane.tool).opacity(0.28), lineWidth: 0.5))
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(.white.opacity(0.05))
             )
         }
         .buttonStyle(.plain)
@@ -82,7 +80,7 @@ struct CodeExpandedView: View {
     }
 
     private var emptyProject: some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 2) {
             Text("No folder pinned")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.82))
@@ -90,13 +88,13 @@ struct CodeExpandedView: View {
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.white.opacity(0.32))
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
     }
 
     private func row(_ project: CodeProjectDisplay, index: Int) -> some View {
-        VStack(spacing: 7) {
-            VStack(alignment: .center, spacing: 2) {
+        VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(project.name)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white)
@@ -110,7 +108,7 @@ struct CodeExpandedView: View {
                 actionButton("terminal", help: "Open Terminal") { onAction(index, .terminal) }
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
         .contextMenu {
             Button("Reveal in Finder") { onAction(index, .reveal) }
@@ -138,7 +136,7 @@ struct CodeExpandedView: View {
             }
         }
         .font(.system(size: 9))
-        .frame(maxWidth: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func actionButton(_ systemName: String, help: String, action: @escaping () -> Void) -> some View {

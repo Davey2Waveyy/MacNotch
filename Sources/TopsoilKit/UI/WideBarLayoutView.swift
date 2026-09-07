@@ -7,6 +7,7 @@ struct WideBarLayoutView: View {
     @Environment(\.notchTokens) private var tokens
     let modules: [any NotchModule]
     let size: CGSize
+    var topInset: CGFloat = 0
     let onSwitchMode: (ExpansionMode) -> Void
 
     var body: some View {
@@ -27,6 +28,8 @@ struct WideBarLayoutView: View {
             ) { onSwitchMode(.dashboard) }
         }
         .padding(.horizontal, 18)
+        // Sit below the menu-bar / notch band so content isn't clipped at the top edge.
+        .padding(.top, topInset)
         .frame(width: size.width, height: size.height, alignment: .leading)
         .overlay(alignment: .bottom) {
             // Hairline that brightens toward the centre, echoing the notch above.

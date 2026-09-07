@@ -111,7 +111,7 @@ private struct SnapshotState {
             }
             let height = DashboardNavigation.height(modules: descriptors, page: page, layout: appearance.dashboardLayout)
             return CGSize(width: 1120, height: height)
-        case .wideBar: return CGSize(width: 1340, height: 56)
+        case .wideBar: return CGSize(width: 1340, height: max(NSScreen.main?.safeAreaInsets.top ?? 0, 24) + 40)
         }
     }
 

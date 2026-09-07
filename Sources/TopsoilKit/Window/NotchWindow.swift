@@ -106,7 +106,10 @@ public final class NotchWindow: NSObject {
     private let settings: SettingsStore
     private let compactSize = CGSize(width: 280, height: 320)
     private let dashboardSize = CGSize(width: 1120, height: 350)
-    private let wideBarHeight: CGFloat = 56
+    private let wideBarRowHeight: CGFloat = 40
+    /// Matches NotchRootView.wideBarTopInset so the SwiftUI content and the panel
+    /// frame agree on the wide-bar height.
+    private var wideBarTopInset: CGFloat { max(NSScreen.main?.safeAreaInsets.top ?? 0, 24) }
     private let minCompactHeight: CGFloat = 132
     private let maxCompactHeight: CGFloat = 520
     private var measuredCompactHeight: CGFloat = 320
@@ -450,7 +453,7 @@ public final class NotchWindow: NSObject {
             let screenWidth = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
                 ?? NSScreen.main?.frame.width
                 ?? 1440
-            return CGSize(width: screenWidth, height: wideBarHeight)
+            return CGSize(width: screenWidth, height: wideBarTopInset + wideBarRowHeight)
         }
     }
 
