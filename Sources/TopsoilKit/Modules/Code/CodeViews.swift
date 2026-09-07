@@ -33,9 +33,6 @@ struct CodeExpandedView: View {
                 .foregroundStyle(.white.opacity(0.40))
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            GardenExpandedView()
-                .padding(.bottom, 4)
-
             if projects.isEmpty {
                 emptyProject
                 cliQuickLaunch
