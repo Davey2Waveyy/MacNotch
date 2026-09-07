@@ -153,12 +153,17 @@ struct CodeExpandedView: View {
 private struct EmbeddedTerminalView: NSViewRepresentable {
     let terminal: NotchTerminal
     let isFocused: Bool
+    @Environment(\.notchTokens) private var tokens
 
     func makeNSView(context: Context) -> NSView {
         terminal.terminalView
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        // Caret + selection follow the app's live accent so the terminal matches
+        // whatever theme colour the notch is using.
+        terminal.applyAccent(NSColor(tokens.accent))
+
         guard isFocused else { return }
         DispatchQueue.main.async {
             guard let window = nsView.window else { return }

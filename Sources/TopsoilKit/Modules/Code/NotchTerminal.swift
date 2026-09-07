@@ -31,9 +31,15 @@ public final class NotchTerminal: ObservableObject {
         terminalView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         terminalView.nativeForegroundColor = NSColor(srgbRed: 0.93, green: 0.94, blue: 0.96, alpha: 0.96)   // #EDEFF5
         terminalView.nativeBackgroundColor = .clear
-        terminalView.caretColor = NSColor(srgbRed: 0.36, green: 0.78, blue: 1.0, alpha: 0.95)               // Topsoil cyan
-        terminalView.selectedTextBackgroundColor = NSColor(srgbRed: 0.36, green: 0.78, blue: 1.0, alpha: 0.22)
         terminalView.installColors(Self.ansiPalette)
+        applyAccent(NSColor(srgbRed: 0.36, green: 0.78, blue: 1.0, alpha: 1.0))                             // cyan until themed
+    }
+
+    /// Tints the caret and selection with the app's current accent so the terminal
+    /// matches the notch theme. Called from the SwiftUI bridge as the accent changes.
+    public func applyAccent(_ accent: NSColor) {
+        terminalView.caretColor = accent.withAlphaComponent(0.95)
+        terminalView.selectedTextBackgroundColor = accent.withAlphaComponent(0.22)
     }
 
     /// ANSI palette built from Topsoil's own colours — black panel + white text
