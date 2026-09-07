@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// Value-only page planning, shared by navigation and rendering.
 public struct DashboardModuleDescriptor: Equatable, Sendable {
@@ -44,6 +45,34 @@ public enum DashboardNavigation {
 
     public static func clampedPage(_ page: Int, count: Int) -> Int {
         min(max(0, page), max(0, count - 1))
+    }
+
+    public static let fullDashboardHeight: CGFloat = 350
+    public static let compactDashboardHeight: CGFloat = 280
+
+    // ponytail: coarse short/tall split, not per-pixel content measurement. Rich
+    // and full-page tiles fill the taller panel; pages made only of these short
+    // "tool" surfaces shrink. Tune the set or the two heights if snapshots read
+    // cramped or empty.
+    private static let shortTileModuleIDs: Set<String> = ["customize", "commandPalette"]
+
+    /// Panel height for a single page: shrinks only when every tile is a short
+    /// tool surface, so rich tiles never get squeezed.
+    public static func height(for page: [DashboardModuleDescriptor]) -> CGFloat {
+        guard !page.isEmpty else { return fullDashboardHeight }
+        let allShort = page.allSatisfy { !$0.isFullPage && shortTileModuleIDs.contains($0.id) }
+        return allShort ? compactDashboardHeight : fullDashboardHeight
+    }
+
+    /// Panel height for the currently-visible page.
+    public static func height(
+        modules: [DashboardModuleDescriptor],
+        page: Int,
+        layout: DashboardLayoutPreference = .pagedTiles
+    ) -> CGFloat {
+        let pages = pages(modules: modules, layout: layout)
+        guard !pages.isEmpty else { return fullDashboardHeight }
+        return height(for: pages[clampedPage(page, count: pages.count)])
     }
 
     public static func title(for page: [DashboardModuleDescriptor], index: Int) -> String {

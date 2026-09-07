@@ -34,7 +34,7 @@ public enum NotchSnapshots {
                 modules: { modules }
             )
 
-            let panelSize = state.panelSize(collapsed: collapsedSize, model: model)
+            let panelSize = state.panelSize(collapsed: collapsedSize, model: model, modules: modules)
             let stage = SnapshotStage(panelSize: panelSize) { root }
 
             let renderer = ImageRenderer(content: stage)
@@ -100,11 +100,17 @@ private struct SnapshotState {
     var page: Int = 0
 
     @MainActor
-    func panelSize(collapsed: CGSize, model: NotchWindowModel) -> CGSize {
+    func panelSize(collapsed: CGSize, model: NotchWindowModel, modules: [any NotchModule]) -> CGSize {
         guard isExpanded else { return collapsed }
         switch mode {
         case .compact: return CGSize(width: 280, height: model.compactContentHeight)
-        case .dashboard: return CGSize(width: 1120, height: 350)
+        case .dashboard:
+            let descriptors = modules.compactMap { module -> DashboardModuleDescriptor? in
+                guard module.dashboardTile() != nil else { return nil }
+                return DashboardModuleDescriptor(id: module.id, title: module.title, isFullPage: module.isFullPageTile)
+            }
+            let height = DashboardNavigation.height(modules: descriptors, page: page, layout: appearance.dashboardLayout)
+            return CGSize(width: 1120, height: height)
         case .wideBar: return CGSize(width: 1340, height: 56)
         }
     }

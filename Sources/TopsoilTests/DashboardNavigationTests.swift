@@ -24,6 +24,22 @@ func dashboardNavigationTests() {
         expectEqual(DashboardNavigation.pages(modules: modules).map { $0.count }, [5, 1], "standard capacity")
         expectEqual(DashboardNavigation.pages(modules: modules, layout: .priority).map { $0.count }, [4, 2], "priority capacity")
     }
+    test("dashboard height shrinks only for tool-only pages") {
+        let full = DashboardNavigation.fullDashboardHeight
+        let compact = DashboardNavigation.compactDashboardHeight
+        expectEqual(DashboardNavigation.height(for: [DashboardModuleDescriptor(id: "commandPalette", title: "Command Palette")]), compact, "single tool page shrinks")
+        expectEqual(DashboardNavigation.height(for: [
+            DashboardModuleDescriptor(id: "customize", title: "Design Studio"),
+            DashboardModuleDescriptor(id: "commandPalette", title: "Command Palette")
+        ]), compact, "all-tool page shrinks")
+        expectEqual(DashboardNavigation.height(for: [DashboardModuleDescriptor(id: "media", title: "Now Playing")]), full, "rich tile stays full")
+        expectEqual(DashboardNavigation.height(for: [
+            DashboardModuleDescriptor(id: "commandPalette", title: "Command Palette"),
+            DashboardModuleDescriptor(id: "media", title: "Now Playing")
+        ]), full, "mixed page stays full")
+        expectEqual(DashboardNavigation.height(for: [DashboardModuleDescriptor(id: "code", title: "Code", isFullPage: true)]), full, "full-page tile stays full")
+        expectEqual(DashboardNavigation.height(for: []), full, "empty page defaults full")
+    }
     test("dashboard safely clamps stale and negative page selections") {
         expectEqual(DashboardNavigation.clampedPage(-1, count: 4), 0, "negative")
         expectEqual(DashboardNavigation.clampedPage(9, count: 2), 1, "shrunk list")

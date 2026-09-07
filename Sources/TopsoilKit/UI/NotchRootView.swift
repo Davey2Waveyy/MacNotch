@@ -89,7 +89,17 @@ public struct NotchRootView: View {
     private var expandedSize: CGSize {
         switch model.mode {
         case .compact: return CGSize(width: compactWidth, height: model.compactContentHeight)
-        case .dashboard: return dashboardSize
+        case .dashboard:
+            let descriptors = modules().compactMap { module -> DashboardModuleDescriptor? in
+                guard module.dashboardTile() != nil else { return nil }
+                return DashboardModuleDescriptor(id: module.id, title: module.title, isFullPage: module.isFullPageTile)
+            }
+            let height = DashboardNavigation.height(
+                modules: descriptors,
+                page: model.dashboardPage,
+                layout: model.appearance.dashboardLayout
+            )
+            return CGSize(width: dashboardSize.width, height: height)
         case .wideBar:
             let width = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
                 ?? NSScreen.main?.frame.width

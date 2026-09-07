@@ -94,7 +94,11 @@ struct SettingsView: View {
                         }
                     }
                 )) {
-                    Text("Custom").tag("custom")
+                    // "Custom" is a derived state, not an applyable profile — list it
+                    // only while it's the current selection so it's never a dead click.
+                    if WorkspaceProfile.matching(settings) == nil {
+                        Text("Custom").tag("custom")
+                    }
                     ForEach(WorkspaceProfile.defaults) { profile in
                         Text(profile.name).tag(profile.id)
                     }

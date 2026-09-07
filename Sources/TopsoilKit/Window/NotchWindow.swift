@@ -112,6 +112,7 @@ public final class NotchWindow: NSObject {
     private var measuredCompactHeight: CGFloat = 320
     private var isShown = false
     private var compactHeightObserver: AnyCancellable?
+    private var dashboardPageObserver: AnyCancellable?
     private let expansionAnimationDuration: TimeInterval = 0.35
     private let collapseGraceDelay: TimeInterval = 0.18
     private let collapseAnimationDuration: TimeInterval = 0.2
@@ -190,6 +191,11 @@ public final class NotchWindow: NSObject {
         compactHeightObserver = model.$compactContentHeight.sink { [weak self] height in
             MainActor.assumeIsolated { self?.applyCompactHeight(height) }
         }
+        // The dashboard panel height depends on which page is showing, so resize
+        // when the page changes (paged tiles / focus pages have different heights).
+        dashboardPageObserver = model.$dashboardPage.sink { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyDashboardPageChange() }
+        }
         installClickMonitorsIfNeeded()
         timerFiredObserver = NotificationCenter.default.addObserver(
             forName: .macNotchTimerFired, object: nil, queue: .main
@@ -233,6 +239,13 @@ public final class NotchWindow: NSObject {
         if machine.mode == .compact, transitionCoordinator.isVisuallyExpanded {
             updateFrame(visuallyExpanded: true)
         }
+    }
+
+    /// Resizes the dashboard panel when the visible page changes, so tool-only
+    /// pages shrink and rich/full-page pages restore full height.
+    private func applyDashboardPageChange() {
+        guard isShown, machine.mode == .dashboard, transitionCoordinator.isVisuallyExpanded else { return }
+        updateFrame(visuallyExpanded: true)
     }
 
     public func tearDown() {
@@ -423,7 +436,16 @@ public final class NotchWindow: NSObject {
         case .compact:
             return CGSize(width: compactSize.width, height: measuredCompactHeight)
         case .dashboard:
-            return dashboardSize
+            let descriptors = activeModules.compactMap { module -> DashboardModuleDescriptor? in
+                guard module.dashboardTile() != nil else { return nil }
+                return DashboardModuleDescriptor(id: module.id, title: module.title, isFullPage: module.isFullPageTile)
+            }
+            let height = DashboardNavigation.height(
+                modules: descriptors,
+                page: model.dashboardPage,
+                layout: settings.settings.appearance.dashboardLayout
+            )
+            return CGSize(width: dashboardSize.width, height: height)
         case .wideBar:
             let screenWidth = ScreenLocator.choose(from: ScreenLocator.current())?.frame.width
                 ?? NSScreen.main?.frame.width
