@@ -198,7 +198,7 @@ public final class NotchWindow: NSObject {
         }
         installClickMonitorsIfNeeded()
         timerFiredObserver = NotificationCenter.default.addObserver(
-            forName: .macNotchTimerFired, object: nil, queue: .main
+            forName: .topsoilTimerFired, object: nil, queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.popOpenForAlarm() }
         }

@@ -3,7 +3,7 @@ import SwiftUI
 
 public extension Notification.Name {
     /// Posted when a countdown reaches zero so the notch can pop open and alarm.
-    static let macNotchTimerFired = Notification.Name("macNotchTimerFired")
+    static let topsoilTimerFired = Notification.Name("topsoilTimerFired")
 }
 
 @MainActor
@@ -74,7 +74,7 @@ final class TimersModule: NotchModule {
         if !fired.isEmpty {
             state.firing.append(contentsOf: fired)
             startAlarm()
-            NotificationCenter.default.post(name: .macNotchTimerFired, object: nil)
+            NotificationCenter.default.post(name: .topsoilTimerFired, object: nil)
             NSApp.requestUserAttention(.criticalRequest)
         }
 

@@ -1,6 +1,6 @@
 import TopsoilKit
 
-func macNotchAppTests() {
+func topsoilAppTests() {
     test("TopsoilApp exposes a main-actor run entry point") {
         let run: @MainActor () -> Void = TopsoilApp.run
         _ = run

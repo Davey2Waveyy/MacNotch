@@ -3,26 +3,55 @@ import SwiftUI
 
 // MARK: - Trackpad scroll-wheel reader
 
+/// Pure paging decision for horizontal scroll, so the gesture tuning is unit-tested
+/// without synthesizing NSEvents. Turns one page per trackpad swipe (as soon as a
+/// clearly-horizontal gesture crosses the threshold, ignoring momentum), and once
+/// per threshold for a plain mouse wheel that carries no phase.
+public struct SwipePager {
+    public var threshold: CGFloat
+    private var x: CGFloat = 0
+    private var y: CGFloat = 0
+    private var fired = false
+
+    public init(threshold: CGFloat = 28) { self.threshold = threshold }
+
+    /// Feed one scroll sample; returns -1 (prev) or +1 (next) when a page should turn.
+    public mutating func feed(dx: CGFloat, dy: CGFloat,
+                              began: Bool, ended: Bool,
+                              isMomentum: Bool, isGesture: Bool) -> Int? {
+        if began { x = 0; y = 0; fired = false }
+        x += dx
+        y += dy
+
+        var direction: Int?
+        let canFire = isGesture ? (!isMomentum && !fired) : true
+        if canFire, abs(x) >= threshold, abs(x) > abs(y) {
+            direction = x > 0 ? -1 : 1
+            fired = true
+            if !isGesture { x = 0; y = 0 }   // mouse wheel: rearm for the next detent
+        }
+        if ended { x = 0; y = 0; fired = false }
+        return direction
+    }
+}
+
 /// Transparent NSView overlay that captures horizontal two-finger swipe events
-/// and forwards them as directional page changes.
+/// (and horizontal mouse-wheel) and forwards them as directional page changes.
 private final class ScrollWheelNSView: NSView {
     var onSwipe: ((Int) -> Void)?       // -1 = prev, +1 = next
-    private var accumulated: CGFloat = 0
+    private var pager = SwipePager()
 
     override func scrollWheel(with event: NSEvent) {
-        accumulated += event.scrollingDeltaX
-
-        let ended = event.phase == .ended || event.phase == .cancelled
-            || event.momentumPhase == .ended || event.momentumPhase == .cancelled
-        let threshold: CGFloat = 40
-
-        if ended {
-            if accumulated > threshold  { onSwipe?(-1) }
-            if accumulated < -threshold { onSwipe?(1) }
-            accumulated = 0
-        } else if abs(accumulated) >= threshold && event.momentumPhase == [] {
-            onSwipe?(accumulated > 0 ? -1 : 1)
-            accumulated = 0
+        let isGesture = event.phase != [] || event.momentumPhase != []
+        if let direction = pager.feed(
+            dx: event.scrollingDeltaX,
+            dy: event.scrollingDeltaY,
+            began: event.phase == .began,
+            ended: event.phase == .ended || event.phase == .cancelled,
+            isMomentum: event.momentumPhase != [],
+            isGesture: isGesture
+        ) {
+            onSwipe?(direction)
         }
     }
 }
